@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 04:31:55 2025 as: nmap -v -sU -T3 -p 53,67,68,80,443,1900,5353,554,8080 -&#45;max-retries 1 -&#45;max-rtt-timeout 100ms -&#45;host-timeout 30s -oX scans/iot_scan_2025-07-20_0431.xml 192.168.68.0/22 -->
+<nmaprun scanner="nmap" args="nmap -v -sU -T3 -p 53,67,68,80,443,1900,5353,554,8080 -&#45;max-retries 1 -&#45;max-rtt-timeout 100ms -&#45;host-timeout 30s -oX scans/iot_scan_2025-07-20_0431.xml 192.168.68.0/22" start="1752985915" startstr="Sun Jul 20 04:31:55 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="udp" protocol="udp" numservices="9" services="53,67-68,80,443,554,1900,5353,8080"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="ARP Ping Scan" time="1752985915"/>

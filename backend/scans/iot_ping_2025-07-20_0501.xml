@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 05:01:49 2025 as: nmap -v -sn -T2 -&#45;max-retries 2 -&#45;host-timeout 30s -oX scans/iot_ping_2025-07-20_0501.xml 192.168.68.1 192.168.68.21 192.168.68.41 192.168.68.61 192.168.68.81 192.168.68.101 192.168.68.121 192.168.68.141 192.168.68.161 192.168.68.181 192.168.68.201 192.168.68.221 192.168.68.241 192.168.69.5 192.168.69.25 192.168.69.45 192.168.69.65 192.168.69.85 192.168.69.105 192.168.69.125 192.168.69.145 192.168.69.165 192.168.69.185 192.168.69.205 192.168.69.225 192.168.69.245 192.168.70.9 192.168.70.29 192.168.70.49 192.168.70.69 192.168.70.89 192.168.70.109 192.168.70.129 192.168.70.149 192.168.70.169 192.168.70.189 192.168.70.209 192.168.70.229 192.168.70.249 192.168.71.13 192.168.71.33 192.168.71.53 192.168.71.73 192.168.71.93 192.168.71.113 192.168.71.133 192.168.71.153 192.168.71.173 192.168.71.193 192.168.71.213 -->
+<nmaprun scanner="nmap" args="nmap -v -sn -T2 -&#45;max-retries 2 -&#45;host-timeout 30s -oX scans/iot_ping_2025-07-20_0501.xml 192.168.68.1 192.168.68.21 192.168.68.41 192.168.68.61 192.168.68.81 192.168.68.101 192.168.68.121 192.168.68.141 192.168.68.161 192.168.68.181 192.168.68.201 192.168.68.221 192.168.68.241 192.168.69.5 192.168.69.25 192.168.69.45 192.168.69.65 192.168.69.85 192.168.69.105 192.168.69.125 192.168.69.145 192.168.69.165 192.168.69.185 192.168.69.205 192.168.69.225 192.168.69.245 192.168.70.9 192.168.70.29 192.168.70.49 192.168.70.69 192.168.70.89 192.168.70.109 192.168.70.129 192.168.70.149 192.168.70.169 192.168.70.189 192.168.70.209 192.168.70.229 192.168.70.249 192.168.71.13 192.168.71.33 192.168.71.53 192.168.71.73 192.168.71.93 192.168.71.113 192.168.71.133 192.168.71.153 192.168.71.173 192.168.71.193 192.168.71.213" start="1752987709" startstr="Sun Jul 20 05:01:49 2025" version="7.80" xmloutputversion="1.04">
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="ARP Ping Scan" time="1752987709"/>
+<taskend task="ARP Ping Scan" time="1752987746" extrainfo="50 total hosts"/>
+<taskbegin task="Parallel DNS resolution of 50 hosts." time="1752987746"/>
+<taskend task="Parallel DNS resolution of 50 hosts." time="1752987746"/>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.68.1" addrtype="ipv4"/>
+<address addr="54:AF:97:F8:CB:84" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="851" rttvar="2889" to="400000"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.21" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.41" addrtype="ipv4"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.68.61" addrtype="ipv4"/>
+<address addr="78:28:CA:AF:E5:10" addrtype="mac" vendor="Sonos"/>
+<hostnames>
+</hostnames>
+<times srtt="4526" rttvar="5139" to="400000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.68.81" addrtype="ipv4"/>
+<address addr="94:9F:3E:A9:36:A8" addrtype="mac" vendor="Sonos"/>
+<hostnames>
+</hostnames>
+<times srtt="1340" rttvar="3788" to="400000"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.101" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.121" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.141" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.161" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.181" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.201" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.221" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.241" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.5" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.25" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.45" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.65" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.85" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.105" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.125" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.145" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.165" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.185" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.205" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.225" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.69.245" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.9" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.29" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.49" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.69" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.89" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.109" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.129" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.149" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.169" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.189" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.209" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.229" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.70.249" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.13" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.33" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.53" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.73" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.93" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.113" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.133" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.153" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.173" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.193" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.71.213" addrtype="ipv4"/>
+</host>
+<runstats><finished time="1752987746" timestr="Sun Jul 20 05:02:26 2025" elapsed="37.10" summary="Nmap done at Sun Jul 20 05:02:26 2025; 50 IP addresses (3 hosts up) scanned in 37.10 seconds" exit="success"/><hosts up="3" down="47" total="50"/>
+</runstats>
+</nmaprun>

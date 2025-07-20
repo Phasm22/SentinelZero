@@ -1,0 +1,9 @@
+{
+  "target_network": "172.16.0.0/22",
+  "scan_timeout": 900,
+  "exclude_hosts": "192.168.0.1",
+  "custom_nmap_args": "-sS -T4",
+  "selected_interface": "eth0",
+  "auto_detect_interface": true,
+  "max_hosts": 500
+}

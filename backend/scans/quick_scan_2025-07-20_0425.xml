@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 04:25:46 2025 as: nmap -v -sS -T3 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 1 -&#45;host-timeout 30s -&#45;max-rtt-timeout 200ms -&#45;initial-rtt-timeout 100ms -&#45;min-rtt-timeout 50ms -oX scans/quick_scan_2025-07-20_0425.xml 192.168.68.1 192.168.68.2 192.168.68.3 192.168.68.4 192.168.68.5 192.168.68.6 192.168.68.7 192.168.68.8 192.168.68.9 192.168.68.10 -->
+<nmaprun scanner="nmap" args="nmap -v -sS -T3 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 1 -&#45;host-timeout 30s -&#45;max-rtt-timeout 200ms -&#45;initial-rtt-timeout 100ms -&#45;min-rtt-timeout 50ms -oX scans/quick_scan_2025-07-20_0425.xml 192.168.68.1 192.168.68.2 192.168.68.3 192.168.68.4 192.168.68.5 192.168.68.6 192.168.68.7 192.168.68.8 192.168.68.9 192.168.68.10" start="1752985546" startstr="Sun Jul 20 04:25:46 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="19" services="21-23,25,53,80,110-111,135,139,143,443,993,995,1723,3306,3389,5900,8080"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="ARP Ping Scan" time="1752985546"/>
+<taskend task="ARP Ping Scan" time="1752985546" extrainfo="10 total hosts"/>
+<taskbegin task="Parallel DNS resolution of 10 hosts." time="1752985546"/>
+<taskend task="Parallel DNS resolution of 10 hosts." time="1752985546"/>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.2" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.3" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.4" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.5" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.6" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.7" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.8" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.9" addrtype="ipv4"/>
+</host>
+<host><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.68.10" addrtype="ipv4"/>
+</host>
+<taskbegin task="SYN Stealth Scan" time="1752985546"/>
+<taskend task="SYN Stealth Scan" time="1752985547" extrainfo="19 total ports"/>
+<host starttime="1752985546" endtime="1752985547"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.68.1" addrtype="ipv4"/>
+<address addr="54:AF:97:F8:CB:84" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
+<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
+<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="58"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
+<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
+<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
+<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
+<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
+<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+</ports>
+<times srtt="2525" rttvar="2636" to="50000"/>
+</host>
+<runstats><finished time="1752985547" timestr="Sun Jul 20 04:25:47 2025" elapsed="1.40" summary="Nmap done at Sun Jul 20 04:25:47 2025; 10 IP addresses (1 host up) scanned in 1.40 seconds" exit="success"/><hosts up="1" down="9" total="10"/>
+</runstats>
+</nmaprun>

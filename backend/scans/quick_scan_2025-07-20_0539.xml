@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 05:39:48 2025 as: nmap -v -sS -T4 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 2 -&#45;host-timeout 30s -oX scans/quick_scan_2025-07-20_0539.xml 10.0.0.0/24 -->
+<nmaprun scanner="nmap" args="nmap -v -sS -T4 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 2 -&#45;host-timeout 30s -oX scans/quick_scan_2025-07-20_0539.xml 10.0.0.0/24" start="1752989988" startstr="Sun Jul 20 05:39:48 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="19" services="21-23,25,53,80,110-111,135,139,143,443,993,995,1723,3306,3389,5900,8080"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="Ping Scan" time="1752989988"/>
+<taskprogress task="Ping Scan" time="1752990019" percent="34.08" remaining="60" etc="1752990079"/>
+<taskprogress task="Ping Scan" time="1752990214" percent="88.28" remaining="30" etc="1752990244"/>
+<taskprogress task="Ping Scan" time="1752990244" percent="88.28" remaining="34" etc="1752990278"/>
+<taskprogress task="Ping Scan" time="1752990280" percent="88.28" remaining="39" etc="1752990319"/>
+<taskprogress task="Ping Scan" time="1752990319" percent="88.28" remaining="44" etc="1752990363"/>
+<taskprogress task="Ping Scan" time="1752990364" percent="88.28" remaining="50" etc="1752990414"/>
+<taskprogress task="Ping Scan" time="1752990415" percent="88.28" remaining="57" etc="1752990472"/>
+<taskprogress task="Ping Scan" time="1752990472" percent="88.28" remaining="65" etc="1752990536"/>
+<taskprogress task="Ping Scan" time="1752990538" percent="88.28" remaining="74" etc="1752990611"/>
+<taskprogress task="Ping Scan" time="1752990613" percent="88.28" remaining="83" etc="1752990696"/>
+<taskprogress task="Ping Scan" time="1752990697" percent="88.28" remaining="95" etc="1752990791"/>
+<taskprogress task="Ping Scan" time="1752990793" percent="88.28" remaining="107" etc="1752990900"/>
+<taskprogress task="Ping Scan" time="1752990901" percent="88.28" remaining="122" etc="1752991022"/>
+<taskprogress task="Ping Scan" time="1752991024" percent="88.28" remaining="138" etc="1752991162"/>
+<taskprogress task="Ping Scan" time="1752991162" percent="88.28" remaining="156" etc="1752991318"/>
+<taskprogress task="Ping Scan" time="1752991318" percent="88.28" remaining="177" etc="1752991495"/>
+<taskprogress task="Ping Scan" time="1752991495" percent="88.28" remaining="201" etc="1752991695"/>
+<taskprogress task="Ping Scan" time="1752991696" percent="88.28" remaining="227" etc="1752991923"/>
+<taskprogress task="Ping Scan" time="1752991924" percent="88.28" remaining="257" etc="1752992181"/>
+<taskprogress task="Ping Scan" time="1752992183" percent="88.28" remaining="292" etc="1752992474"/>
+<taskprogress task="Ping Scan" time="1752992474" percent="88.28" remaining="330" etc="1752992804"/>
+<taskprogress task="Ping Scan" time="1752992804" percent="88.28" remaining="374" etc="1752993178"/>
+<taskprogress task="Ping Scan" time="1752993179" percent="88.28" remaining="424" etc="1752993603"/>
+<taskprogress task="Ping Scan" time="1752993605" percent="88.28" remaining="481" etc="1752994085"/>
+<taskprogress task="Ping Scan" time="1752994086" percent="88.28" remaining="544" etc="1752994630"/>
+<taskprogress task="Ping Scan" time="1752994632" percent="88.28" remaining="617" etc="1752995248"/>
+<taskprogress task="Ping Scan" time="1752995251" percent="88.28" remaining="699" etc="1752995950"/>
+<taskprogress task="Ping Scan" time="1752995950" percent="88.28" remaining="792" etc="1752996741"/>
+<taskprogress task="Ping Scan" time="1752996742" percent="88.28" remaining="897" etc="1752997639"/>
+<taskprogress task="Ping Scan" time="1752997640" percent="88.28" remaining="1016" etc="1752998656"/>
+<taskprogress task="Ping Scan" time="1752998657" percent="88.28" remaining="1151" etc="1752999808"/>
+<taskprogress task="Ping Scan" time="1752999810" percent="88.28" remaining="1304" etc="1753001114"/>
+<taskprogress task="Ping Scan" time="1753001115" percent="88.28" remaining="1478" etc="1753002592"/>
+<taskprogress task="Ping Scan" time="1753002595" percent="88.28" remaining="1674" etc="1753004268"/>
+<taskprogress task="Ping Scan" time="1753004269" percent="88.28" remaining="1896" etc="1753006165"/>
+<taskprogress task="Ping Scan" time="1753006166" percent="88.28" remaining="2148" etc="1753008314"/>
+<taskprogress task="Ping Scan" time="1753008314" percent="88.28" remaining="2433" etc="1753010747"/>
+<taskprogress task="Ping Scan" time="1753010748" percent="88.28" remaining="2756" etc="1753013504"/>
+<taskprogress task="Ping Scan" time="1753013506" percent="88.28" remaining="3122" etc="1753016628"/>
+<taskprogress task="Ping Scan" time="1753016630" percent="88.28" remaining="3537" etc="1753020167"/>
+<taskprogress task="Ping Scan" time="1753020168" percent="88.28" remaining="4007" etc="1753024174"/>
+<taskprogress task="Ping Scan" time="1753024175" percent="88.28" remaining="4539" etc="1753028713"/>
+<taskprogress task="Ping Scan" time="1753028715" percent="88.28" remaining="5141" etc="1753033856"/>

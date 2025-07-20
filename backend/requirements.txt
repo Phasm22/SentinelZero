@@ -1,0 +1,9 @@
+flask
+flask-socketio
+eventlet
+flask_sqlalchemy
+flask-migrate
+requests
+APScheduler>=3.10.0
+pytz
+flask-cors 

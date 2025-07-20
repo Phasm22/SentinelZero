@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 05:09:49 2025 as: nmap -v -sS -T3 -p- -&#45;open -sV -&#45;script http-vuln*,ssl*,smb-vuln*,ftp-vuln*,smtp-vuln* -&#45;max-retries 1 -&#45;host-timeout 60s -oX scans/vuln_scripts_2025-07-20_0509.xml 172.16.0.0/22 -->
+<nmaprun scanner="nmap" args="nmap -v -sS -T3 -p- -&#45;open -sV -&#45;script http-vuln*,ssl*,smb-vuln*,ftp-vuln*,smtp-vuln* -&#45;max-retries 1 -&#45;host-timeout 60s -oX scans/vuln_scripts_2025-07-20_0509.xml 172.16.0.0/22" start="1752988189" startstr="Sun Jul 20 05:09:49 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="NSE" time="1752988189"/>
+<taskend task="NSE" time="1752988189"/>
+<taskbegin task="NSE" time="1752988189"/>
+<taskend task="NSE" time="1752988189"/>
+<taskbegin task="NSE" time="1752988189"/>
+<taskend task="NSE" time="1752988189"/>
+<taskbegin task="ARP Ping Scan" time="1752988189"/>
+<taskend task="ARP Ping Scan" time="1752988192" extrainfo="1023 total hosts"/>
+<taskbegin task="Parallel DNS resolution of 1023 hosts." time="1752988192"/>
+<taskend task="Parallel DNS resolution of 1023 hosts." time="1752988192"/>
+<taskbegin task="SYN Stealth Scan" time="1752988192"/>
+<taskprogress task="SYN Stealth Scan" time="1752988223" percent="7.20" remaining="400" etc="1752988623"/>
+<taskend task="SYN Stealth Scan" time="1752988252" extrainfo="4 hosts timed out"/>
+<taskbegin task="Service scan" time="1752988252"/>
+<taskbegin task="NSE" time="1752988252"/>
+<taskend task="NSE" time="1752988252"/>
+<taskbegin task="NSE" time="1752988252"/>
+<taskend task="NSE" time="1752988252"/>
+<taskbegin task="NSE" time="1752988252"/>
+<taskend task="NSE" time="1752988252"/>
+<host starttime="1752988189" endtime="1752988252"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.1" addrtype="ipv4"/>
+<address addr="BC:24:11:7C:04:E1" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988189" endtime="1752988252"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.9" addrtype="ipv4"/>
+<address addr="00:1D:71:B9:11:C0" addrtype="mac" vendor="Cisco Systems"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988189" endtime="1752988252"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.10" addrtype="ipv4"/>
+<address addr="50:91:E3:68:62:F6" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988189" endtime="1752988252"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.11" addrtype="ipv4"/>
+<address addr="B8:85:84:AD:F5:C4" addrtype="mac" vendor="Dell"/>
+<hostnames>
+</hostnames>
+</host>
+<taskbegin task="Parallel DNS resolution of 1 host." time="1752988252"/>
+<taskend task="Parallel DNS resolution of 1 host." time="1752988252"/>
+<taskbegin task="SYN Stealth Scan" time="1752988252"/>
+<taskprogress task="SYN Stealth Scan" time="1752988283" percent="4.14" remaining="718" etc="1752989001"/>
+<taskend task="SYN Stealth Scan" time="1752988312" extrainfo="8 hosts timed out"/>
+<taskbegin task="Service scan" time="1752988312"/>
+<taskbegin task="NSE" time="1752988312"/>
+<taskend task="NSE" time="1752988312"/>
+<taskbegin task="NSE" time="1752988312"/>
+<taskend task="NSE" time="1752988312"/>
+<taskbegin task="NSE" time="1752988312"/>
+<taskend task="NSE" time="1752988312"/>
+<host starttime="1752988189" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.12" addrtype="ipv4"/>
+<address addr="B8:85:84:AE:0E:7D" addrtype="mac" vendor="Dell"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988189" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.13" addrtype="ipv4"/>
+<address addr="EE:7F:23:EA:BF:73" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.100" addrtype="ipv4"/>
+<address addr="BC:24:11:47:79:DE" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.106" addrtype="ipv4"/>
+<address addr="FE:E0:BC:B2:96:38" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.107" addrtype="ipv4"/>
+<address addr="9A:D7:31:D5:A8:E8" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.178" addrtype="ipv4"/>
+<address addr="BC:24:11:82:BA:EC" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.180" addrtype="ipv4"/>
+<address addr="BC:24:11:C6:18:28" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1752988190" endtime="1752988312"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.182" addrtype="ipv4"/>
+<address addr="BC:24:11:A1:4B:1F" addrtype="mac"/>
+<hostnames>
+</hostnames>
+</host>
+<taskbegin task="SYN Stealth Scan" time="1752988312"/>
+<taskend task="SYN Stealth Scan" time="1752988313" extrainfo="65535 total ports"/>
+<taskbegin task="Service scan" time="1752988313"/>
+<taskend task="Service scan" time="1752988377" extrainfo="1 host timed out"/>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<host starttime="1752988312" endtime="1752988377"><status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="172.16.0.183" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<taskbegin task="NSE" time="1752988377"/>
+<taskend task="NSE" time="1752988377"/>
+<runstats><finished time="1752988377" timestr="Sun Jul 20 05:12:57 2025" elapsed="188.38" summary="Nmap done at Sun Jul 20 05:12:57 2025; 1024 IP addresses (13 hosts up) scanned in 188.38 seconds" exit="success"/><hosts up="13" down="1011" total="1024"/>
+</runstats>
+</nmaprun>

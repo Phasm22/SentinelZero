@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 05:09:12 2025 as: nmap -v -sS -T2 -p- -&#45;open -sV -&#45;max-retries 1 -&#45;host-timeout 120s -oX scans/stealth_scan_2025-07-20_0509.xml 172.16.0.0/22 -->
+<nmaprun scanner="nmap" args="nmap -v -sS -T2 -p- -&#45;open -sV -&#45;max-retries 1 -&#45;host-timeout 120s -oX scans/stealth_scan_2025-07-20_0509.xml 172.16.0.0/22" start="1752988152" startstr="Sun Jul 20 05:09:12 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="ARP Ping Scan" time="1752988152"/>

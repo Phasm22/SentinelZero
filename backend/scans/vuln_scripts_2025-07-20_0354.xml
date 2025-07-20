@@ -1,0 +1,967 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Sun Jul 20 03:54:50 2025 as: nmap -v -sS -T4 -p- -&#45;open -sV -&#45;script http-vuln*,ssl*,smb-vuln*,ftp-vuln*,smtp-vuln* -oX scans/vuln_scripts_2025-07-20_0354.xml 172.16.0.0/24 -->
+<nmaprun scanner="nmap" args="nmap -v -sS -T4 -p- -&#45;open -sV -&#45;script http-vuln*,ssl*,smb-vuln*,ftp-vuln*,smtp-vuln* -oX scans/vuln_scripts_2025-07-20_0354.xml 172.16.0.0/24" start="1752983690" startstr="Sun Jul 20 03:54:50 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="NSE" time="1752983690"/>
+<taskend task="NSE" time="1752983690"/>
+<taskbegin task="NSE" time="1752983690"/>
+<taskend task="NSE" time="1752983690"/>
+<taskbegin task="NSE" time="1752983690"/>
+<taskend task="NSE" time="1752983690"/>
+<taskbegin task="ARP Ping Scan" time="1752983690"/>
+<taskend task="ARP Ping Scan" time="1752983692" extrainfo="255 total hosts"/>
+<taskbegin task="Parallel DNS resolution of 255 hosts." time="1752983692"/>
+<taskend task="Parallel DNS resolution of 255 hosts." time="1752983692"/>
+<taskbegin task="SYN Stealth Scan" time="1752983692"/>
+<taskprogress task="SYN Stealth Scan" time="1752983723" percent="6.28" remaining="463" etc="1752984185"/>
+<taskprogress task="SYN Stealth Scan" time="1752983753" percent="14.34" remaining="365" etc="1752984117"/>
+<taskprogress task="SYN Stealth Scan" time="1752983783" percent="22.79" remaining="309" etc="1752984091"/>
+<taskprogress task="SYN Stealth Scan" time="1752983813" percent="31.24" remaining="267" etc="1752984079"/>
+<taskprogress task="SYN Stealth Scan" time="1752983843" percent="39.69" remaining="230" etc="1752984072"/>
+<taskprogress task="SYN Stealth Scan" time="1752983915" percent="47.32" remaining="249" etc="1752984163"/>
+<taskprogress task="SYN Stealth Scan" time="1752983966" percent="55.25" remaining="222" etc="1752984188"/>
+<taskprogress task="SYN Stealth Scan" time="1752983996" percent="63.46" remaining="176" etc="1752984171"/>
+<taskprogress task="SYN Stealth Scan" time="1752984026" percent="71.76" remaining="132" etc="1752984157"/>
+<taskprogress task="SYN Stealth Scan" time="1752984056" percent="80.21" remaining="90" etc="1752984146"/>
+<taskprogress task="SYN Stealth Scan" time="1752984086" percent="88.66" remaining="51" etc="1752984136"/>
+<taskend task="SYN Stealth Scan" time="1752984226" extrainfo="524280 total ports"/>
+<taskbegin task="Service scan" time="1752984226"/>
+<taskend task="Service scan" time="1752984357" extrainfo="37 services on 8 hosts"/>
+<taskbegin task="NSE" time="1752984357"/>
+<taskend task="NSE" time="1752984409"/>
+<taskbegin task="NSE" time="1752984409"/>
+<taskend task="NSE" time="1752984470"/>
+<taskbegin task="NSE" time="1752984470"/>
+<taskend task="NSE" time="1752984483"/>
+<host starttime="1752983690" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.1" addrtype="ipv4"/>
+<address addr="BC:24:11:7C:04:E1" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65530">
+<extrareasons reason="no-responses" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="10.0" extrainfo="protocol 2.0" ostype="FreeBSD" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:10.0</cpe><cpe>cpe:/o:freebsd:freebsd</cpe></service></port>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" product="Unbound" version="1.23.0" method="probed" conf="10"><cpe>cpe:/a:nlnetlabs:unbound:1.23.0</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="OPNsense" servicefp="SF-Port80-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(GetRequest,8FC,&quot;HTTP/1\.0\x20200\x20OK\r\nSet-Cookie:\x20PHPSESSID=25dfb8218591c1c45eed5f28cacd843e;\x20path=/;\x20HttpOnly;\x20SameSite=Lax\r\nSet-Cookie:\x20PHPSESSID=25dfb8218591c1c45eed5f28cacd843e;\x20path=/;\x20HttpOnly\r\nExpires:\x20Thu,\x2019\x20Nov\x201981\x2008:52:00\x20GMT\r\nCache-Control:\x20no-store,\x20no-cache,\x20must-revalidate\r\nPragma:\x20no-cache\r\nContent-Security-Policy:\x20default-src\x20&apos;self&apos;;\x20script-src\x20&apos;self&apos;\x20&apos;unsafe-inline&apos;\x20&apos;unsafe-eval&apos;;\x20style-src\x20&apos;self&apos;\x20&apos;unsafe-inline&apos;\x20&apos;unsafe-eval&apos;;\r\nX-Frame-Options:\x20SAMEORIGIN\r\nX-Content-Type-Options:\x20nosniff\r\nX-XSS-Protection:\x201;\x20mode=block\r\nReferrer-Policy:\x20same-origin\r\nContent-type:\x20text/html;\x20charset=UTF-8\r\nContent-Length:\x201605\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nServer:\x20OPNsense\r\n\r\n&lt;!doctype\x20html&gt;\n&lt;html\x20lang=\&quot;en-US\&quot;\x20class=\&quot;no-js\&quot;&gt;\n\x20\x20&lt;head&gt;\n\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;X-UA-Compatible\&quot;\x20content=\&quot;IE=edge\&quot;&gt;\n\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;robots\&quot;\x20content=\&quot;noindex,\x20nofollow\&quot;\x20/&gt;\n\x20\x20&quot;)%r(HTTPOptions,390,&quot;HTTP/1\.0\x20403\x20Forbidden\r\nSet-Cookie:\x20PHPSESSID=47444ff49bf92697bbe2e11558732f16;\x20path=/;\x20HttpOnly;\x20SameSite=Lax\r\nExpires:\x20Thu,\x2019\x20Nov\x201981\x2008:52:00\x20GMT\r\nCache-Control:\x20no-store,\x20no-cache,\x20must-revalidate\r\nPragma:\x20no-cache\r\nContent-type:\x20text/html;\x20charset=UTF-8\r\nContent-Length:\x20553\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nServer:\x20OPNsense\r\n\r\n&lt;html&gt;&lt;head&gt;&lt;title&gt;CSRF\x20check\x20failed&lt;/title&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;script&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\$\(\x20document\x20\)\.ready\(function\(\)\x20{\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\$\.ajaxSetup\({\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&apos;beforeSend&apos;:\x20function\(xhr\)\x20{\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20xhr\.setRequestHeader\(\&quot;X-CSRFToken\&quot;,\x20\&quot;F6LoyRRf05V3aUdJHFE_tg\&quot;\x20\);\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20}\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20}\);\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20}\);\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;/script&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;/head&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;body&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;p&gt;CSRF\x20check\x20failed\.\x20Your\x20form\x20session\x20may\x20have\x20expired,\x20or\x20you\x20may\x20not\x20have\x20cookies\x20enabled\.&lt;/p&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20&lt;/&quot;);" method="probed" conf="10"/><script id="fingerprint-strings" output="&#xa;  GetRequest: &#xa;    HTTP/1.0 200 OK&#xa;    Set-Cookie: PHPSESSID=25dfb8218591c1c45eed5f28cacd843e; path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: PHPSESSID=25dfb8218591c1c45eed5f28cacd843e; path=/; HttpOnly&#xa;    Expires: Thu, 19 Nov 1981 08:52:00 GMT&#xa;    Cache-Control: no-store, no-cache, must-revalidate&#xa;    Pragma: no-cache&#xa;    Content-Security-Policy: default-src &apos;self&apos;; script-src &apos;self&apos; &apos;unsafe-inline&apos; &apos;unsafe-eval&apos;; style-src &apos;self&apos; &apos;unsafe-inline&apos; &apos;unsafe-eval&apos;;&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    X-Content-Type-Options: nosniff&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Referrer-Policy: same-origin&#xa;    Content-type: text/html; charset=UTF-8&#xa;    Content-Length: 1605&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Server: OPNsense&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en-US&quot; class=&quot;no-js&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot; /&gt;&#xa;    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge&quot;&gt;&#xa;    &lt;meta name=&quot;robots&quot; content=&quot;noindex, nofollow&quot; /&gt;&#xa;  HTTPOptions: &#xa;    HTTP/1.0 403 Forbidden&#xa;    Set-Cookie: PHPSESSID=47444ff49bf92697bbe2e11558732f16; path=/; HttpOnly; SameSite=Lax&#xa;    Expires: Thu, 19 Nov 1981 08:52:00 GMT&#xa;    Cache-Control: no-store, no-cache, must-revalidate&#xa;    Pragma: no-cache&#xa;    Content-type: text/html; charset=UTF-8&#xa;    Content-Length: 553&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Server: OPNsense&#xa;    &lt;html&gt;&lt;head&gt;&lt;title&gt;CSRF check failed&lt;/title&gt;&#xa;    &lt;script&gt;&#xa;    document ).ready(function() {&#xa;    $.ajaxSetup({&#xa;    &apos;beforeSend&apos;: function(xhr) {&#xa;    xhr.setRequestHeader(&quot;X-CSRFToken&quot;, &quot;F6LoyRRf05V3aUdJHFE_tg&quot; );&#xa;    &lt;/script&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;p&gt;CSRF check failed. Your form session may have expired, or you may not have cookies enabled.&lt;/p&gt;"><elem key="GetRequest">&#xa;    HTTP/1.0 200 OK&#xa;    Set-Cookie: PHPSESSID=25dfb8218591c1c45eed5f28cacd843e; path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: PHPSESSID=25dfb8218591c1c45eed5f28cacd843e; path=/; HttpOnly&#xa;    Expires: Thu, 19 Nov 1981 08:52:00 GMT&#xa;    Cache-Control: no-store, no-cache, must-revalidate&#xa;    Pragma: no-cache&#xa;    Content-Security-Policy: default-src &apos;self&apos;; script-src &apos;self&apos; &apos;unsafe-inline&apos; &apos;unsafe-eval&apos;; style-src &apos;self&apos; &apos;unsafe-inline&apos; &apos;unsafe-eval&apos;;&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    X-Content-Type-Options: nosniff&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Referrer-Policy: same-origin&#xa;    Content-type: text/html; charset=UTF-8&#xa;    Content-Length: 1605&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Server: OPNsense&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en-US&quot; class=&quot;no-js&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot; /&gt;&#xa;    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge&quot;&gt;&#xa;    &lt;meta name=&quot;robots&quot; content=&quot;noindex, nofollow&quot; /&gt;</elem>
+<elem key="HTTPOptions">&#xa;    HTTP/1.0 403 Forbidden&#xa;    Set-Cookie: PHPSESSID=47444ff49bf92697bbe2e11558732f16; path=/; HttpOnly; SameSite=Lax&#xa;    Expires: Thu, 19 Nov 1981 08:52:00 GMT&#xa;    Cache-Control: no-store, no-cache, must-revalidate&#xa;    Pragma: no-cache&#xa;    Content-type: text/html; charset=UTF-8&#xa;    Content-Length: 553&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Server: OPNsense&#xa;    &lt;html&gt;&lt;head&gt;&lt;title&gt;CSRF check failed&lt;/title&gt;&#xa;    &lt;script&gt;&#xa;    document ).ready(function() {&#xa;    $.ajaxSetup({&#xa;    &apos;beforeSend&apos;: function(xhr) {&#xa;    xhr.setRequestHeader(&quot;X-CSRFToken&quot;, &quot;F6LoyRRf05V3aUdJHFE_tg&quot; );&#xa;    &lt;/script&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;p&gt;CSRF check failed. Your form session may have expired, or you may not have cookies enabled.&lt;/p&gt;</elem>
+</script><script id="http-server-header" output="OPNsense"><elem>OPNsense</elem>
+</script><script id="http-trane-info" output="Problem with XML parsing of /evox/about"/><script id="http-vuln-cve2010-0738" output="&#xa;  /jmx-console/: Authentication was not required&#xa;"/><script id="http-vuln-cve2017-1001000" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="3000"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Mongoose httpd" method="probed" conf="10"><cpe>cpe:/a:cesanta:mongoose</cpe></service><script id="http-server-header" output="ntopng 6.4.250617 (amd64)"><elem>ntopng 6.4.250617 (amd64)</elem>
+</script><script id="http-trane-info" output="Problem with XML parsing of /evox/about"/><script id="http-vuln-cve2010-0738" output="&#xa;  /jmx-console/: Authentication was not required&#xa;"/><script id="http-vuln-cve2017-1001000" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="tcp" portid="6379"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="redis" servicefp="SF-Port6379-TCP:V=7.80%I=7%D=7/20%Time=687C6AA2%P=x86_64-pc-linux-gnu%r(NULL,42A,&quot;-DENIED\x20Redis\x20is\x20running\x20in\x20protected\x20mode\x20because\x20protected\x20mode\x20is\x20enabled\x20and\x20no\x20password\x20is\x20set\x20for\x20the\x20default\x20user\.\x20In\x20this\x20mode\x20connections\x20are\x20only\x20accepted\x20from\x20the\x20loopback\x20interface\.\x20If\x20you\x20want\x20to\x20connect\x20from\x20external\x20computers\x20to\x20Redis\x20you\x20may\x20adopt\x20one\x20of\x20the\x20following\x20solutions:\x201\)\x20Just\x20disable\x20protected\x20mode\x20sending\x20the\x20command\x20&apos;CONFIG\x20SET\x20protected-mode\x20no&apos;\x20from\x20the\x20loopback\x20interface\x20by\x20connecting\x20to\x20Redis\x20from\x20the\x20same\x20host\x20the\x20server\x20is\x20running,\x20however\x20MAKE\x20SURE\x20Redis\x20is\x20not\x20publicly\x20accessible\x20from\x20internet\x20if\x20you\x20do\x20so\.\x20Use\x20CONFIG\x20REWRITE\x20to\x20make\x20this\x20change\x20permanent\.\x202\)\x20Alternatively\x20you\x20can\x20just\x20disable\x20the\x20protected\x20mode\x20by\x20editing\x20the\x20Redis\x20configuration\x20file,\x20and\x20setting\x20the\x20protected\x20mode\x20option\x20to\x20&apos;no&apos;,\x20and\x20then\x20restarting\x20the\x20server\.\x203\)\x20If\x20you\x20started\x20the\x20server\x20manually\x20just\x20for\x20testing,\x20restart\x20it\x20with\x20the\x20&apos;-&#45;protected-mode\x20no&apos;\x20option\.\x204\)\x20Set\x20up\x20an\x20auth&quot;)%r(redis-server,42A,&quot;-DENIED\x20Redis\x20is\x20running\x20in\x20protected\x20mode\x20because\x20protected\x20mode\x20is\x20enabled\x20and\x20no\x20password\x20is\x20set\x20for\x20the\x20default\x20user\.\x20In\x20this\x20mode\x20connections\x20are\x20only\x20accepted\x20from\x20the\x20loopback\x20interface\.\x20If\x20you\x20want\x20to\x20connect\x20from\x20external\x20computers\x20to\x20Redis\x20you\x20may\x20adopt\x20one\x20of\x20the\x20following\x20solutions:\x201\)\x20Just\x20disable\x20protected\x20mode\x20sending\x20the\x20command\x20&apos;CONFIG\x20SET\x20protected-mode\x20no&apos;\x20from\x20the\x20loopback\x20interface\x20by\x20connecting\x20to\x20Redis\x20from\x20the\x20same\x20host\x20the\x20server\x20is\x20running,\x20however\x20MAKE\x20SURE\x20Redis\x20is\x20not\x20publicly\x20accessible\x20from\x20internet\x20if\x20you\x20do\x20so\.\x20Use\x20CONFIG\x20REWRITE\x20to\x20make\x20this\x20change\x20permanent\.\x202\)\x20Alternatively\x20you\x20can\x20just\x20disable\x20the\x20protected\x20mode\x20by\x20editing\x20the\x20Redis\x20configuration\x20file,\x20and\x20setting\x20the\x20protected\x20mode\x20option\x20to\x20&apos;no&apos;,\x20and\x20then\x20restarting\x20the\x20server\.\x203\)\x20If\x20you\x20started\x20the\x20server\x20manually\x20just\x20for\x20testing,\x20restart\x20it\x20with\x20the\x20&apos;-&#45;protected-mode\x20no&apos;\x20option\.\x204\)\x20Set\x20up\x20an\x20auth&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  NULL, redis-server: &#xa;    -DENIED Redis is running in protected mode because protected mode is enabled and no password is set for the default user. In this mode connections are only accepted from the loopback interface. If you want to connect from external computers to Redis you may adopt one of the following solutions: 1) Just disable protected mode sending the command &apos;CONFIG SET protected-mode no&apos; from the loopback interface by connecting to Redis from the same host the server is running, however MAKE SURE Redis is not publicly accessible from internet if you do so. Use CONFIG REWRITE to make this change permanent. 2) Alternatively you can just disable the protected mode by editing the Redis configuration file, and setting the protected mode option to &apos;no&apos;, and then restarting the server. 3) If you started the server manually just for testing, restart it with the &apos;-&#45;protected-mode no&apos; option. 4) Set up an auth"><elem key="NULL, redis-server">&#xa;    -DENIED Redis is running in protected mode because protected mode is enabled and no password is set for the default user. In this mode connections are only accepted from the loopback interface. If you want to connect from external computers to Redis you may adopt one of the following solutions: 1) Just disable protected mode sending the command &apos;CONFIG SET protected-mode no&apos; from the loopback interface by connecting to Redis from the same host the server is running, however MAKE SURE Redis is not publicly accessible from internet if you do so. Use CONFIG REWRITE to make this change permanent. 2) Alternatively you can just disable the protected mode by editing the Redis configuration file, and setting the protected mode option to &apos;no&apos;, and then restarting the server. 3) If you started the server manually just for testing, restart it with the &apos;-&#45;protected-mode no&apos; option. 4) Set up an auth</elem>
+</script></port>
+</ports>
+<times srtt="665" rttvar="140" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984483"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.9" addrtype="ipv4"/>
+<address addr="00:1D:71:B9:11:C0" addrtype="mac" vendor="Cisco Systems"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65531">
+<extrareasons reason="no-responses" count="65531"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="ssh" product="Cisco SSH" version="1.25" extrainfo="protocol 2.0" ostype="IOS" method="probed" conf="10"><cpe>cpe:/a:cisco:ssh:1.25</cpe><cpe>cpe:/o:cisco:ios</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="http" product="Cisco IOS http config" ostype="IOS" method="probed" conf="10"><cpe>cpe:/o:cisco:ios</cpe></service><script id="http-server-header" output="cisco-IOS"><elem>cisco-IOS</elem>
+</script></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="https" tunnel="ssl" method="table" conf="3"/><script id="http-vuln-cve2014-3704" output="ERROR: Script execution failed (use -d to debug)"/><script id="ssl-date" output="2025-07-20T04:06:49+00:00; 0s from scanner time."><elem key="delta">0.0</elem>
+<elem key="date">2025-07-20T04:06:49+00:00</elem>
+</script><script id="ssl-enum-ciphers" output="&#xa;  SSLv3: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA - F&#xa;      TLS_RSA_WITH_DES_CBC_SHA - F&#xa;      TLS_RSA_WITH_RC4_128_MD5 - F&#xa;      TLS_RSA_WITH_RC4_128_SHA - F&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: client&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;      64-bit block cipher DES vulnerable to SWEET32 attack&#xa;      Broken cipher RC4 is deprecated by RFC 7465&#xa;      CBC-mode cipher in SSLv3 (CVE-2014-3566)&#xa;      Ciphersuite uses MD5 for message integrity&#xa;      Forward Secrecy not supported by any cipher&#xa;      Insecure certificate signature: MD5&#xa;  least strength: F"><table key="SSLv3">
+<table key="ciphers">
+<table>
+<elem key="strength">F</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+</table>
+<table>
+<elem key="strength">F</elem>
+<elem key="name">TLS_RSA_WITH_DES_CBC_SHA</elem>
+</table>
+<table>
+<elem key="strength">F</elem>
+<elem key="name">TLS_RSA_WITH_RC4_128_MD5</elem>
+</table>
+<table>
+<elem key="strength">F</elem>
+<elem key="name">TLS_RSA_WITH_RC4_128_SHA</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">client</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+<elem>64-bit block cipher DES vulnerable to SWEET32 attack</elem>
+<elem>Broken cipher RC4 is deprecated by RFC 7465</elem>
+<elem>CBC-mode cipher in SSLv3 (CVE-2014-3566)</elem>
+<elem>Ciphersuite uses MD5 for message integrity</elem>
+<elem>Forward Secrecy not supported by any cipher</elem>
+<elem>Insecure certificate signature: MD5</elem>
+</table>
+</table>
+<elem key="least strength">F</elem>
+</script><script id="ssl-poodle" output="&#xa;  VULNERABLE:&#xa;  SSL POODLE information leak&#xa;    State: VULNERABLE&#xa;    IDs:  BID:70574  CVE:CVE-2014-3566&#xa;          The SSL protocol 3.0, as used in OpenSSL through 1.0.1i and other&#xa;          products, uses nondeterministic CBC padding, which makes it easier&#xa;          for man-in-the-middle attackers to obtain cleartext data via a&#xa;          padding-oracle attack, aka the &quot;POODLE&quot; issue.&#xa;    Disclosure date: 2014-10-14&#xa;    Check results:&#xa;      TLS_RSA_WITH_DES_CBC_SHA&#xa;    References:&#xa;      https://www.imperialviolet.org/2014/10/14/poodle.html&#xa;      https://www.openssl.org/~bodo/ssl-poodle.pdf&#xa;      https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-3566&#xa;      https://www.securityfocus.com/bid/70574&#xa;"><table key="CVE-2014-3566">
+<elem key="title">SSL POODLE information leak</elem>
+<elem key="state">VULNERABLE</elem>
+<table key="ids">
+<elem>BID:70574</elem>
+<elem>CVE:CVE-2014-3566</elem>
+</table>
+<table key="description">
+<elem>    The SSL protocol 3.0, as used in OpenSSL through 1.0.1i and other&#xa;    products, uses nondeterministic CBC padding, which makes it easier&#xa;    for man-in-the-middle attackers to obtain cleartext data via a&#xa;    padding-oracle attack, aka the &quot;POODLE&quot; issue.</elem>
+</table>
+<table key="dates">
+<table key="disclosure">
+<elem key="year">2014</elem>
+<elem key="month">10</elem>
+<elem key="day">14</elem>
+</table>
+</table>
+<elem key="disclosure">2014-10-14</elem>
+<table key="check_results">
+<elem>TLS_RSA_WITH_DES_CBC_SHA</elem>
+</table>
+<table key="refs">
+<elem>https://www.imperialviolet.org/2014/10/14/poodle.html</elem>
+<elem>https://www.openssl.org/~bodo/ssl-poodle.pdf</elem>
+<elem>https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-3566</elem>
+<elem>https://www.securityfocus.com/bid/70574</elem>
+</table>
+</table>
+</script><script id="sslv2-drown" output="&#xa;"></script></port>
+<port protocol="tcp" portid="4786"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="smart-install" method="table" conf="3"/></port>
+</ports>
+<times srtt="2642" rttvar="1781" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.10" addrtype="ipv4"/>
+<address addr="50:91:E3:68:62:F6" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65530">
+<extrareasons reason="no-responses" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="9.2p1 Debian 2+deb12u6" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.2p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" version="2-4" extrainfo="RPC #100000" method="probed" conf="10"/><script id="rpcinfo" output="&#xa;  program version    port/proto  service&#xa;  100000  2,3,4        111/tcp   rpcbind&#xa;  100000  2,3,4        111/udp   rpcbind&#xa;  100000  3,4          111/tcp6  rpcbind&#xa;  100000  3,4          111/udp6  rpcbind&#xa;"><table key="100000">
+<table key="tcp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="local">
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">/run/rpcbind.sock</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="tcp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+</table>
+</script></port>
+<port protocol="tcp" portid="3128"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Proxmox Virtual Environment REST API" version="3.0" method="probed" conf="10"><cpe>cpe:/a:proxmox:proxmox_virtual_environment:3.0</cpe></service><script id="http-server-header" output="pve-api-daemon/3.0"><elem>pve-api-daemon/3.0</elem>
+</script></port>
+<port protocol="tcp" portid="8006"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="wpl-analytics" servicefp="SF-Port8006-TCP:V=7.80%I=7%D=7/20%Time=687C6AB6%P=x86_64-pc-linux-gnu%r(HTTPOptions,D7,&quot;HTTP/1\.0\x20501\x20method\x20&apos;OPTIONS&apos;\x20not\x20available\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\n&quot;)%r(RTSPRequest,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\nbad\x20request&quot;)%r(Help,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(TerminalServerCookie,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(Kerberos,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(LPDString,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;)%r(LDAPSearchReq,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  HTTPOptions: &#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;  Help, Kerberos, TerminalServerCookie: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request&#xa;  LDAPSearchReq, LPDString: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request&#xa;  RTSPRequest: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request"><elem key="HTTPOptions">&#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT</elem>
+<elem key="Help, Kerberos, TerminalServerCookie">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request</elem>
+<elem key="LDAPSearchReq, LPDString">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request</elem>
+</script></port>
+<port protocol="tcp" portid="9221"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="unknown" servicefp="SF-Port9221-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(GenericLines,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;)%r(GetRequest,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;)%r(HTTPOptions,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  GenericLines: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request&#xa;  GetRequest, HTTPOptions: &#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604"><elem key="GenericLines">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request</elem>
+<elem key="GetRequest, HTTPOptions">&#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604</elem>
+</script></port>
+</ports>
+<times srtt="545" rttvar="97" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.11" addrtype="ipv4"/>
+<address addr="B8:85:84:AD:F5:C4" addrtype="mac" vendor="Dell"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65529">
+<extrareasons reason="no-responses" count="65529"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="9.2p1 Debian 2+deb12u6" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.2p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" product="dnsmasq" version="2.90" method="probed" conf="10"><cpe>cpe:/a:thekelleys:dnsmasq:2.90</cpe></service></port>
+<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" version="2-4" extrainfo="RPC #100000" method="probed" conf="10"/><script id="rpcinfo" output="&#xa;  program version    port/proto  service&#xa;  100000  2,3,4        111/tcp   rpcbind&#xa;  100000  2,3,4        111/udp   rpcbind&#xa;  100000  3,4          111/tcp6  rpcbind&#xa;  100000  3,4          111/udp6  rpcbind&#xa;"><table key="100000">
+<table key="tcp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="local">
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">/run/rpcbind.sock</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="tcp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+</table>
+</script></port>
+<port protocol="tcp" portid="3128"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Proxmox Virtual Environment REST API" version="3.0" method="probed" conf="10"><cpe>cpe:/a:proxmox:proxmox_virtual_environment:3.0</cpe></service><script id="http-server-header" output="pve-api-daemon/3.0"><elem>pve-api-daemon/3.0</elem>
+</script></port>
+<port protocol="tcp" portid="8006"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="wpl-analytics" servicefp="SF-Port8006-TCP:V=7.80%I=7%D=7/20%Time=687C6AB6%P=x86_64-pc-linux-gnu%r(HTTPOptions,D7,&quot;HTTP/1\.0\x20501\x20method\x20&apos;OPTIONS&apos;\x20not\x20available\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\n&quot;)%r(RTSPRequest,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\nbad\x20request&quot;)%r(Help,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(TerminalServerCookie,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(Kerberos,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(LPDString,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;)%r(LDAPSearchReq,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  HTTPOptions: &#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;  Help, Kerberos, TerminalServerCookie: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request&#xa;  LDAPSearchReq, LPDString: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request&#xa;  RTSPRequest: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request"><elem key="HTTPOptions">&#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT</elem>
+<elem key="Help, Kerberos, TerminalServerCookie">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request</elem>
+<elem key="LDAPSearchReq, LPDString">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request</elem>
+</script></port>
+<port protocol="tcp" portid="9221"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="unknown" servicefp="SF-Port9221-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(GenericLines,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;)%r(GetRequest,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;)%r(HTTPOptions,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  GenericLines: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request&#xa;  GetRequest, HTTPOptions: &#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604"><elem key="GenericLines">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request</elem>
+<elem key="GetRequest, HTTPOptions">&#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604</elem>
+</script></port>
+</ports>
+<times srtt="430" rttvar="67" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.12" addrtype="ipv4"/>
+<address addr="B8:85:84:AE:0E:7D" addrtype="mac" vendor="Dell"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65530">
+<extrareasons reason="no-responses" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="9.2p1 Debian 2+deb12u6" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.2p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" version="2-4" extrainfo="RPC #100000" method="probed" conf="10"/><script id="rpcinfo" output="&#xa;  program version    port/proto  service&#xa;  100000  2,3,4        111/tcp   rpcbind&#xa;  100000  2,3,4        111/udp   rpcbind&#xa;  100000  3,4          111/tcp6  rpcbind&#xa;  100000  3,4          111/udp6  rpcbind&#xa;"><table key="100000">
+<table key="tcp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="local">
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">/run/rpcbind.sock</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp">
+<elem key="port">111</elem>
+<table key="version">
+<elem>2</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">0.0.0.0</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="udp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+<table key="tcp6">
+<elem key="port">111</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="addr">::</elem>
+<elem key="owner">superuser</elem>
+</table>
+</table>
+</script></port>
+<port protocol="tcp" portid="3128"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Proxmox Virtual Environment REST API" version="3.0" method="probed" conf="10"><cpe>cpe:/a:proxmox:proxmox_virtual_environment:3.0</cpe></service><script id="http-server-header" output="pve-api-daemon/3.0"><elem>pve-api-daemon/3.0</elem>
+</script></port>
+<port protocol="tcp" portid="8006"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="wpl-analytics" servicefp="SF-Port8006-TCP:V=7.80%I=7%D=7/20%Time=687C6AB6%P=x86_64-pc-linux-gnu%r(HTTPOptions,D7,&quot;HTTP/1\.0\x20501\x20method\x20&apos;OPTIONS&apos;\x20not\x20available\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\n&quot;)%r(RTSPRequest,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:06\x20GMT\r\n\r\nbad\x20request&quot;)%r(Help,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(TerminalServerCookie,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(Kerberos,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:21\x20GMT\r\n\r\nbad\x20request&quot;)%r(LPDString,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;)%r(LDAPSearchReq,E3,&quot;HTTP/1\.0\x20400\x20bad\x20request\r\nCache-Control:\x20max-age=0\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\nPragma:\x20no-cache\r\nServer:\x20pve-api-daemon/3\.0\r\nContent-Length:\x2011\r\nExpires:\x20Sun,\x2020\x20Jul\x202025\x2004:04:31\x20GMT\r\n\r\nbad\x20request&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  HTTPOptions: &#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;  Help, Kerberos, TerminalServerCookie: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request&#xa;  LDAPSearchReq, LPDString: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request&#xa;  RTSPRequest: &#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request"><elem key="HTTPOptions">&#xa;    HTTP/1.0 501 method &apos;OPTIONS&apos; not available&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT</elem>
+<elem key="Help, Kerberos, TerminalServerCookie">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:21 GMT&#xa;    request</elem>
+<elem key="LDAPSearchReq, LPDString">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:31 GMT&#xa;    request</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.0 400 bad request&#xa;    Cache-Control: max-age=0&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    Pragma: no-cache&#xa;    Server: pve-api-daemon/3.0&#xa;    Content-Length: 11&#xa;    Expires: Sun, 20 Jul 2025 04:04:06 GMT&#xa;    request</elem>
+</script></port>
+<port protocol="tcp" portid="9221"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="unknown" servicefp="SF-Port9221-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(GenericLines,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;)%r(GetRequest,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;)%r(HTTPOptions,436,&quot;HTTP/1\.0\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=UTF-8\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nContent-Length:\x20961\r\n\r\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;Node\x20Exporter&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;body\x20{\n\x20\x20font-family:\x20-apple-system,BlinkMacSystemFont,Segoe\x20UI,Roboto,Helvetica\x20Neue,Arial,Noto\x20Sans,Liberation\x20Sans,sans-serif,Apple\x20Color\x20Emoji,Segoe\x20UI\x20Emoji,Segoe\x20UI\x20Symbol,Noto\x20Color\x20Emoji;\n\x20\x20margin:\x200;\n}\nheader\x20{\n\x20\x20background-color:\x20#e6522c;\n\x20\x20color:\x20#fff;\n\x20\x20font-size:\x201rem;\n\x20\x20padding:\x201rem;\n}\nmain\x20{\n\x20\x20padding:\x201rem;\n}\nlabel\x20{\n\x20\x20display:\x20inline-block;\n\x20\x20width:\x200\.5em;\n}\n\n&lt;/style&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body&gt;\n\x20\x20\x20\x20&lt;header&gt;\n\x20\x20\x20\x20\x20\x20&lt;h1&gt;Node\x20Exporter&lt;/h1&gt;\n\x20\x20\x20\x20&lt;/header&gt;\n\x20\x20\x20\x20&lt;main&gt;\n\x20\x20\x20\x20\x20\x20&lt;h2&gt;Prometheus\x20Node\x20Exporter&lt;/h2&gt;\n\x20\x20\x20\x20\x20\x20&lt;div&gt;Version:\x20\(version=1\.7\.0,\x20branch=HEAD,\x20revision=7333465abf9efba81876303bb57e6fadb94604&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  GenericLines: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request&#xa;  GetRequest, HTTPOptions: &#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604"><elem key="GenericLines">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request</elem>
+<elem key="GetRequest, HTTPOptions">&#xa;    HTTP/1.0 200 OK&#xa;    Content-Type: text/html; charset=UTF-8&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Content-Length: 961&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;&#xa;    &lt;title&gt;Node Exporter&lt;/title&gt;&#xa;    &lt;style&gt;body {&#xa;    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,Liberation Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;&#xa;    margin: 0;&#xa;    header {&#xa;    background-color: #e6522c;&#xa;    color: #fff;&#xa;    font-size: 1rem;&#xa;    padding: 1rem;&#xa;    main {&#xa;    padding: 1rem;&#xa;    label {&#xa;    display: inline-block;&#xa;    width: 0.5em;&#xa;    &lt;/style&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;header&gt;&#xa;    &lt;h1&gt;Node Exporter&lt;/h1&gt;&#xa;    &lt;/header&gt;&#xa;    &lt;main&gt;&#xa;    &lt;h2&gt;Prometheus Node Exporter&lt;/h2&gt;&#xa;    &lt;div&gt;Version: (version=1.7.0, branch=HEAD, revision=7333465abf9efba81876303bb57e6fadb94604</elem>
+</script></port>
+</ports>
+<times srtt="56" rttvar="8" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.13" addrtype="ipv4"/>
+<address addr="EE:7F:23:EA:BF:73" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65530">
+<extrareasons reason="no-responses" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="8.4p1 Debian 5+deb11u3" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.4p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" product="dnsmasq" version="pi-hole-v2.90+1" method="probed" conf="10"><cpe>cpe:/a:thekelleys:dnsmasq:pi-hole-v2.90%2B1</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="lighttpd" version="1.4.59" method="probed" conf="10"><cpe>cpe:/a:lighttpd:lighttpd:1.4.59</cpe></service><script id="http-server-header" output="lighttpd/1.4.59"><elem>lighttpd/1.4.59</elem>
+</script></port>
+<port protocol="tcp" portid="5355"><state state="open" reason="syn-ack" reason_ttl="1"/><service name="llmnr" method="table" conf="3"/></port>
+<port protocol="tcp" portid="9617"><state state="open" reason="syn-ack" reason_ttl="63"/><service name="http" product="Golang net/http server" extrainfo="Go-IPFS json-rpc or InfluxDB API" method="probed" conf="10"><cpe>cpe:/a:protocol_labs:go-ipfs</cpe></service></port>
+</ports>
+<times srtt="505" rttvar="53" to="100000"/>
+</host>
+<host starttime="1752983692" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.100" addrtype="ipv4"/>
+<address addr="BC:24:11:47:79:DE" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65532">
+<extrareasons reason="no-responses" count="65532"/>
+</extraports>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="ssl-cert" output="Subject: commonName=DESKTOP-LAB&#xa;Issuer: commonName=DESKTOP-LAB&#xa;Public Key type: rsa&#xa;Public Key bits: 2048&#xa;Signature Algorithm: sha256WithRSAEncryption&#xa;Not valid before: 2025-03-13T04:58:50&#xa;Not valid after:  2025-09-12T04:58:50&#xa;MD5:   44b1 06fc 293a 5247 e65c c42c 816b ca19&#xa;SHA-1: dd38 9d2c 89e5 f35d 0a14 f502 1d4e 1c30 04ec 0fff&#xa;-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIC2jCCAcKgAwIBAgIQcm5+nkrCVbhFeZRJKw1/cTANBgkqhkiG9w0BAQsFADAW&#xa;MRQwEgYDVQQDEwtERVNLVE9QLUxBQjAeFw0yNTAzMTMwNDU4NTBaFw0yNTA5MTIw&#xa;NDU4NTBaMBYxFDASBgNVBAMTC0RFU0tUT1AtTEFCMIIBIjANBgkqhkiG9w0BAQEF&#xa;AAOCAQ8AMIIBCgKCAQEAtpsujsJF1c2jGVOXLn/xlz24KpN+uWqfaKF6BzHDuvPL&#xa;d43pzUnb3MghMeobfQL1s07InhpBfVjb87ofRiJyPQ6Ghp+JKfLFRnaEVD8ch9qD&#xa;euSpw2QY1M98OMI55x4a7Oyn95CLYO0q9LIRN4s56FTic4aYHXBxWQkVgmfTYdQb&#xa;FhWh9S0PTOJZw9zPses9WX2Qk/3WTKJ81aghBxmefnqKPg7PBlsOjRDbGDoNFuCk&#xa;ut4+ZkXABI/yBxHdiDcfHgoiQUWkuwFFHXoaHHKOieY2hZZ3ynzGrFQ+Ury6u8we&#xa;LjdlS+d2wHSalhrLDVYR/TMN2NNyN5ow05BzFZPNyQIDAQABoyQwIjATBgNVHSUE&#xa;DDAKBggrBgEFBQcDATALBgNVHQ8EBAMCBDAwDQYJKoZIhvcNAQELBQADggEBADaZ&#xa;okGTdnR6DJ+BmXCxC4NfjcT6XA3hD81/nKbQAybCipvvpEohGqwnYP3z2IRAOpVL&#xa;sOMuxiXIM0/clM42qDq6XjBL9cKBIvzY8YlrpTZaMdp+cZH/NRxcjSOVXhN35fgC&#xa;E1ZUUSRB3+9CsdDrUllnhrw7ZbHL3aZVHvqHDo+AQsLiXF/yyAaTVLRbNhlwzmZy&#xa;SN3fANcPuzXF/qI84evNxBb5+0S9EWUoxQQtyD+xVNfBZ3kIrXesw+aPcuFVBtEW&#xa;gQ5+dKPVn354kgw5OG7pa5j8srrpqmCV6DA3UlE1Lfgym+74EiYTvTR59688rta+&#xa;SFnb7NtDooAAf4L41p8=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;"><table key="subject">
+<elem key="commonName">DESKTOP-LAB</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">DESKTOP-LAB</elem>
+</table>
+<table key="pubkey">
+<elem key="exponent">userdata: 0x593f8f7e7e38</elem>
+<elem key="bits">2048</elem>
+<elem key="modulus">userdata: 0x593f8f7e7ec8</elem>
+<elem key="type">rsa</elem>
+</table>
+<table key="extensions">
+<table>
+<elem key="value">TLS Web Server Authentication</elem>
+<elem key="name">X509v3 Extended Key Usage</elem>
+</table>
+<table>
+<elem key="value">Key Encipherment, Data Encipherment</elem>
+<elem key="name">X509v3 Key Usage</elem>
+</table>
+</table>
+<elem key="sig_algo">sha256WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2025-03-13T04:58:50</elem>
+<elem key="notAfter">2025-09-12T04:58:50</elem>
+</table>
+<elem key="md5">44b106fc293a5247e65cc42c816bca19</elem>
+<elem key="sha1">dd389d2c89e5f35d0a14f5021d4e1c3004ec0fff</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIC2jCCAcKgAwIBAgIQcm5+nkrCVbhFeZRJKw1/cTANBgkqhkiG9w0BAQsFADAW&#xa;MRQwEgYDVQQDEwtERVNLVE9QLUxBQjAeFw0yNTAzMTMwNDU4NTBaFw0yNTA5MTIw&#xa;NDU4NTBaMBYxFDASBgNVBAMTC0RFU0tUT1AtTEFCMIIBIjANBgkqhkiG9w0BAQEF&#xa;AAOCAQ8AMIIBCgKCAQEAtpsujsJF1c2jGVOXLn/xlz24KpN+uWqfaKF6BzHDuvPL&#xa;d43pzUnb3MghMeobfQL1s07InhpBfVjb87ofRiJyPQ6Ghp+JKfLFRnaEVD8ch9qD&#xa;euSpw2QY1M98OMI55x4a7Oyn95CLYO0q9LIRN4s56FTic4aYHXBxWQkVgmfTYdQb&#xa;FhWh9S0PTOJZw9zPses9WX2Qk/3WTKJ81aghBxmefnqKPg7PBlsOjRDbGDoNFuCk&#xa;ut4+ZkXABI/yBxHdiDcfHgoiQUWkuwFFHXoaHHKOieY2hZZ3ynzGrFQ+Ury6u8we&#xa;LjdlS+d2wHSalhrLDVYR/TMN2NNyN5ow05BzFZPNyQIDAQABoyQwIjATBgNVHSUE&#xa;DDAKBggrBgEFBQcDATALBgNVHQ8EBAMCBDAwDQYJKoZIhvcNAQELBQADggEBADaZ&#xa;okGTdnR6DJ+BmXCxC4NfjcT6XA3hD81/nKbQAybCipvvpEohGqwnYP3z2IRAOpVL&#xa;sOMuxiXIM0/clM42qDq6XjBL9cKBIvzY8YlrpTZaMdp+cZH/NRxcjSOVXhN35fgC&#xa;E1ZUUSRB3+9CsdDrUllnhrw7ZbHL3aZVHvqHDo+AQsLiXF/yyAaTVLRbNhlwzmZy&#xa;SN3fANcPuzXF/qI84evNxBb5+0S9EWUoxQQtyD+xVNfBZ3kIrXesw+aPcuFVBtEW&#xa;gQ5+dKPVn354kgw5OG7pa5j8srrpqmCV6DA3UlE1Lfgym+74EiYTvTR59688rta+&#xa;SFnb7NtDooAAf4L41p8=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script><script id="ssl-date" output="2025-07-20T04:06:49+00:00; -1s from scanner time."><elem key="delta">-1.0</elem>
+<elem key="date">2025-07-20T04:06:49+00:00</elem>
+</script><script id="ssl-enum-ciphers" output="&#xa;  TLSv1.0: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  TLSv1.1: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  TLSv1.2: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_GCM_SHA384 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_GCM_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_256_CBC_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (ecdh_x25519) - A&#xa;      TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 (dh 2048) - A&#xa;      TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 (dh 2048) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 (ecdh_x25519) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  least strength: C"><table key="TLSv1.0">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<table key="TLSv1.1">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<table key="TLSv1.2">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">dh 2048</elem>
+<elem key="name">TLS_DHE_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">dh 2048</elem>
+<elem key="name">TLS_DHE_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<elem key="least strength">C</elem>
+</script><script id="sslv2-drown" output="&#xa;"></script></port>
+<port protocol="tcp" portid="5040"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="unknown" method="table" conf="3"/></port>
+<port protocol="tcp" portid="7680"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="pando-pub" method="table" conf="3"/></port>
+</ports>
+<times srtt="1042" rttvar="175" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984470"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.106" addrtype="ipv4"/>
+<address addr="FE:E0:BC:B2:96:38" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65531">
+<extrareasons reason="no-responses" count="65531"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="8.4p1 Debian 5+deb11u5" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.4p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="5355"><state state="open" reason="syn-ack" reason_ttl="1"/><service name="llmnr" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http-proxy" servicefp="SF-Port8080-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(GetRequest,82,&quot;HTTP/1\.1\x20302\x20Found\r\nContent-Type:\x20text/plain\r\nLocation:\x20\./login\?to=%2F\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nConnection:\x20close\r\n\r\n&quot;)%r(HTTPOptions,648,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/html\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nConnection:\x20close\r\n\r\n&lt;!DOCTYPE\x20html&gt;\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;utf-8\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\n\x20\x20\x20\x20\x20\x20name=\&quot;viewport\&quot;\n\x20\x20\x20\x20\x20\x20content=\&quot;width=device-width,\x20initial-scale=1\.0,\x20maximum-scale=1\.0,\x20minimum-scale=1\.0,\x20user-scalable=no\&quot;\n\x20\x20\x20\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;Content-Security-Policy\&quot;\x20content=\&quot;style-src\x20&apos;self&apos;;\x20manifest-src\x20&apos;self&apos;;\x20img-src\x20&apos;self&apos;\x20data:;\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;title&gt;400\x20-\x20code-server&lt;/title&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;icon\&quot;\x20href=\&quot;\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon\.ico\&quot;\x20type=\&quot;image/x-icon\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;link\n\x20\x20\x20\x20\x20\x20rel=\&quot;manifest\&quot;\n\x20\x20\x20\x20\x20\x20href=\&quot;\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest\.json\&quot;\n\x20\x20\x20\x20\x20\x20crossorigin=\&quot;use-credentials\&quot;\n\x20\x20\x20\x20/&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;apple-touch-icon\&quot;\x20href=\&quot;\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/pwa-ic&quot;)%r(RTSPRequest,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(FourOhFourRequest,650,&quot;HTTP/1\.1\x20401\x20Unauthorized\r\nContent-Type:\x20text/html\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:03:52\x20GMT\r\nConnection:\x20close\r\n\r\n&lt;!DOCTYPE\x20html&gt;\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;utf-8\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\n\x20\x20\x20\x20\x20\x20name=\&quot;viewport\&quot;\n\x20\x20\x20\x20\x20\x20content=\&quot;width=device-width,\x20initial-scale=1\.0,\x20maximum-scale=1\.0,\x20minimum-scale=1\.0,\x20user-scalable=no\&quot;\n\x20\x20\x20\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;Content-Security-Policy\&quot;\x20content=\&quot;style-src\x20&apos;self&apos;;\x20manifest-src\x20&apos;self&apos;;\x20img-src\x20&apos;self&apos;\x20data:;\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;title&gt;401\x20-\x20code-server&lt;/title&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;icon\&quot;\x20href=\&quot;\./\.\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon\.ico\&quot;\x20type=\&quot;image/x-icon\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;link\n\x20\x20\x20\x20\x20\x20rel=\&quot;manifest\&quot;\n\x20\x20\x20\x20\x20\x20href=\&quot;\./\.\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest\.json\&quot;\n\x20\x20\x20\x20\x20\x20crossorigin=\&quot;use-credentials\&quot;\n\x20\x20\x20\x20/&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;apple-touch-icon\&quot;\x20href=\&quot;\./\.\./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/me&quot;);" method="probed" conf="10"/><script id="fingerprint-strings" output="&#xa;  FourOhFourRequest: &#xa;    HTTP/1.1 401 Unauthorized&#xa;    Content-Type: text/html&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot; /&gt;&#xa;    &lt;meta&#xa;    name=&quot;viewport&quot;&#xa;    content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no&quot;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;style-src &apos;self&apos;; manifest-src &apos;self&apos;; img-src &apos;self&apos; data:;&quot; /&gt;&#xa;    &lt;title&gt;401 - code-server&lt;/title&gt;&#xa;    &lt;link rel=&quot;icon&quot; href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon.ico&quot; type=&quot;image/x-icon&quot; /&gt;&#xa;    &lt;link&#xa;    rel=&quot;manifest&quot;&#xa;    href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest.json&quot;&#xa;    crossorigin=&quot;use-credentials&quot;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/me&#xa;  GetRequest: &#xa;    HTTP/1.1 302 Found&#xa;    Content-Type: text/plain&#xa;    Location: ./login?to=%2F&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close&#xa;  HTTPOptions: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/html&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot; /&gt;&#xa;    &lt;meta&#xa;    name=&quot;viewport&quot;&#xa;    content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no&quot;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;style-src &apos;self&apos;; manifest-src &apos;self&apos;; img-src &apos;self&apos; data:;&quot; /&gt;&#xa;    &lt;title&gt;400 - code-server&lt;/title&gt;&#xa;    &lt;link rel=&quot;icon&quot; href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon.ico&quot; type=&quot;image/x-icon&quot; /&gt;&#xa;    &lt;link&#xa;    rel=&quot;manifest&quot;&#xa;    href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest.json&quot;&#xa;    crossorigin=&quot;use-credentials&quot;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/pwa-ic&#xa;  RTSPRequest: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close"><elem key="FourOhFourRequest">&#xa;    HTTP/1.1 401 Unauthorized&#xa;    Content-Type: text/html&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot; /&gt;&#xa;    &lt;meta&#xa;    name=&quot;viewport&quot;&#xa;    content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no&quot;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;style-src &apos;self&apos;; manifest-src &apos;self&apos;; img-src &apos;self&apos; data:;&quot; /&gt;&#xa;    &lt;title&gt;401 - code-server&lt;/title&gt;&#xa;    &lt;link rel=&quot;icon&quot; href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon.ico&quot; type=&quot;image/x-icon&quot; /&gt;&#xa;    &lt;link&#xa;    rel=&quot;manifest&quot;&#xa;    href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest.json&quot;&#xa;    crossorigin=&quot;use-credentials&quot;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; href=&quot;./../static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/me</elem>
+<elem key="GetRequest">&#xa;    HTTP/1.1 302 Found&#xa;    Content-Type: text/plain&#xa;    Location: ./login?to=%2F&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close</elem>
+<elem key="HTTPOptions">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/html&#xa;    Date: Sun, 20 Jul 2025 04:03:52 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot; /&gt;&#xa;    &lt;meta&#xa;    name=&quot;viewport&quot;&#xa;    content=&quot;width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no&quot;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;style-src &apos;self&apos;; manifest-src &apos;self&apos;; img-src &apos;self&apos; data:;&quot; /&gt;&#xa;    &lt;title&gt;400 - code-server&lt;/title&gt;&#xa;    &lt;link rel=&quot;icon&quot; href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/favicon.ico&quot; type=&quot;image/x-icon&quot; /&gt;&#xa;    &lt;link&#xa;    rel=&quot;manifest&quot;&#xa;    href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/manifest.json&quot;&#xa;    crossorigin=&quot;use-credentials&quot;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; href=&quot;./static/0a5687bacf192afad07e43fe5d4555cf766af8a4/src/browser/media/pwa-ic</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close</elem>
+</script></port>
+<port protocol="tcp" portid="35245"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" extrainfo="protocol 2.0" servicefp="SF-Port35245-TCP:V=7.80%I=7%D=7/20%Time=687C6AA8%P=x86_64-pc-linux-gnu%r(NULL,18,&quot;SSH-2\.0-ssh2js0\.4\.9srv\r\n&quot;);" method="probed" conf="10"/><script id="fingerprint-strings" output="&#xa;  NULL: &#xa;    SSH-2.0-ssh2js0.4.9srv"><elem key="NULL">&#xa;    SSH-2.0-ssh2js0.4.9srv</elem>
+</script></port>
+</ports>
+<times srtt="497" rttvar="79" to="100000"/>
+</host>
+<taskbegin task="Parallel DNS resolution of 1 host." time="1752984483"/>
+<taskend task="Parallel DNS resolution of 1 host." time="1752984483"/>
+<taskbegin task="SYN Stealth Scan" time="1752984483"/>
+<taskprogress task="SYN Stealth Scan" time="1752984514" percent="8.39" remaining="339" etc="1752984852"/>
+<taskprogress task="SYN Stealth Scan" time="1752984544" percent="23.00" remaining="205" etc="1752984748"/>
+<taskprogress task="SYN Stealth Scan" time="1752984574" percent="39.89" remaining="138" etc="1752984711"/>
+<taskprogress task="SYN Stealth Scan" time="1752984604" percent="56.79" remaining="93" etc="1752984696"/>
+<taskprogress task="SYN Stealth Scan" time="1752984634" percent="73.69" remaining="54" etc="1752984688"/>
+<taskend task="SYN Stealth Scan" time="1752984680" extrainfo="262140 total ports"/>
+<taskbegin task="Service scan" time="1752984680"/>
+<taskend task="Service scan" time="1752984818" extrainfo="9 services on 4 hosts"/>
+<taskbegin task="NSE" time="1752984818"/>
+<taskend task="NSE" time="1752984846"/>
+<taskbegin task="NSE" time="1752984846"/>
+<taskend task="NSE" time="1752984906"/>
+<taskbegin task="NSE" time="1752984906"/>
+<taskend task="NSE" time="1752984906"/>
+<host starttime="1752983691" endtime="1752984906"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.107" addrtype="ipv4"/>
+<address addr="9A:D7:31:D5:A8:E8" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65530">
+<extrareasons reason="no-responses" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="ssl-cert" output="Subject: commonName=DESKTOP-VCFJKE8&#xa;Issuer: commonName=DESKTOP-VCFJKE8&#xa;Public Key type: rsa&#xa;Public Key bits: 2048&#xa;Signature Algorithm: sha256WithRSAEncryption&#xa;Not valid before: 2025-06-06T10:59:38&#xa;Not valid after:  2025-12-06T10:59:38&#xa;MD5:   0be8 0f00 8373 9f92 63d6 5076 4af2 9e40&#xa;SHA-1: a55e c0d9 742d d7a5 d25c ce88 63e7 b32e 1211 0885&#xa;-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIC4jCCAcqgAwIBAgIQOVKxfY+t8ZtH6SAd34OOiTANBgkqhkiG9w0BAQsFADAa&#xa;MRgwFgYDVQQDEw9ERVNLVE9QLVZDRkpLRTgwHhcNMjUwNjA2MTA1OTM4WhcNMjUx&#xa;MjA2MTA1OTM4WjAaMRgwFgYDVQQDEw9ERVNLVE9QLVZDRkpLRTgwggEiMA0GCSqG&#xa;SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC0iRqo+7haqP8HnFqb58vrcwTONUa5p/PD&#xa;nhDWmWwo1My+pFbK4Np+fNSfnc4zmPr2obAzBMJsVIPwxl6h4F1anehzZDsMe7vw&#xa;9fo3eVFrMdBvqGIWTKjN3msXS973hQSxCfCqaH2CZxigGTQRG48SOfDFrg8osnC+&#xa;lY/SB8H7M3AB6R7mHOQ1ubrgZGNJmjfvIvaqwYeTe34nqy9UiI1poZmfbYVcB9P/&#xa;LgWyGSyGdWwS3efbW1m+Tpl4xi+UukI5UQ/gKs0Y4OIBQWSfw7+FV9uo6910sI3G&#xa;12WJCoxLuHHrdYwUbbnejfqkjBMtks6aj3+6UnMb9yCIszJ/6SGJAgMBAAGjJDAi&#xa;MBMGA1UdJQQMMAoGCCsGAQUFBwMBMAsGA1UdDwQEAwIEMDANBgkqhkiG9w0BAQsF&#xa;AAOCAQEAcwUmlH06s/pGccrT6tozBy6OHp/yhcWwnNmi64cyr8Y1o9kIeNGtUFNk&#xa;HbCnN8iK1vwcnToGKcuAMtW9m+LsqYH2Sy+SelO/QRpCoBJPhhg99FOuGmdxmaSQ&#xa;stp/RddIr1ZXMGkbg0EGwtNwk7PwFo2V1ZpoyeB2n+qhLSsyS+MNPBjVNk1V5K/+&#xa;z6X4QHJAJQc1FBzfjLvqP25QClzlof4yc9unjc7UXY1pzNrX3FNRh/wBcu8CpgnT&#xa;nck1USLObMIwTJbq+Ilj8T5AGaaMeOanzIlTWGx6DMH9Y9et9C3T8KoKLPlJOdi9&#xa;QKi+w7UQ+oCtT9gmfEa21PyBnwRcng==&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;"><table key="subject">
+<elem key="commonName">DESKTOP-VCFJKE8</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">DESKTOP-VCFJKE8</elem>
+</table>
+<table key="pubkey">
+<elem key="exponent">userdata: 0x593f8d8c3dd8</elem>
+<elem key="bits">2048</elem>
+<elem key="modulus">userdata: 0x593f8ca32448</elem>
+<elem key="type">rsa</elem>
+</table>
+<table key="extensions">
+<table>
+<elem key="value">TLS Web Server Authentication</elem>
+<elem key="name">X509v3 Extended Key Usage</elem>
+</table>
+<table>
+<elem key="value">Key Encipherment, Data Encipherment</elem>
+<elem key="name">X509v3 Key Usage</elem>
+</table>
+</table>
+<elem key="sig_algo">sha256WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2025-06-06T10:59:38</elem>
+<elem key="notAfter">2025-12-06T10:59:38</elem>
+</table>
+<elem key="md5">0be80f0083739f9263d650764af29e40</elem>
+<elem key="sha1">a55ec0d9742dd7a5d25cce8863e7b32e12110885</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIC4jCCAcqgAwIBAgIQOVKxfY+t8ZtH6SAd34OOiTANBgkqhkiG9w0BAQsFADAa&#xa;MRgwFgYDVQQDEw9ERVNLVE9QLVZDRkpLRTgwHhcNMjUwNjA2MTA1OTM4WhcNMjUx&#xa;MjA2MTA1OTM4WjAaMRgwFgYDVQQDEw9ERVNLVE9QLVZDRkpLRTgwggEiMA0GCSqG&#xa;SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC0iRqo+7haqP8HnFqb58vrcwTONUa5p/PD&#xa;nhDWmWwo1My+pFbK4Np+fNSfnc4zmPr2obAzBMJsVIPwxl6h4F1anehzZDsMe7vw&#xa;9fo3eVFrMdBvqGIWTKjN3msXS973hQSxCfCqaH2CZxigGTQRG48SOfDFrg8osnC+&#xa;lY/SB8H7M3AB6R7mHOQ1ubrgZGNJmjfvIvaqwYeTe34nqy9UiI1poZmfbYVcB9P/&#xa;LgWyGSyGdWwS3efbW1m+Tpl4xi+UukI5UQ/gKs0Y4OIBQWSfw7+FV9uo6910sI3G&#xa;12WJCoxLuHHrdYwUbbnejfqkjBMtks6aj3+6UnMb9yCIszJ/6SGJAgMBAAGjJDAi&#xa;MBMGA1UdJQQMMAoGCCsGAQUFBwMBMAsGA1UdDwQEAwIEMDANBgkqhkiG9w0BAQsF&#xa;AAOCAQEAcwUmlH06s/pGccrT6tozBy6OHp/yhcWwnNmi64cyr8Y1o9kIeNGtUFNk&#xa;HbCnN8iK1vwcnToGKcuAMtW9m+LsqYH2Sy+SelO/QRpCoBJPhhg99FOuGmdxmaSQ&#xa;stp/RddIr1ZXMGkbg0EGwtNwk7PwFo2V1ZpoyeB2n+qhLSsyS+MNPBjVNk1V5K/+&#xa;z6X4QHJAJQc1FBzfjLvqP25QClzlof4yc9unjc7UXY1pzNrX3FNRh/wBcu8CpgnT&#xa;nck1USLObMIwTJbq+Ilj8T5AGaaMeOanzIlTWGx6DMH9Y9et9C3T8KoKLPlJOdi9&#xa;QKi+w7UQ+oCtT9gmfEa21PyBnwRcng==&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script><script id="ssl-date" output="2025-07-20T04:14:06+00:00; 0s from scanner time."><elem key="delta">0.0</elem>
+<elem key="date">2025-07-20T04:14:06+00:00</elem>
+</script><script id="ssl-enum-ciphers" output="&#xa;  TLSv1.0: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  TLSv1.1: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  TLSv1.2: &#xa;    ciphers: &#xa;      TLS_RSA_WITH_AES_256_GCM_SHA384 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_GCM_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_256_CBC_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA256 (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_256_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_AES_128_CBC_SHA (rsa 2048) - A&#xa;      TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C&#xa;      TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (ecdh_x25519) - A&#xa;      TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 (dh 2048) - A&#xa;      TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 (dh 2048) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 (ecdh_x25519) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (secp384r1) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;    warnings: &#xa;      64-bit block cipher 3DES vulnerable to SWEET32 attack&#xa;  least strength: C"><table key="TLSv1.0">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<table key="TLSv1.1">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<table key="TLSv1.2">
+<table key="ciphers">
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">rsa 2048</elem>
+<elem key="name">TLS_RSA_WITH_3DES_EDE_CBC_SHA</elem>
+<elem key="strength">C</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">dh 2048</elem>
+<elem key="name">TLS_DHE_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">dh 2048</elem>
+<elem key="name">TLS_DHE_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">secp384r1</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+<table key="warnings">
+<elem>64-bit block cipher 3DES vulnerable to SWEET32 attack</elem>
+</table>
+</table>
+<elem key="least strength">C</elem>
+</script><script id="sslv2-drown" output="&#xa;"></script></port>
+<port protocol="tcp" portid="5040"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="unknown" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5357"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script></port>
+<port protocol="tcp" portid="7680"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="pando-pub" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8834"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="nessus-xmlrpc" servicefp="SF-Port8834-TCP:V=7.80%T=SSL%I=7%D=7/20%Time=687C6C88%P=x86_64-pc-linux-gnu%r(GetRequest,788,&quot;HTTP/1\.1\x20200\x20OK\r\nCache-Control:\x20must-revalidate\r\nX-Frame-Options:\x20DENY\r\nContent-Type:\x20text/html\r\nETag:\x2046abf0de87c3c5ffbcb6a686df4437cc\r\nConnection:\x20close\r\nX-XSS-Protection:\x201;\x20mode=block\r\nServer:\x20NessusWWW\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:11:52\x20GMT\r\nX-Content-Type-Options:\x20nosniff\r\nContent-Length:\x201217\r\nContent-Security-Policy:\x20upgrade-insecure-requests;\x20block-all-mixed-content;\x20form-action\x20&apos;self&apos;;\x20frame-ancestors\x20&apos;none&apos;;\x20frame-src\x20https://store\.tenable\.com;\x20default-src\x20&apos;self&apos;;\x20connect-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20script-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20img-src\x20&apos;self&apos;\x20data:;\x20style-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20object-src\x20&apos;none&apos;;\x20base-uri\x20&apos;self&apos;;\r\nStrict-Transport-Security:\x20max-age=31536000\r\nExpect-CT:\x20max-age=0\r\n\r\n&lt;!doctype\x20html&gt;\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n\x20\x20\x20\x20&lt;head&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;X-UA-Compatible\&quot;\x20content=\&quot;IE=edge,chrome=1\&quot;\x20/&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;Content-Security-Policy\&quot;\x20content=\&quot;upgrade-inse&quot;)%r(HTTPOptions,81,&quot;HTTP/1\.1\x20405\x20Method\x20not\x20Allowed\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:11:52\x20GMT\r\nContent-Length:\x200\r\nServer:\x20NessusWWW\r\n\r\n&quot;)%r(RTSPRequest,7A,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:11:52\x20GMT\r\nContent-Length:\x200\r\nServer:\x20NessusWWW\r\n\r\n&quot;)%r(Help,7A,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:12:07\x20GMT\r\nContent-Length:\x200\r\nServer:\x20NessusWWW\r\n\r\n&quot;)%r(TerminalServerCookie,7A,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:12:12\x20GMT\r\nContent-Length:\x200\r\nServer:\x20NessusWWW\r\n\r\n&quot;)%r(FourOhFourRequest,30F,&quot;HTTP/1\.1\x20404\x20File\x20not\x20found\r\nCache-Control:\x20no-cache,\x20no-store,\x20must-revalidate\r\nX-Frame-Options:\x20DENY\r\nContent-Type:\x20application/json\r\nConnection:\x20close\r\nX-XSS-Protection:\x201;\x20mode=block\r\nServer:\x20NessusWWW\r\nX-Content-Type-Options:\x20nosniff\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:12:33\x20GMT\r\nContent-Length:\x2045\r\nContent-Security-Policy:\x20upgrade-insecure-requests;\x20block-all-mixed-content;\x20form-action\x20&apos;self&apos;;\x20frame-ancestors\x20&apos;none&apos;;\x20frame-src\x20https://store\.tenable\.com;\x20default-src\x20&apos;self&apos;;\x20connect-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20script-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20img-src\x20&apos;self&apos;\x20data:;\x20style-src\x20&apos;self&apos;\x20www\.tenable\.com;\x20object-src\x20&apos;none&apos;;\x20base-uri\x20&apos;self&apos;;\r\nStrict-Transport-Security:\x20max-age=31536000\r\nExpires:\x200\r\nExpect-CT:\x20max-age=0\r\nPragma:\x20no-cache\r\n\r\n{\&quot;error\&quot;:\&quot;The\x20requested\x20file\x20was\x20not\x20found\.\&quot;}&quot;);" tunnel="ssl" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  FourOhFourRequest: &#xa;    HTTP/1.1 404 File not found&#xa;    Cache-Control: no-cache, no-store, must-revalidate&#xa;    X-Frame-Options: DENY&#xa;    Content-Type: application/json&#xa;    Connection: close&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Server: NessusWWW&#xa;    X-Content-Type-Options: nosniff&#xa;    Date: Sun, 20 Jul 2025 04:12:33 GMT&#xa;    Content-Length: 45&#xa;    Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content; form-action &apos;self&apos;; frame-ancestors &apos;none&apos;; frame-src https://store.tenable.com; default-src &apos;self&apos;; connect-src &apos;self&apos; www.tenable.com; script-src &apos;self&apos; www.tenable.com; img-src &apos;self&apos; data:; style-src &apos;self&apos; www.tenable.com; object-src &apos;none&apos;; base-uri &apos;self&apos;;&#xa;    Strict-Transport-Security: max-age=31536000&#xa;    Expires: 0&#xa;    Expect-CT: max-age=0&#xa;    Pragma: no-cache&#xa;    {&quot;error&quot;:&quot;The requested file was not found.&quot;}&#xa;  GetRequest: &#xa;    HTTP/1.1 200 OK&#xa;    Cache-Control: must-revalidate&#xa;    X-Frame-Options: DENY&#xa;    Content-Type: text/html&#xa;    ETag: 46abf0de87c3c5ffbcb6a686df4437cc&#xa;    Connection: close&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Server: NessusWWW&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    X-Content-Type-Options: nosniff&#xa;    Content-Length: 1217&#xa;    Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content; form-action &apos;self&apos;; frame-ancestors &apos;none&apos;; frame-src https://store.tenable.com; default-src &apos;self&apos;; connect-src &apos;self&apos; www.tenable.com; script-src &apos;self&apos; www.tenable.com; img-src &apos;self&apos; data:; style-src &apos;self&apos; www.tenable.com; object-src &apos;none&apos;; base-uri &apos;self&apos;;&#xa;    Strict-Transport-Security: max-age=31536000&#xa;    Expect-CT: max-age=0&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge,chrome=1&quot; /&gt;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;upgrade-inse&#xa;  HTTPOptions: &#xa;    HTTP/1.1 405 Method not Allowed&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW&#xa;  Help: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:12:07 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW&#xa;  RTSPRequest: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW&#xa;  TerminalServerCookie: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:12:12 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW"><elem key="FourOhFourRequest">&#xa;    HTTP/1.1 404 File not found&#xa;    Cache-Control: no-cache, no-store, must-revalidate&#xa;    X-Frame-Options: DENY&#xa;    Content-Type: application/json&#xa;    Connection: close&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Server: NessusWWW&#xa;    X-Content-Type-Options: nosniff&#xa;    Date: Sun, 20 Jul 2025 04:12:33 GMT&#xa;    Content-Length: 45&#xa;    Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content; form-action &apos;self&apos;; frame-ancestors &apos;none&apos;; frame-src https://store.tenable.com; default-src &apos;self&apos;; connect-src &apos;self&apos; www.tenable.com; script-src &apos;self&apos; www.tenable.com; img-src &apos;self&apos; data:; style-src &apos;self&apos; www.tenable.com; object-src &apos;none&apos;; base-uri &apos;self&apos;;&#xa;    Strict-Transport-Security: max-age=31536000&#xa;    Expires: 0&#xa;    Expect-CT: max-age=0&#xa;    Pragma: no-cache&#xa;    {&quot;error&quot;:&quot;The requested file was not found.&quot;}</elem>
+<elem key="GetRequest">&#xa;    HTTP/1.1 200 OK&#xa;    Cache-Control: must-revalidate&#xa;    X-Frame-Options: DENY&#xa;    Content-Type: text/html&#xa;    ETag: 46abf0de87c3c5ffbcb6a686df4437cc&#xa;    Connection: close&#xa;    X-XSS-Protection: 1; mode=block&#xa;    Server: NessusWWW&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    X-Content-Type-Options: nosniff&#xa;    Content-Length: 1217&#xa;    Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content; form-action &apos;self&apos;; frame-ancestors &apos;none&apos;; frame-src https://store.tenable.com; default-src &apos;self&apos;; connect-src &apos;self&apos; www.tenable.com; script-src &apos;self&apos; www.tenable.com; img-src &apos;self&apos; data:; style-src &apos;self&apos; www.tenable.com; object-src &apos;none&apos;; base-uri &apos;self&apos;;&#xa;    Strict-Transport-Security: max-age=31536000&#xa;    Expect-CT: max-age=0&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge,chrome=1&quot; /&gt;&#xa;    &lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;upgrade-inse</elem>
+<elem key="HTTPOptions">&#xa;    HTTP/1.1 405 Method not Allowed&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW</elem>
+<elem key="Help">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:12:07 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:11:52 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW</elem>
+<elem key="TerminalServerCookie">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;    Date: Sun, 20 Jul 2025 04:12:12 GMT&#xa;    Content-Length: 0&#xa;    Server: NessusWWW</elem>
+</script><script id="ssl-cert" output="Subject: commonName=DESKTOP-VCFJKE8/organizationName=Nessus Users United/stateOrProvinceName=NY/countryName=US/localityName=New York/organizationalUnitName=Nessus Server&#xa;Issuer: commonName=Nessus Certification Authority/organizationName=Nessus Users United/stateOrProvinceName=NY/countryName=US/localityName=New York/organizationalUnitName=Nessus Certification Authority&#xa;Public Key type: rsa&#xa;Public Key bits: 2048&#xa;Signature Algorithm: sha256WithRSAEncryption&#xa;Not valid before: 2024-01-18T16:45:51&#xa;Not valid after:  2028-01-17T16:45:51&#xa;MD5:   d5cb c31c a08c 5d02 7c05 94b2 9fcc 0a5a&#xa;SHA-1: 3ae5 0a1f e411 c31b 102d c474 82f7 9db3 9115 bf9a&#xa;-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIEETCCAvmgAwIBAgICNoIwDQYJKoZIhvcNAQELBQAwgZ0xHDAaBgNVBAoME05l&#xa;c3N1cyBVc2VycyBVbml0ZWQxJzAlBgNVBAsMHk5lc3N1cyBDZXJ0aWZpY2F0aW9u&#xa;IEF1dGhvcml0eTERMA8GA1UEBwwITmV3IFlvcmsxCzAJBgNVBAYTAlVTMQswCQYD&#xa;VQQIDAJOWTEnMCUGA1UEAwweTmVzc3VzIENlcnRpZmljYXRpb24gQXV0aG9yaXR5&#xa;MB4XDTI0MDExODE2NDU1MVoXDTI4MDExNzE2NDU1MVowfTEcMBoGA1UECgwTTmVz&#xa;c3VzIFVzZXJzIFVuaXRlZDEWMBQGA1UECwwNTmVzc3VzIFNlcnZlcjERMA8GA1UE&#xa;BwwITmV3IFlvcmsxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJOWTEYMBYGA1UEAwwP&#xa;REVTS1RPUC1WQ0ZKS0U4MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA&#xa;uvlLqHqaKxYXh8PxxaIwfNjHXLGLyhtToVBL161/ISWZ93iu5sSgCLf8LYueOErT&#xa;wZQCS7Q/2yr1X8DLMiz5c1QpwiuxDWuS98pvfi1Bghd/JmBaoHkX3IegL6RdJpCu&#xa;Z9mZ1jQXxF6qoDwpCkimYDUdgLtXX6SA+M+PZmPkB70C7gTUN0reThz3wZnhxq0m&#xa;8IlRm5NqxNFdiRrkj7huYNcsQabBkC+CLYNMcYgtsjg2k5Gv+tzqGruMHkk1lH41&#xa;167KfE6zdI1ECOtzo2WihJIyctw5LQ9yrM+LMralWpif1dekdYNSDG34kIZsZ6K8&#xa;zLh+DIaHSNJbvRHC8C5gnwIDAQABo3oweDARBglghkgBhvhCAQEEBAMCBkAwDgYD&#xa;VR0PAQH/BAQDAgXgMB0GA1UdDgQWBBRhbY3WQQqpmWz2VceX6BMHgBJrejAfBgNV&#xa;HSMEGDAWgBSnXrPf2Th7fAXSB77qAAGLxWj8HjATBgNVHSUEDDAKBggrBgEFBQcD&#xa;ATANBgkqhkiG9w0BAQsFAAOCAQEAr5AyqCS2gGdiHOHpcKQiQczYZe84hlGnTfk8&#xa;e4kcfGPmPTL0JGJLsaH3w9wrtG6nhZ0zbrVBiXklMcLqn/2KOcsWmbk6eEIjd52X&#xa;7zpV/IPk9H0lS5YqQa3iJ74QUqk9bUHiKgrbiX+636giET9SXqdtpjsqFQ7YODIp&#xa;u1Rk7cCMd2O75foHUzzQH6cPu7AuedCFB0NwIlwocSleO/+1wNxNTK9k6jg31QKu&#xa;qjDTnUgDzsLMwAjdS3SfePdmtTUxpJ1rty5fq08378mHAgA3LMIYx+QHqJP/1E2s&#xa;8nOV/Z6FSzjnn8sBOyTeoU5uXFVJAvdf8MDlGHoGngMnIjbr5g==&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;"><table key="subject">
+<elem key="commonName">DESKTOP-VCFJKE8</elem>
+<elem key="organizationalUnitName">Nessus Server</elem>
+<elem key="countryName">US</elem>
+<elem key="stateOrProvinceName">NY</elem>
+<elem key="organizationName">Nessus Users United</elem>
+<elem key="localityName">New York</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">Nessus Certification Authority</elem>
+<elem key="organizationalUnitName">Nessus Certification Authority</elem>
+<elem key="countryName">US</elem>
+<elem key="stateOrProvinceName">NY</elem>
+<elem key="organizationName">Nessus Users United</elem>
+<elem key="localityName">New York</elem>
+</table>
+<table key="pubkey">
+<elem key="exponent">userdata: 0x593f8db79748</elem>
+<elem key="bits">2048</elem>
+<elem key="modulus">userdata: 0x593f8e26d4d8</elem>
+<elem key="type">rsa</elem>
+</table>
+<table key="extensions">
+<table>
+<elem key="value">SSL Server</elem>
+<elem key="name">Netscape Cert Type</elem>
+</table>
+<table>
+<elem key="value">Digital Signature, Non Repudiation, Key Encipherment</elem>
+<elem key="name">X509v3 Key Usage</elem>
+<elem key="critical">true</elem>
+</table>
+<table>
+<elem key="value">61:6D:8D:D6:41:0A:A9:99:6C:F6:55:C7:97:E8:13:07:80:12:6B:7A</elem>
+<elem key="name">X509v3 Subject Key Identifier</elem>
+</table>
+<table>
+<elem key="value">keyid:A7:5E:B3:DF:D9:38:7B:7C:05:D2:07:BE:EA:00:01:8B:C5:68:FC:1E&#xa;</elem>
+<elem key="name">X509v3 Authority Key Identifier</elem>
+</table>
+<table>
+<elem key="value">TLS Web Server Authentication</elem>
+<elem key="name">X509v3 Extended Key Usage</elem>
+</table>
+</table>
+<elem key="sig_algo">sha256WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2024-01-18T16:45:51</elem>
+<elem key="notAfter">2028-01-17T16:45:51</elem>
+</table>
+<elem key="md5">d5cbc31ca08c5d027c0594b29fcc0a5a</elem>
+<elem key="sha1">3ae50a1fe411c31b102dc47482f79db39115bf9a</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIEETCCAvmgAwIBAgICNoIwDQYJKoZIhvcNAQELBQAwgZ0xHDAaBgNVBAoME05l&#xa;c3N1cyBVc2VycyBVbml0ZWQxJzAlBgNVBAsMHk5lc3N1cyBDZXJ0aWZpY2F0aW9u&#xa;IEF1dGhvcml0eTERMA8GA1UEBwwITmV3IFlvcmsxCzAJBgNVBAYTAlVTMQswCQYD&#xa;VQQIDAJOWTEnMCUGA1UEAwweTmVzc3VzIENlcnRpZmljYXRpb24gQXV0aG9yaXR5&#xa;MB4XDTI0MDExODE2NDU1MVoXDTI4MDExNzE2NDU1MVowfTEcMBoGA1UECgwTTmVz&#xa;c3VzIFVzZXJzIFVuaXRlZDEWMBQGA1UECwwNTmVzc3VzIFNlcnZlcjERMA8GA1UE&#xa;BwwITmV3IFlvcmsxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJOWTEYMBYGA1UEAwwP&#xa;REVTS1RPUC1WQ0ZKS0U4MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA&#xa;uvlLqHqaKxYXh8PxxaIwfNjHXLGLyhtToVBL161/ISWZ93iu5sSgCLf8LYueOErT&#xa;wZQCS7Q/2yr1X8DLMiz5c1QpwiuxDWuS98pvfi1Bghd/JmBaoHkX3IegL6RdJpCu&#xa;Z9mZ1jQXxF6qoDwpCkimYDUdgLtXX6SA+M+PZmPkB70C7gTUN0reThz3wZnhxq0m&#xa;8IlRm5NqxNFdiRrkj7huYNcsQabBkC+CLYNMcYgtsjg2k5Gv+tzqGruMHkk1lH41&#xa;167KfE6zdI1ECOtzo2WihJIyctw5LQ9yrM+LMralWpif1dekdYNSDG34kIZsZ6K8&#xa;zLh+DIaHSNJbvRHC8C5gnwIDAQABo3oweDARBglghkgBhvhCAQEEBAMCBkAwDgYD&#xa;VR0PAQH/BAQDAgXgMB0GA1UdDgQWBBRhbY3WQQqpmWz2VceX6BMHgBJrejAfBgNV&#xa;HSMEGDAWgBSnXrPf2Th7fAXSB77qAAGLxWj8HjATBgNVHSUEDDAKBggrBgEFBQcD&#xa;ATANBgkqhkiG9w0BAQsFAAOCAQEAr5AyqCS2gGdiHOHpcKQiQczYZe84hlGnTfk8&#xa;e4kcfGPmPTL0JGJLsaH3w9wrtG6nhZ0zbrVBiXklMcLqn/2KOcsWmbk6eEIjd52X&#xa;7zpV/IPk9H0lS5YqQa3iJ74QUqk9bUHiKgrbiX+636giET9SXqdtpjsqFQ7YODIp&#xa;u1Rk7cCMd2O75foHUzzQH6cPu7AuedCFB0NwIlwocSleO/+1wNxNTK9k6jg31QKu&#xa;qjDTnUgDzsLMwAjdS3SfePdmtTUxpJ1rty5fq08378mHAgA3LMIYx+QHqJP/1E2s&#xa;8nOV/Z6FSzjnn8sBOyTeoU5uXFVJAvdf8MDlGHoGngMnIjbr5g==&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script><script id="ssl-enum-ciphers" output="&#xa;  TLSv1.2: &#xa;    ciphers: &#xa;      TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (ecdh_x25519) - A&#xa;      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (ecdh_x25519) - A&#xa;    compressors: &#xa;      NULL&#xa;    cipher preference: server&#xa;  least strength: A"><table key="TLSv1.2">
+<table key="ciphers">
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</elem>
+<elem key="strength">A</elem>
+</table>
+<table>
+<elem key="kex_info">ecdh_x25519</elem>
+<elem key="name">TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</elem>
+<elem key="strength">A</elem>
+</table>
+</table>
+<table key="compressors">
+<elem>NULL</elem>
+</table>
+<elem key="cipher preference">server</elem>
+</table>
+<elem key="least strength">A</elem>
+</script><script id="sslv2-drown" output="&#xa;"></script></port>
+</ports>
+<times srtt="332" rttvar="37" to="100000"/>
+</host>
+<host starttime="1752983692" endtime="1752984906"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.180" addrtype="ipv4"/>
+<address addr="BC:24:11:C6:18:28" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65533">
+<extrareasons reason="no-responses" count="65533"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="9.9p2 Debian 1" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.9p2</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ms-wbt-server" product="xrdp" method="probed" conf="10"><cpe>cpe:/a:jay_sorg:xrdp</cpe></service><script id="ssl-ccs-injection" output="No reply from server (TIMEOUT)"/><script id="sslv2-drown" output="&#xa;"></script></port>
+</ports>
+<times srtt="201" rttvar="41" to="100000"/>
+</host>
+<host starttime="1752983691" endtime="1752984906"><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="172.16.0.182" addrtype="ipv4"/>
+<address addr="BC:24:11:A1:4B:1F" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65533">
+<extrareasons reason="no-responses" count="65533"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="8.4p1 Debian 5+deb11u5" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.4p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="5355"><state state="open" reason="syn-ack" reason_ttl="1"/><service name="llmnr" method="table" conf="3"/></port>
+</ports>
+<times srtt="360" rttvar="115" to="100000"/>
+</host>
+<taskbegin task="SYN Stealth Scan" time="1752984906"/>
+<taskend task="SYN Stealth Scan" time="1752984907" extrainfo="65535 total ports"/>
+<taskbegin task="Service scan" time="1752984907"/>
+<taskend task="Service scan" time="1752985038" extrainfo="5 services on 1 host"/>
+<taskbegin task="NSE" time="1752985038"/>
+<taskend task="NSE" time="1752985052"/>
+<taskbegin task="NSE" time="1752985052"/>
+<taskend task="NSE" time="1752985053"/>
+<taskbegin task="NSE" time="1752985053"/>
+<taskend task="NSE" time="1752985053"/>
+<host starttime="1752984906" endtime="1752985053"><status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="172.16.0.183" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="65530">
+<extrareasons reason="resets" count="65530"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="8.4p1 Debian 5+deb11u5" extrainfo="protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.4p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="5000"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="upnp" servicefp="SF-Port5000-TCP:V=7.80%I=7%D=7/20%Time=687C6D51%P=x86_64-pc-linux-gnu%r(GetRequest,C9DF,&quot;HTTP/1\.1\x20200\x20OK\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nContent-Length:\x2051541\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:13\x20GMT\r\nConnection:\x20close\r\n\r\n&lt;!doctype\x20html&gt;\n&lt;html\x20lang=\&quot;en\&quot;\x20data-bs-theme=\&quot;light\&quot;&gt;\n&lt;html\x20lang=\&quot;en\&quot;\x20data-bs-theme=\&quot;light\&quot;&gt;\n\x20\x20&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;utf-8\&quot;&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\&quot;&gt;\n\x20\x20\x20\x20&lt;title&gt;SentinelZero\x20Dashboard&lt;/title&gt;\n\x20\x20\x20\x20&lt;link\x20href=\&quot;https://cdn\.jsdelivr\.net/npm/bootstrap@5\.3\.2/dist/css/bootstrap\.min\.css\&quot;\x20rel=\&quot;stylesheet\&quot;&gt;\n\x20\x20\x20\x20&lt;link\x20href=\&quot;https://cdn\.jsdelivr\.net/npm/bootstrap-icons@1\.11\.3/font/bootstrap-icons\.css\&quot;\x20rel=\&quot;stylesheet\&quot;&gt;\n\x20\x20\x20\x20&lt;link\x20href=\&quot;https://fonts\.googleapis\.com/css2\?family=Inter:wght@400;600;700&amp;display=swap\&quot;\x20rel=\&quot;stylesheet\&quot;&gt;\n\x20\x20\x20\x20&lt;link\x20href=\&quot;/static/style\.css\&quot;\x20rel=\&quot;stylesheet\&quot;&gt;\n\x20\x20&lt;/head&gt;\n\x20\x20&lt;body\x20data-testid=\&quot;body\&quot;&gt;\n\x20\x20\x20\x20&lt;div\x20class=\&quot;header\&quot;\x20style=\&quot;position:\x20fixed;\x20top:\x200;\x20left:\x200;\x20right:\x200;\x20z-index:\x201030;\x20width&quot;)%r(RTSPRequest,1F4,&quot;&lt;!DOCTYPE\x20HTML\x20PUBLIC\x20\&quot;-//W3C//DTD\x20HTML\x204\.01//EN\&quot;\n\x20\x20\x20\x20\x20\x20\x20\x20\&quot;http://www\.w3\.org/TR/html4/strict\.dtd\&quot;&gt;\n&lt;html&gt;\n\x20\x20\x20\x20&lt;head&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;meta\x20http-equiv=\&quot;Content-Type\&quot;\x20content=\&quot;text/html;charset=utf-8\&quot;&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;title&gt;Error\x20response&lt;/title&gt;\n\x20\x20\x20\x20&lt;/head&gt;\n\x20\x20\x20\x20&lt;body&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;h1&gt;Error\x20response&lt;/h1&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;p&gt;Error\x20code:\x20400&lt;/p&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;p&gt;Message:\x20Bad\x20request\x20version\x20\(&apos;RTSP/1\.0&apos;\)\.&lt;/p&gt;\n\x20\x20\x20\x20\x20\x20\x20\x20&lt;p&gt;Error\x20code\x20explanation:\x20HTTPStatus\.BAD_REQUEST\x20-\x20Bad\x20request\x20syntax\x20or\x20unsupported\x20method\.&lt;/p&gt;\n\x20\x20\x20\x20&lt;/body&gt;\n&lt;/html&gt;\n&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  GetRequest: &#xa;    HTTP/1.1 200 OK&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 51541&#xa;    Date: Sun, 20 Jul 2025 04:15:13 GMT&#xa;    Connection: close&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en&quot; data-bs-theme=&quot;light&quot;&gt;&#xa;    &lt;html lang=&quot;en&quot; data-bs-theme=&quot;light&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&#xa;    &lt;title&gt;SentinelZero Dashboard&lt;/title&gt;&#xa;    &lt;link href=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;/static/style.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body data-testid=&quot;body&quot;&gt;&#xa;    &lt;div class=&quot;header&quot; style=&quot;position: fixed; top: 0; left: 0; right: 0; z-index: 1030; width&#xa;  RTSPRequest: &#xa;    &lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01//EN&quot;&#xa;    &quot;http://www.w3.org/TR/html4/strict.dtd&quot;&gt;&#xa;    &lt;html&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html;charset=utf-8&quot;&gt;&#xa;    &lt;title&gt;Error response&lt;/title&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;h1&gt;Error response&lt;/h1&gt;&#xa;    &lt;p&gt;Error code: 400&lt;/p&gt;&#xa;    &lt;p&gt;Message: Bad request version (&apos;RTSP/1.0&apos;).&lt;/p&gt;&#xa;    &lt;p&gt;Error code explanation: HTTPStatus.BAD_REQUEST - Bad request syntax or unsupported method.&lt;/p&gt;&#xa;    &lt;/body&gt;&#xa;    &lt;/html&gt;"><elem key="GetRequest">&#xa;    HTTP/1.1 200 OK&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 51541&#xa;    Date: Sun, 20 Jul 2025 04:15:13 GMT&#xa;    Connection: close&#xa;    &lt;!doctype html&gt;&#xa;    &lt;html lang=&quot;en&quot; data-bs-theme=&quot;light&quot;&gt;&#xa;    &lt;html lang=&quot;en&quot; data-bs-theme=&quot;light&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;utf-8&quot;&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&#xa;    &lt;title&gt;SentinelZero Dashboard&lt;/title&gt;&#xa;    &lt;link href=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;link href=&quot;/static/style.css&quot; rel=&quot;stylesheet&quot;&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body data-testid=&quot;body&quot;&gt;&#xa;    &lt;div class=&quot;header&quot; style=&quot;position: fixed; top: 0; left: 0; right: 0; z-index: 1030; width</elem>
+<elem key="RTSPRequest">&#xa;    &lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.01//EN&quot;&#xa;    &quot;http://www.w3.org/TR/html4/strict.dtd&quot;&gt;&#xa;    &lt;html&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html;charset=utf-8&quot;&gt;&#xa;    &lt;title&gt;Error response&lt;/title&gt;&#xa;    &lt;/head&gt;&#xa;    &lt;body&gt;&#xa;    &lt;h1&gt;Error response&lt;/h1&gt;&#xa;    &lt;p&gt;Error code: 400&lt;/p&gt;&#xa;    &lt;p&gt;Message: Bad request version (&apos;RTSP/1.0&apos;).&lt;/p&gt;&#xa;    &lt;p&gt;Error code explanation: HTTPStatus.BAD_REQUEST - Bad request syntax or unsupported method.&lt;/p&gt;&#xa;    &lt;/body&gt;&#xa;    &lt;/html&gt;</elem>
+</script></port>
+<port protocol="tcp" portid="5173"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="unknown" servicefp="SF-Port5173-TCP:V=7.80%I=7%D=7/20%Time=687C6D56%P=x86_64-pc-linux-gnu%r(GetRequest,FE,&quot;HTTP/1\.1\x20403\x20Forbidden\r\nVary:\x20Origin\r\nContent-Type:\x20text/plain\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\nBlocked\x20request\.\x20This\x20host\x20\(undefined\)\x20is\x20not\x20allowed\.\nTo\x20allow\x20this\x20host,\x20add\x20undefined\x20to\x20`server\.allowedHosts`\x20in\x20vite\.config\.js\.&quot;)%r(HTTPOptions,D2,&quot;HTTP/1\.1\x20204\x20No\x20Content\r\nVary:\x20Origin,\x20Access-Control-Request-Headers\r\nAccess-Control-Allow-Methods:\x20GET,HEAD,PUT,PATCH,POST,DELETE\r\nContent-Length:\x200\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\n&quot;)%r(RTSPRequest,D2,&quot;HTTP/1\.1\x20204\x20No\x20Content\r\nVary:\x20Origin,\x20Access-Control-Request-Headers\r\nAccess-Control-Allow-Methods:\x20GET,HEAD,PUT,PATCH,POST,DELETE\r\nContent-Length:\x200\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\n&quot;)%r(RPCCheck,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(DNSVersionBindReqTCP,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(DNSStatusRequestTCP,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(Help,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(SSLSessionReq,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(TerminalServerCookie,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(TLSSessionReq,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(Kerberos,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(SMBProgNeg,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(X11Probe,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(FourOhFourRequest,FE,&quot;HTTP/1\.1\x20403\x20Forbidden\r\nVary:\x20Origin\r\nContent-Type:\x20text/plain\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\nBlocked\x20request\.\x20This\x20host\x20\(undefined\)\x20is\x20not\x20allowed\.\nTo\x20allow\x20this\x20host,\x20add\x20undefined\x20to\x20`server\.allowedHosts`\x20in\x20vite\.config\.js\.&quot;)%r(LPDString,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, LPDString, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe: &#xa;    HTTP/1.1 400 Bad Request&#xa;  FourOhFourRequest, GetRequest: &#xa;    HTTP/1.1 403 Forbidden&#xa;    Vary: Origin&#xa;    Content-Type: text/plain&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close&#xa;    Blocked request. This host (undefined) is not allowed.&#xa;    allow this host, add undefined to `server.allowedHosts` in vite.config.js.&#xa;  HTTPOptions, RTSPRequest: &#xa;    HTTP/1.1 204 No Content&#xa;    Vary: Origin, Access-Control-Request-Headers&#xa;    Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE&#xa;    Content-Length: 0&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close"><elem key="DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, LPDString, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe">&#xa;    HTTP/1.1 400 Bad Request</elem>
+<elem key="FourOhFourRequest, GetRequest">&#xa;    HTTP/1.1 403 Forbidden&#xa;    Vary: Origin&#xa;    Content-Type: text/plain&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close&#xa;    Blocked request. This host (undefined) is not allowed.&#xa;    allow this host, add undefined to `server.allowedHosts` in vite.config.js.</elem>
+<elem key="HTTPOptions, RTSPRequest">&#xa;    HTTP/1.1 204 No Content&#xa;    Vary: Origin, Access-Control-Request-Headers&#xa;    Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE&#xa;    Content-Length: 0&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close</elem>
+</script></port>
+<port protocol="tcp" portid="5174"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="unknown" servicefp="SF-Port5174-TCP:V=7.80%I=7%D=7/20%Time=687C6D56%P=x86_64-pc-linux-gnu%r(GetRequest,FE,&quot;HTTP/1\.1\x20403\x20Forbidden\r\nVary:\x20Origin\r\nContent-Type:\x20text/plain\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\nBlocked\x20request\.\x20This\x20host\x20\(undefined\)\x20is\x20not\x20allowed\.\nTo\x20allow\x20this\x20host,\x20add\x20undefined\x20to\x20`server\.allowedHosts`\x20in\x20vite\.config\.js\.&quot;)%r(HTTPOptions,D2,&quot;HTTP/1\.1\x20204\x20No\x20Content\r\nVary:\x20Origin,\x20Access-Control-Request-Headers\r\nAccess-Control-Allow-Methods:\x20GET,HEAD,PUT,PATCH,POST,DELETE\r\nContent-Length:\x200\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\n&quot;)%r(RTSPRequest,D2,&quot;HTTP/1\.1\x20204\x20No\x20Content\r\nVary:\x20Origin,\x20Access-Control-Request-Headers\r\nAccess-Control-Allow-Methods:\x20GET,HEAD,PUT,PATCH,POST,DELETE\r\nContent-Length:\x200\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\n&quot;)%r(RPCCheck,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(DNSVersionBindReqTCP,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(DNSStatusRequestTCP,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(Help,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(SSLSessionReq,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(TerminalServerCookie,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(TLSSessionReq,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(Kerberos,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(SMBProgNeg,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(X11Probe,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;)%r(FourOhFourRequest,FE,&quot;HTTP/1\.1\x20403\x20Forbidden\r\nVary:\x20Origin\r\nContent-Type:\x20text/plain\r\nDate:\x20Sun,\x2020\x20Jul\x202025\x2004:15:18\x20GMT\r\nConnection:\x20close\r\n\r\nBlocked\x20request\.\x20This\x20host\x20\(undefined\)\x20is\x20not\x20allowed\.\nTo\x20allow\x20this\x20host,\x20add\x20undefined\x20to\x20`server\.allowedHosts`\x20in\x20vite\.config\.js\.&quot;)%r(LPDString,1C,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, LPDString, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe: &#xa;    HTTP/1.1 400 Bad Request&#xa;  FourOhFourRequest, GetRequest: &#xa;    HTTP/1.1 403 Forbidden&#xa;    Vary: Origin&#xa;    Content-Type: text/plain&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close&#xa;    Blocked request. This host (undefined) is not allowed.&#xa;    allow this host, add undefined to `server.allowedHosts` in vite.config.js.&#xa;  HTTPOptions, RTSPRequest: &#xa;    HTTP/1.1 204 No Content&#xa;    Vary: Origin, Access-Control-Request-Headers&#xa;    Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE&#xa;    Content-Length: 0&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close"><elem key="DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, LPDString, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe">&#xa;    HTTP/1.1 400 Bad Request</elem>
+<elem key="FourOhFourRequest, GetRequest">&#xa;    HTTP/1.1 403 Forbidden&#xa;    Vary: Origin&#xa;    Content-Type: text/plain&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close&#xa;    Blocked request. This host (undefined) is not allowed.&#xa;    allow this host, add undefined to `server.allowedHosts` in vite.config.js.</elem>
+<elem key="HTTPOptions, RTSPRequest">&#xa;    HTTP/1.1 204 No Content&#xa;    Vary: Origin, Access-Control-Request-Headers&#xa;    Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE&#xa;    Content-Length: 0&#xa;    Date: Sun, 20 Jul 2025 04:15:18 GMT&#xa;    Connection: close</elem>
+</script></port>
+<port protocol="tcp" portid="5355"><state state="open" reason="syn-ack" reason_ttl="1"/><service name="llmnr" method="table" conf="3"/></port>
+</ports>
+<times srtt="6" rttvar="0" to="100000"/>
+</host>
+<taskbegin task="NSE" time="1752985053"/>
+<taskend task="NSE" time="1752985053"/>
+<taskbegin task="NSE" time="1752985053"/>
+<taskend task="NSE" time="1752985053"/>
+<taskbegin task="NSE" time="1752985053"/>
+<taskend task="NSE" time="1752985053"/>
+<runstats><finished time="1752985053" timestr="Sun Jul 20 04:17:33 2025" elapsed="1363.01" summary="Nmap done at Sun Jul 20 04:17:33 2025; 256 IP addresses (13 hosts up) scanned in 1363.01 seconds" exit="success"/><hosts up="13" down="243" total="256"/>
+</runstats>
+</nmaprun>
