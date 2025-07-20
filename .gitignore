@@ -1,99 +1,50 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Flask
-instance/
-.webassets-cache
-
-# Database
-*.db
-*.sqlite
+*.pyc
+*.pyo
+*.pyd
 *.sqlite3
+*.db
+instance/
+backend/sentinelzero.db
+backend/sentinelzero.db.bak
 
-# Logs
-*.log
-logs/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Node.js
+# Node/Vite
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
-.eslintcache
-
-# React/Vite
-dist/
-build/
-.cache/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+frontend/react-sentinelzero/node_modules/
+frontend/react-sentinelzero/dist/
+frontend/react-sentinelzero/.vite/
+frontend/react-sentinelzero/.cache/
+frontend/react-sentinelzero/.eslintcache
+frontend/react-sentinelzero/.env
+frontend/react-sentinelzero/.env.*
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
+# Logs
+*.log
+backend/app.log
+backend/app_new.log
+backend/flask.log
 
-# Playwright
-test-results/
-playwright-report/
-blob-report/
+# Test/coverage
+frontend/react-sentinelzero/coverage/
+backend/htmlcov/
+backend/.pytest_cache/
 
-# Cursor
-.cursor-server/
+# Backups
+../sentinelzero-backup-*/
 
-# Backup files
-*_backup_*/
+# Misc
 *.bak
-*.backup
+*.swp
+*.swo
 
-# Temporary files
-*.tmp
-*.temp 
+# Ignore font zips
+frontend/react-sentinelzero/public/fonts/*.zip 
+
+.cursor-server/*
+.cache/*
+.npm/*

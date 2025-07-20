@@ -4,11 +4,13 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
+  darkMode: 'media',
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Work Sans', 'system-ui', 'sans-serif'],
+        'sans': ['Inter', 'Manrope', 'Work Sans', 'system-ui', 'sans-serif'],
+        'inter': ['Inter', 'sans-serif'],
+        'manrope': ['Manrope', 'sans-serif'],
       },
       colors: {
         primary: {

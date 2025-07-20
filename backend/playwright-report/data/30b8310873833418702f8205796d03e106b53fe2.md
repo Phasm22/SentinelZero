@@ -1,0 +1,74 @@
+# Page snapshot
+
+```yaml
+- img "SentinelZero Logo"
+- text: SentinelZero v1
+- link "Back to Dashboard":
+  - /url: /
+- navigation:
+  - link " Scan Types":
+    - /url: /
+  - link " Alert Settings":
+    - /url: "#"
+  - link " Scan History":
+    - /url: /scan-history
+  - link " Settings":
+    - /url: /settings
+- main:
+  - link " Back to Dashboard":
+    - /url: /
+  - text:  Application Settings Default Scan Network
+  - textbox "Default Scan Network"
+  - text: Network range to scan by default Scan Timeout (minutes)
+  - spinbutton "Scan Timeout (minutes)": "30"
+  - text: Maximum time for a scan to run Max Concurrent Scans
+  - spinbutton "Max Concurrent Scans": "1"
+  - text: Maximum number of scans running simultaneously Log Retention (days)
+  - spinbutton "Log Retention (days)": "30"
+  - text: How long to keep scan logs
+  - button "Save Settings"
+  - text:  Notification Settings
+  - checkbox "Enable Pushover Notifications" [checked]
+  - text: Enable Pushover Notifications Pushover API Token
+  - textbox "Pushover API Token"
+  - text: Pushover User Key
+  - textbox "Pushover User Key"
+  - checkbox "Notify on scan start" [checked]
+  - text: Notify on scan start
+  - checkbox "Notify on scan completion" [checked]
+  - text: Notify on scan completion
+  - checkbox "Notify when vulnerabilities found" [checked]
+  - text: Notify when vulnerabilities found
+  - button "Save Notification Settings"
+  - text:  System Information
+  - table:
+    - rowgroup:
+      - 'row "Application Version: SentinelZero v1.0"':
+        - cell "Application Version:"
+        - cell "SentinelZero v1.0"
+      - 'row "Python Version: 3.8+"':
+        - cell "Python Version:"
+        - cell "3.8+"
+      - 'row "Flask Version: 2.0+"':
+        - cell "Flask Version:"
+        - cell "2.0+"
+      - 'row "Database: SQLite"':
+        - cell "Database:"
+        - cell "SQLite"
+  - table:
+    - rowgroup:
+      - 'row "Total Scans: 1"':
+        - cell "Total Scans:"
+        - cell "1"
+      - 'row "Database Size: ~1.2 MB"':
+        - cell "Database Size:"
+        - cell "~1.2 MB"
+      - 'row "Last Scan: 7/19/2025, 1:55:25 AM"':
+        - cell "Last Scan:"
+        - cell "7/19/2025, 1:55:25 AM"
+      - 'row "Uptime: 2 days, 3 hours"':
+        - cell "Uptime:"
+        - cell "2 days, 3 hours"
+  - button " Refresh System Info"
+  - button " Clear All Data"
+```

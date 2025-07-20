@@ -1,0 +1,87 @@
+# Page snapshot
+
+```yaml
+- img "SentinelZero Logo"
+- text: SentinelZero v1 
+- navigation:
+  - link " Scan Types":
+    - /url: /
+  - link " Alert Settings":
+    - /url: "#"
+  - link " Scan History":
+    - /url: /scan-history
+  - link " Settings":
+    - /url: /settings
+- main:
+  - text:  13 Hosts Found  0 Open Ports  0 Vulns  Jul 18, 2025 19:55 Last Run Time  System Information
+  - table:
+    - rowgroup:
+      - 'row "Application Version: SentinelZero v1.0"':
+        - cell "Application Version:"
+        - cell "SentinelZero v1.0"
+      - 'row "Python Version: --"':
+        - cell "Python Version:"
+        - cell "--"
+      - 'row "Flask Version: --"':
+        - cell "Flask Version:"
+        - cell "--"
+      - 'row "Database: SQLite"':
+        - cell "Database:"
+        - cell "SQLite"
+  - table:
+    - rowgroup:
+      - 'row "Total Scans: --"':
+        - cell "Total Scans:"
+        - cell "--"
+      - 'row "Database Size: --"':
+        - cell "Database Size:"
+        - cell "--"
+      - 'row "Last Scan: --"':
+        - cell "Last Scan:"
+        - cell "--"
+      - 'row "Uptime: --"':
+        - cell "Uptime:"
+        - cell "--"
+  - button " Refresh System Info"
+  - button " Clear All Data"
+  - text:  Last 5 Scans
+  - table:
+    - rowgroup:
+      - row "Timestamp Type Hosts Vulns Actions":
+        - cell "Timestamp"
+        - cell "Type"
+        - cell "Hosts"
+        - cell "Vulns"
+        - cell "Actions"
+    - rowgroup:
+      - row "Jul 18, 2025 19:55 IoT Scan 13 2  ":
+        - cell "Jul 18, 2025 19:55"
+        - cell "IoT Scan"
+        - cell "13"
+        - cell "2"
+        - cell " ":
+          - button ""
+          - button ""
+  - text:  Trigger New Scan Scan Type
+  - combobox "Scan Type":
+    - option "Full TCP" [selected]
+    - option "IoT Scan"
+    - option "Vuln Scripts"
+  - button " Start Scan"
+  - text:  Alert Settings
+  - heading "Scheduled Scans" [level=6]
+  - checkbox "Enable Scheduled Scan"
+  - text: Enable Scheduled Scan Scan Type
+  - combobox "Scan Type":
+    - option "Full TCP" [selected]
+    - option "IoT Scan"
+    - option "Vuln Scripts"
+  - text: Frequency
+  - combobox "Frequency":
+    - option "Daily" [selected]
+    - option "Weekly (Mon)"
+  - text: Time (24h)
+  - textbox "Time (24h)": 03:00
+  - button "Save Schedule"
+  - text: "Next Scheduled Run: -- Last Run Status: --  Live Log"
+```

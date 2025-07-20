@@ -1,23 +1,19 @@
+/* No manual dark mode toggling logic here. Tailwind will use 'media' for dark mode. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Manrope:wght@400;600;700&display=swap');
 @import url('/fonts/Sentient_Complete/Sentient_Complete/Fonts/WEB/css/sentient.css');
-@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* TEST STYLE: Add a red border and background to body to confirm CSS is loaded */
-body {
-  border: 5px solid red !important;
-  background: #ffeaea !important;
-}
-
 /* Set up base font families */
 @layer base {
   html {
-    font-family: 'Work Sans', system-ui, sans-serif;
+    font-family: 'Inter', 'Work Sans', system-ui, sans-serif;
+    font-size: 18px;
   }
   h1, h2, h3, .font-title {
-    font-family: 'Sentient-Bold', 'Sentient-Variable', 'Work Sans', system-ui, sans-serif;
+    font-family: 'Manrope', 'Sentient-Bold', 'Sentient-Variable', 'Inter', 'Work Sans', system-ui, sans-serif;
     font-weight: 700;
   }
 }
@@ -147,5 +143,22 @@ body {
   
   .dark .border-primary-800 {
     border-color: #1e40af;
+  }
+} 
+.bg-fly-in {
+  animation: fly-in-bg 0.9s cubic-bezier(0.4,0,0.2,1) 1;
+}
+@keyframes fly-in-bg {
+  0% {
+    opacity: 0;
+    transform: translateX(-60vw) scale(1.1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 } 

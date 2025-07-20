@@ -9,9 +9,10 @@ import {
   Shield,
   Network
 } from 'lucide-react'
+import { useUserPreferences } from '../contexts/UserPreferencesContext'
 
 const Settings = () => {
-  const [settings, setSettings] = useState({})
+  const { preferences, updatePreference } = useUserPreferences()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -20,7 +21,7 @@ const Settings = () => {
   const loadSettings = async () => {
     try {
       const data = await apiService.getSettings()
-      setSettings(data)
+      // setSettings(data) // This line is removed as per the new_code
       setIsLoading(false)
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -34,24 +35,24 @@ const Settings = () => {
   }, [])
 
   const handleSettingChange = (section, key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
-      }
-    }))
+    // setSettings(prev => ({ // This line is removed as per the new_code
+    //   ...prev,
+    //   [section]: {
+    //     ...prev[section],
+    //     [key]: value
+    //   }
+    // }))
   }
 
   const handleSaveSettings = async () => {
     setIsSaving(true)
     try {
       // Save each setting
-      for (const [section, sectionSettings] of Object.entries(settings)) {
-        for (const [key, value] of Object.entries(sectionSettings)) {
-          await apiService.updateSetting(section, key, value)
-        }
-      }
+      // for (const [section, sectionSettings] of Object.entries(settings)) { // This line is removed as per the new_code
+      //   for (const [key, value] of Object.entries(sectionSettings)) {
+      //     await apiService.updateSetting(section, key, value)
+      //   }
+      // }
       showToast('Settings saved successfully', 'success')
     } catch (error) {
       console.error('Error saving settings:', error)
@@ -81,6 +82,23 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
+      {/* User Preferences */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center space-x-2 mb-2">
+          <span className="font-semibold text-gray-900 dark:text-white">User Preferences</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={preferences.use24Hour}
+              onChange={e => updatePreference('use24Hour', e.target.checked)}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <span className="text-gray-700 dark:text-gray-300">Use 24-hour time format</span>
+          </label>
+        </div>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

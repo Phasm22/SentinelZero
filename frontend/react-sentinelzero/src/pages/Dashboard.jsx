@@ -3,6 +3,8 @@ import { useSocket } from '../contexts/SocketContext'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
 import ScanDetailsModal from '../components/ScanDetailsModal'
+import AnimatedValue from '../components/AnimatedValue'
+import StatCard from '../components/StatCard'
 import { 
   Server, 
   Shield, 
@@ -11,10 +13,21 @@ import {
   Play,
   RefreshCw,
   Eye,
-  Trash2
+  Trash2,
+  Rocket,
+  Cpu,
+  Bug,
+  ShieldCheck,
+  Info,
+  Loader2
 } from 'lucide-react'
+import { useUserPreferences } from '../contexts/UserPreferencesContext'
+import { formatTimestamp } from '../utils/date'
+import ScanControls from '../components/ScanControls'
+import RecentScansTable from '../components/RecentScansTable'
 
 const Dashboard = () => {
+  const { preferences } = useUserPreferences()
   const [recentScans, setRecentScans] = useState([])
   const [systemInfo, setSystemInfo] = useState({})
   const [isLoading, setIsLoading] = useState(true)
@@ -128,16 +141,19 @@ const Dashboard = () => {
     }
   }
 
-  const formatTimestamp = (timestamp) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
+  // Accept use24Hour as a prop or fallback to false
+  const VulnIcon = ({ count }) =>
+    count === 0
+      ? <ShieldCheck className="w-7 h-7 text-green-500" />
+      : <AlertTriangle className="w-7 h-7 text-red-500 animate-pulse" />
+
+  // Helper for Disconnected dot
+  const DisconnectedDot = () => (
+    <span className="relative flex h-3 w-3">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+    </span>
+  )
 
   if (isLoading) {
     return (
@@ -158,193 +174,84 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Network Security Scanner</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={clearAllData}
-            className="btn btn-outline btn-sm flex items-center space-x-1"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Clear All Data</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Scan Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Scan Controls</h2>
-          <div className="flex items-center space-x-2">
-            {!isConnected && (
-              <div className="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm">Disconnected</span>
-              </div>
-            )}
+    <div className="space-y-10 w-full">
+      {/* Header with shimmer/progress bar */}
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-title font-extrabold text-gray-100 tracking-tight drop-shadow-lg">Dashboard</h1>
+            <p className="text-lg text-gray-400 mt-2">Network Security Scanner</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={clearAllData}
+              className="btn btn-error btn-sm flex items-center space-x-2 hover:bg-red-700 hover:text-white transition-colors relative group"
+              title="This will wipe all scan history. Are you sure?"
+            >
+              <Trash2 className="w-6 h-6 text-red-500 group-hover:text-white transition-colors" />
+              <span>Clear All Data</span>
+            </button>
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => handleScanTrigger('Full TCP')}
-            disabled={isScanning}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            {isScanning ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span>{isScanning ? 'Scanning...' : 'Full TCP Scan'}</span>
-          </button>
-          
-          <button
-            onClick={() => handleScanTrigger('IoT Scan')}
-            disabled={isScanning}
-            className="btn btn-outline flex items-center space-x-2"
-          >
-            <Play className="w-4 h-4" />
-            <span>IoT Scan</span>
-          </button>
-          
-          <button
-            onClick={() => handleScanTrigger('Vuln Scripts')}
-            disabled={isScanning}
-            className="btn btn-outline flex items-center space-x-2"
-          >
-            <Play className="w-4 h-4" />
-            <span>Vuln Scripts</span>
-          </button>
-        </div>
-
-        {/* Progress Bar */}
+        {/* Shimmer/progress bar under header during scan */}
         {isScanning && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Scan in Progress...
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {scanProgress ? `${Math.round(scanProgress)}%` : '0%'}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div 
-                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${scanProgress || 0}%` }}
-              ></div>
-            </div>
+          <div className="absolute left-0 right-0 top-full mt-2 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded-full shadow-lg" />
+        )}
+        {isScanning && (
+          <div className="flex items-center mt-2">
+            <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-400" />
+            <span className="text-blue-300 animate-pulse font-semibold">Scanning…</span>
           </div>
         )}
       </div>
 
-      {/* System Info Cards */}
+      <ScanControls
+        onScanTrigger={handleScanTrigger}
+        isScanning={isScanning}
+        scanProgress={scanProgress}
+        isConnected={isConnected}
+      />
+
+      {/* System Info Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Server className="h-8 w-8 text-blue-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Scans</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {systemInfo.total_scans || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Shield className="h-8 w-8 text-green-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts Found</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {systemInfo.total_hosts || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <AlertTriangle className="h-8 w-8 text-red-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vulnerabilities</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {systemInfo.total_vulns || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Clock className="h-8 w-8 text-purple-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Scan</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">
-                {systemInfo.last_scan || 'Never'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={<Server className="w-8 h-8 text-blue-400 mb-1" />}
+          label="Total Scans"
+          value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-3xl font-extrabold text-gray-100" />}
+          hoverRing="hover:ring-blue-400/40"
+        />
+        <StatCard
+          icon={<Shield className="w-8 h-8 text-green-400 mb-1" />}
+          label="Hosts Found"
+          value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-3xl font-extrabold text-gray-100" />}
+          hoverRing="hover:ring-green-400/40"
+        />
+        <StatCard
+          icon={VulnIcon({ count: systemInfo.vulns_count })}
+          label="Vulnerabilities"
+          value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-3xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
+          hoverRing="hover:ring-red-400/40"
+        />
+        <StatCard
+          icon={<Clock className="w-8 h-8 text-yellow-300 mb-1" />}
+          label="Last Scan"
+          value={<div className="text-xl font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
+          hoverRing="hover:ring-yellow-300/40"
+        />
       </div>
 
-      {/* Recent Scans */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Scans</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Type</th>
-                <th>Hosts</th>
-                <th>Vulns</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentScans.map((scan) => (
-                <tr key={scan.id}>
-                  <td>{formatTimestamp(scan.timestamp)}</td>
-                  <td>
-                    <span className="badge badge-primary">
-                      {scan.scan_type}
-                    </span>
-                  </td>
-                  <td>{scan.hosts_count || 0}</td>
-                  <td>{scan.vulns_count || 0}</td>
-                  <td>
-                    <button 
-                      onClick={() => handleViewDetails(scan)}
-                      className="btn btn-outline btn-sm flex items-center space-x-1"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>View</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <RecentScansTable
+        recentScans={recentScans}
+        preferences={preferences}
+        handleViewDetails={handleViewDetails}
+      />
 
       {/* Scan Details Modal */}
-      {isModalOpen && selectedScan && (
-        <ScanDetailsModal
-          scan={selectedScan}
-          onClose={handleCloseModal}
-        />
-      )}
+      <ScanDetailsModal
+        scan={selectedScan}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }

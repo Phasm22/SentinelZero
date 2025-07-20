@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../utils/api'
 import { useToast } from '../contexts/ToastContext'
+import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { 
   BarChart3, 
   Monitor, 
@@ -10,6 +11,7 @@ import {
   Download,
   Eye
 } from 'lucide-react'
+import { formatTimestamp } from '../utils/date'
 
 const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview')
@@ -18,6 +20,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [xmlData, setXmlData] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { showToast } = useToast()
+  const { preferences } = useUserPreferences()
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
@@ -69,17 +72,6 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
     showToast('XML file downloaded', 'success')
   }
 
-  const formatTimestamp = (timestamp) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
   if (!isOpen || !scan) return null
 
   return (
@@ -96,7 +88,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                   Scan Details - {scan.scan_type}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {formatTimestamp(scan.timestamp)}
+                  {formatTimestamp(scan.timestamp, preferences.use24Hour)}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -241,7 +233,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-500 dark:text-gray-400">Timestamp:</span>
-                          <span className="text-gray-900 dark:text-white">{formatTimestamp(scan.timestamp)}</span>
+                          <span className="text-gray-900 dark:text-white">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</span>
                         </div>
                         {scan.diff_from_previous && (
                           <div className="flex justify-between">
