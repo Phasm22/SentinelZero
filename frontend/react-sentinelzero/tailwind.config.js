@@ -8,9 +8,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Inter', 'Manrope', 'Work Sans', 'system-ui', 'sans-serif'],
+        'sans': ['Work Sans', 'Inter', 'Manrope', 'system-ui', 'sans-serif'],
         'inter': ['Inter', 'sans-serif'],
         'manrope': ['Manrope', 'sans-serif'],
+        'sentient': [
+          'Sentient-Bold',
+          'Sentient-Variable',
+          'Sentient-Regular',
+          'Sentient-Light',
+          'Manrope',
+          'Work Sans',
+          'Inter',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       colors: {
         primary: {

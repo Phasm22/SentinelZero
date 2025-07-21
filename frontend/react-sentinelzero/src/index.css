@@ -1,19 +1,53 @@
 /* No manual dark mode toggling logic here. Tailwind will use 'media' for dark mode. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Manrope:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;600&display=swap');
 @import url('/fonts/Sentient_Complete/Sentient_Complete/Fonts/WEB/css/sentient.css');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-image: url('/backgrounds/blob-desk-light.png');
+  background-size: contain;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-color: #18181b;
+  transition: background-image 0.3s;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-image: url('/backgrounds/blob-desk-dark.png');
+    background-color: #0f0f0f;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    background-image: url('/backgrounds/blob-mobile-light.png');
+    background-size: contain;
+    background-position: center top;
+    background-color: #18181b;
+  }
+}
+
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  body {
+    background-image: url('/backgrounds/blob-mobile-dark.png');
+    background-size: contain;
+    background-position: center top;
+    background-color: #0f0f0f;
+  }
+}
+
 /* Set up base font families */
 @layer base {
   html {
-    font-family: 'Inter', 'Work Sans', system-ui, sans-serif;
+    font-family: 'Work Sans', system-ui, sans-serif;
     font-size: 18px;
   }
   h1, h2, h3, .font-title {
-    font-family: 'Manrope', 'Sentient-Bold', 'Sentient-Variable', 'Inter', 'Work Sans', system-ui, sans-serif;
+    font-family: 'Sentient-Bold', 'Sentient-Variable', 'Sentient-Regular', 'Sentient-Light', 'Work Sans', system-ui, sans-serif;
     font-weight: 700;
   }
 }

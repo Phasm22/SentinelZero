@@ -25,6 +25,7 @@ import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { formatTimestamp } from '../utils/date'
 import ScanControls from '../components/ScanControls'
 import RecentScansTable from '../components/RecentScansTable'
+import InsightsCard from '../components/InsightsCard'
 
 const Dashboard = () => {
   const { preferences } = useUserPreferences()
@@ -174,20 +175,16 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-10 w-full">
+    <div className="space-y-6 w-full">
       {/* Header with shimmer/progress bar */}
       <div className="relative">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-5xl font-title font-extrabold text-gray-100 tracking-tight drop-shadow-lg">Dashboard</h1>
-            <p className="text-lg text-gray-400 mt-2">Network Security Scanner</p>
-          </div>
           <div className="flex items-center space-x-4">
-            <button
-              onClick={clearAllData}
-              className="btn btn-error btn-sm flex items-center space-x-2 hover:bg-red-700 hover:text-white transition-colors relative group"
-              title="This will wipe all scan history. Are you sure?"
-            >
+      <button
+        onClick={clearAllData}
+        className="btn btn-error btn-sm flex items-center space-x-2 hover:bg-red-700 hover:text-white transition-colors relative group"
+        title="This will wipe all scan history. Are you sure?"
+      >
               <Trash2 className="w-6 h-6 text-red-500 group-hover:text-white transition-colors" />
               <span>Clear All Data</span>
             </button>
@@ -205,46 +202,78 @@ const Dashboard = () => {
         )}
       </div>
 
-      <ScanControls
-        onScanTrigger={handleScanTrigger}
-        isScanning={isScanning}
-        scanProgress={scanProgress}
-        isConnected={isConnected}
-      />
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left Column - Insights and Controls */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Insights Card */}
+          <InsightsCard />
+          
+          {/* Scan Controls */}
+          <ScanControls
+            onScanTrigger={handleScanTrigger}
+            isScanning={isScanning}
+            scanProgress={scanProgress}
+            isConnected={isConnected}
+          />
+        </div>
 
-      {/* System Info Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={<Server className="w-8 h-8 text-blue-400 mb-1" />}
-          label="Total Scans"
-          value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-3xl font-extrabold text-gray-100" />}
-          hoverRing="hover:ring-blue-400/40"
-        />
-        <StatCard
-          icon={<Shield className="w-8 h-8 text-green-400 mb-1" />}
-          label="Hosts Found"
-          value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-3xl font-extrabold text-gray-100" />}
-          hoverRing="hover:ring-green-400/40"
-        />
-        <StatCard
-          icon={VulnIcon({ count: systemInfo.vulns_count })}
-          label="Vulnerabilities"
-          value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-3xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
-          hoverRing="hover:ring-red-400/40"
-        />
-        <StatCard
-          icon={<Clock className="w-8 h-8 text-yellow-300 mb-1" />}
-          label="Last Scan"
-          value={<div className="text-xl font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
-          hoverRing="hover:ring-yellow-300/40"
-        />
+        {/* Right Column - Stats and Recent Scans */}
+        <div className="space-y-4">
+          {/* System Info Cards Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              icon={<Server className="w-6 h-6 text-blue-400 mb-1" />}
+              label="Total Scans"
+              value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-2xl font-extrabold text-gray-100" />}
+              hoverRing="hover:ring-blue-400/40"
+            />
+            <StatCard
+              icon={<Shield className="w-6 h-6 text-green-400 mb-1" />}
+              label="Hosts Found"
+              value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-2xl font-extrabold text-gray-100" />}
+              hoverRing="hover:ring-green-400/40"
+            />
+            <StatCard
+              icon={VulnIcon({ count: systemInfo.vulns_count })}
+              label="Vulnerabilities"
+              value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-2xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
+              hoverRing="hover:ring-red-400/40"
+            />
+            <StatCard
+              icon={<Clock className="w-6 h-6 text-yellow-300 mb-1" />}
+              label="Last Scan"
+              value={<div className="text-lg font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
+              hoverRing="hover:ring-yellow-300/40"
+            />
+          </div>
+
+          {/* Recent Scans - Compact Version */}
+          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-4">
+            <h2 className="text-xl font-title font-bold text-gray-100 mb-4">Recent Scans</h2>
+            <div className="space-y-3">
+              {recentScans.slice(0, 3).map((scan) => (
+                <div key={scan.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">{scan.scan_type}</div>
+                      <div className="text-xs text-gray-400">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleViewDetails(scan)}
+                    className="text-blue-400 hover:text-blue-300 text-sm"
+                    data-testid={`recent-scan-view-btn-${scan.id}`}
+                  >
+                    View
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <RecentScansTable
-        recentScans={recentScans}
-        preferences={preferences}
-        handleViewDetails={handleViewDetails}
-      />
 
       {/* Scan Details Modal */}
       <ScanDetailsModal

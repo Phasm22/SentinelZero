@@ -75,11 +75,11 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   if (!isOpen || !scan) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="scan-details-modal">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} data-testid="modal-overlay"></div>
 
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" data-testid="modal-content">
           {/* Header */}
           <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
@@ -95,6 +95,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                 <button
                   onClick={handleDownloadXml}
                   className="btn btn-outline btn-sm flex items-center space-x-1"
+                  data-testid="download-xml-btn"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download XML</span>
@@ -102,6 +103,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  data-testid="close-modal-btn"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -121,6 +123,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
+                  data-testid={`modal-tab-btn-${tab.id}`}
                 >
                   {tab.icon}
                   <span>{tab.name}</span>

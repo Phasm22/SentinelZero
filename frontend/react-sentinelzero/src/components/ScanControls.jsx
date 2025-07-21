@@ -29,6 +29,7 @@ const ScanControls = ({
       </div>
       <div className="flex flex-wrap gap-4">
         <button
+          data-testid="scan-full-tcp-btn"
           onClick={() => onScanTrigger('Full TCP')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
@@ -38,6 +39,7 @@ const ScanControls = ({
           {isScanning && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </button>
         <button
+          data-testid="scan-iot-btn"
           onClick={() => onScanTrigger('IoT Scan')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-800 hover:bg-purple-700 focus:ring-2 focus:ring-purple-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
@@ -46,6 +48,7 @@ const ScanControls = ({
           <span>IoT Scan</span>
         </button>
         <button
+          data-testid="scan-vuln-btn"
           onClick={() => onScanTrigger('Vuln Scripts')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-700 hover:bg-red-700 focus:ring-2 focus:ring-red-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"

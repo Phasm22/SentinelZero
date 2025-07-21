@@ -363,19 +363,30 @@ def scans_table():
         scans_dicts.append(d)
     return render_template('scans_table.html', scans=scans_dicts)
 
+# Helper to determine if request is for API
+
+def is_api_request():
+    return request.path.startswith('/api/')
+
 @app.errorhandler(404)
 def not_found_error(error):
     socketio.emit('scan_log', {'msg': '404 Not Found'})
+    if is_api_request():
+        return jsonify({'error': 'Not found', 'code': 404}), 404
     return render_template('error.html', code=404, message='Page not found'), 404
 
 @app.errorhandler(400)
 def bad_request_error(error):
     socketio.emit('scan_log', {'msg': '400 Bad Request - Unicode error from nmap probes'})
+    if is_api_request():
+        return jsonify({'error': 'Bad request', 'code': 400}), 400
     return render_template('error.html', code=400, message='Bad request - Unicode error from nmap probes'), 400
 
 @app.errorhandler(500)
 def internal_error(error):
     socketio.emit('scan_log', {'msg': '500 Internal Server Error'})
+    if is_api_request():
+        return jsonify({'error': 'Internal server error', 'code': 500}), 500
     return render_template('error.html', code=500, message='Internal server error'), 500
 
 @app.errorhandler(Exception)
@@ -383,6 +394,8 @@ def handle_exception(e):
     print("=== Uncaught Exception ===", file=sys.stderr)
     import traceback
     traceback.print_exc()
+    if is_api_request():
+        return jsonify({'error': str(e), 'code': 500}), 500
     return jsonify({'error': str(e)}), 500
 
 @app.route('/scan', methods=['POST'])

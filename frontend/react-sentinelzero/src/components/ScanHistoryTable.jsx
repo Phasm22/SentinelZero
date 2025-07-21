@@ -22,7 +22,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => (
         </thead>
         <tbody>
           {scans.map((scan) => (
-            <tr key={scan.id} className="hover:bg-gray-800/60 transition-colors group">
+            <tr key={scan.id} className="hover:bg-gray-800/60 transition-colors group" data-testid={`history-scan-row-${scan.id}`}>
               <td>{formatTimestamp(scan.timestamp, preferences.use24Hour)}</td>
               <td>
                 <span className="inline-flex items-center gap-1 badge badge-primary bg-blue-700/20 text-blue-200 px-2 py-1 rounded-md">
@@ -33,7 +33,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => (
               <td>{scan.hosts_count || 0}</td>
               <td>{scan.vulns_count || 0}</td>
               <td>
-                <button className="btn btn-outline btn-sm group-hover:shadow-blue-400/40 group-hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)}>
+                <button className="btn btn-outline btn-sm group-hover:shadow-blue-400/40 group-hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)} data-testid={`history-scan-view-btn-${scan.id}`}>
                   <Eye className="w-3 h-3" /> View Details
                 </button>
               </td>
@@ -45,7 +45,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => (
     {/* Mobile Cards */}
     <div className="md:hidden space-y-4">
       {scans.map((scan) => (
-        <div key={scan.id} className="bg-white/10 dark:bg-gray-900/30 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-4 space-y-3">
+        <div key={scan.id} className="bg-white/10 dark:bg-gray-900/30 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-4 space-y-3" data-testid={`history-scan-card-${scan.id}`}>
           <div className="flex items-center mb-2">
             <Info className="w-5 h-5 text-blue-400 mr-2" />
             <span className="badge badge-primary bg-blue-700/20 text-blue-200 px-2 py-1 rounded-md">
@@ -70,7 +70,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => (
             </div>
           </div>
           <div className="pt-2">
-            <button className="btn btn-outline btn-sm w-full hover:shadow-blue-400/40 hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)}>
+            <button className="btn btn-outline btn-sm w-full hover:shadow-blue-400/40 hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)} data-testid={`history-scan-view-btn-mobile-${scan.id}`}>
               <Eye className="w-3 h-3" /> View Details
             </button>
           </div>

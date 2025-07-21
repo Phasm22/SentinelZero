@@ -51,3 +51,6 @@
 <taskprogress task="Ping Scan" time="1753024175" percent="88.28" remaining="4539" etc="1753028713"/>
 <taskprogress task="Ping Scan" time="1753028715" percent="88.28" remaining="5141" etc="1753033856"/>
 <taskprogress task="Ping Scan" time="1753033857" percent="88.28" remaining="5824" etc="1753039680"/>
+<taskprogress task="Ping Scan" time="1753039683" percent="88.28" remaining="6597" etc="1753046280"/>
+<taskprogress task="Ping Scan" time="1753046281" percent="88.28" remaining="7473" etc="1753053754"/>
+<taskprogress task="Ping Scan" time="1753053756" percent="88.28" remaining="8465" etc="1753062221"/>

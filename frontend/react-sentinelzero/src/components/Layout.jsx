@@ -1,58 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Menu, X, LayoutDashboard, History, Settings as SettingsIcon } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import SpaceDots from './SpaceDots'
 import { useLocation, Link } from 'react-router-dom'
-
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Scan History', href: '/scan-history', icon: History },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon },
-]
+import { navigation } from './navigation'
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
   return (
-    <div className="min-h-screen w-screen flex relative overflow-hidden">
-      {/* Full viewport background layer */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 z-0"
-        style={{
-          background: `linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)`,
-          backgroundImage: `url('/backgrounds/blob-desk-dark.png')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
+    <div className="min-h-screen w-full">
       {/* Space dots overlay */}
       <SpaceDots />
       {/* Main content (sidebar + main) */}
       <div className="relative z-10 flex w-full min-h-screen">
-        {/* Sidebar flush left, no margin/padding */}
-        <div className="w-64 flex-shrink-0 h-full fixed top-0 left-0 z-20 hidden lg:block">
+        {/* Sidebar - even narrower */}
+        <div className="w-40 flex-shrink-0 h-full fixed top-0 left-0 z-20 hidden lg:block">
           <Sidebar navigation={navigation} />
         </div>
-        {/* Main content area, responsive and centered */}
-        <div className="flex flex-col min-h-screen lg:ml-64 max-w-screen-xl mx-auto px-6">
-          {/* Custom header */}
-          <header className="flex items-center gap-4 px-6 py-6 md:py-8 w-full">
+        {/* Main content area - maximum width */}
+        <div className="flex flex-col min-h-screen lg:ml-40 w-full">
+          {/* Custom header - minimal padding */}
+          <header className="flex items-center gap-4 px-2 py-2 w-full">
             <button
               type="button"
               className="lg:hidden text-gray-700 dark:text-gray-200 focus:outline-none"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open sidebar"
+              data-testid="open-sidebar-btn"
             >
               <Menu className="h-8 w-8" />
             </button>
-            <h1 className="text-4xl md:text-5xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-              SentinelZero
-            </h1>
+            <div className="flex items-center gap-3">
+              {/* Logo placeholder */}
+              <div className="w-12 h-12 bg-transparent flex items-center justify-center" data-testid="logo-container">
+                {/* Replace this div with your logo image */}
+                <img src="/favicon.png" alt="SentinelZero" className="w-full h-full object-contain" />
+                {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">S</span>
+                </div> */}
+              </div>
+              <h1 className="text-4xl md:text-5xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight" data-testid="main-header-title">
+                SentinelZero
+              </h1>
+            </div>
           </header>
-          <main className="flex-1 w-full px-2 sm:px-4 lg:px-8 space-y-10">
+          <main className="flex-1 w-full px-2 pb-2">
             {children}
           </main>
         </div>
@@ -73,6 +67,7 @@ const Layout = ({ children }) => {
             className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
+            data-testid="close-sidebar-btn"
           >
             <X className="h-7 w-7" />
           </button>
