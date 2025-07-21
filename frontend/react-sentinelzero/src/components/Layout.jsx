@@ -37,7 +37,7 @@ const Layout = ({ children }) => {
           <Sidebar navigation={navigation} />
         </div>
         {/* Main content area, responsive and centered */}
-        <div className="flex-1 flex flex-col min-h-screen lg:ml-64 max-w-screen-xl mx-auto px-6">
+        <div className="flex flex-col min-h-screen lg:ml-64 max-w-screen-xl mx-auto px-6">
           {/* Custom header */}
           <header className="flex items-center gap-4 px-6 py-6 md:py-8 w-full">
             <button
