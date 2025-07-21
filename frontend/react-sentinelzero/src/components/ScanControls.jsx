@@ -5,6 +5,8 @@ const ScanControls = ({
   onScanTrigger,
   isScanning,
   scanProgress,
+  scanStatus,
+  scanMessage,
   isConnected,
 }) => {
   const DisconnectedDot = () => (
@@ -60,6 +62,9 @@ const ScanControls = ({
       {/* Progress Bar */}
       {isScanning && (
         <div className="mt-4">
+          {scanMessage && (
+            <div className="mb-2 text-sm font-medium text-blue-200">{scanMessage}</div>
+          )}
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-300">
               Scan in Progress...

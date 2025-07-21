@@ -19,6 +19,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [vulns, setVulns] = useState([])
   const [xmlData, setXmlData] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [scanDetails, setScanDetails] = useState(scan)
   const { showToast } = useToast()
   const { preferences } = useUserPreferences()
 
@@ -40,6 +41,9 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 
     setIsLoading(true)
     try {
+      // Fetch full scan details
+      const scanData = await apiService.getScan(scan.id)
+      setScanDetails(scanData)
       const [hostsData, vulnsData, xmlData] = await Promise.all([
         apiService.getScanHosts(scan.id),
         apiService.getScanVulns(scan.id),
@@ -72,7 +76,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
     showToast('XML file downloaded', 'success')
   }
 
-  if (!isOpen || !scan) return null
+  if (!isOpen || !scanDetails) return null
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="scan-details-modal">
@@ -85,10 +89,10 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Scan Details - {scan.scan_type}
+                  Scan Details - {scanDetails.scan_type}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {formatTimestamp(scan.timestamp, preferences.use24Hour)}
+                  {formatTimestamp(scanDetails.timestamp, preferences.use24Hour)}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -146,7 +150,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan Type</div>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{scan.scan_type}</div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{scanDetails.scan_type}</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts Found</div>
@@ -158,7 +162,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan ID</div>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">#{scan.id}</div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">#{scanDetails.id}</div>
                       </div>
                     </div>
 
@@ -236,18 +240,18 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-500 dark:text-gray-400">Timestamp:</span>
-                          <span className="text-gray-900 dark:text-white">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</span>
+                          <span className="text-gray-900 dark:text-white">{formatTimestamp(scanDetails.timestamp, preferences.use24Hour)}</span>
                         </div>
-                        {scan.diff_from_previous && (
+                        {scanDetails.diff_from_previous && (
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">Changes from Previous:</span>
-                            <span className="text-gray-900 dark:text-white">{scan.diff_from_previous}</span>
+                            <span className="text-gray-900 dark:text-white">{scanDetails.diff_from_previous}</span>
                           </div>
                         )}
-                        {scan.raw_xml_path && (
+                        {scanDetails.raw_xml_path && (
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">XML File:</span>
-                            <span className="text-gray-900 dark:text-white">{scan.raw_xml_path}</span>
+                            <span className="text-gray-900 dark:text-white">{scanDetails.raw_xml_path}</span>
                           </div>
                         )}
                       </div>

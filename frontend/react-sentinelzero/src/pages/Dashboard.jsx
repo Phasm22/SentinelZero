@@ -35,11 +35,15 @@ const Dashboard = () => {
   const [error, setError] = useState(null)
   const [isScanning, setIsScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(null)
+  const [scanStatus, setScanStatus] = useState('idle')
+  const [scanMessage, setScanMessage] = useState('')
+  const [scanId, setScanId] = useState(null)
   const [scanStartTime, setScanStartTime] = useState(null)
   const [selectedScan, setSelectedScan] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { socket, isConnected, isInitialized } = useSocket()
   const { showToast } = useToast()
+  const [pollInterval, setPollInterval] = useState(null)
 
   const loadDashboardData = async () => {
     try {
@@ -70,50 +74,95 @@ const Dashboard = () => {
     }
 
     const handleScanProgress = (data) => {
-      console.log('📊 Scan progress:', data.percent)
+      if (!scanId || data.scan_id !== scanId) return
       setScanProgress(data.percent)
+      setScanStatus(data.status)
+      setScanMessage(data.message)
+      if (data.status === 'complete' || data.status === 'error') {
+        setIsScanning(false)
+        setScanId(null)
+        setScanStartTime(null)
+        setPollInterval(null)
+        loadDashboardData()
+        showToast(data.status === 'complete' ? 'Scan completed successfully' : 'Scan failed', data.status === 'complete' ? 'success' : 'danger')
+      }
     }
 
-    const handleScanComplete = () => {
-      console.log('✅ Scan completed')
+    const handleScanComplete = (data) => {
+      if (!scanId || data.scan_id !== scanId) return
       setIsScanning(false)
-      setScanProgress(null)
+      setScanProgress(100)
+      setScanStatus('complete')
+      setScanMessage('Scan complete!')
+      setScanId(null)
       setScanStartTime(null)
+      setPollInterval(null)
       loadDashboardData()
       showToast('Scan completed successfully', 'success')
-    }
-
-    const handleScanStart = () => {
-      console.log('🚀 Scan started')
-      setIsScanning(true)
-      setScanProgress(0)
-      setScanStartTime(Date.now())
     }
 
     socket.on('scan_log', handleScanLog)
     socket.on('scan_progress', handleScanProgress)
     socket.on('scan_complete', handleScanComplete)
-    socket.on('scan_start', handleScanStart)
 
     return () => {
       socket.off('scan_log', handleScanLog)
       socket.off('scan_progress', handleScanProgress)
       socket.off('scan_complete', handleScanComplete)
-      socket.off('scan_start', handleScanStart)
     }
-  }, [socket, isInitialized, showToast])
+  }, [socket, isInitialized, scanId])
+
+  // Poll scan status if no events received
+  useEffect(() => {
+    if (!scanId) {
+      if (pollInterval) clearInterval(pollInterval)
+      return
+    }
+    const interval = setInterval(async () => {
+      try {
+        const status = await apiService.getScanStatus(scanId)
+        setScanProgress(status.percent)
+        setScanStatus(status.status)
+        setScanMessage(status.message)
+        if (status.status === 'complete' || status.status === 'error') {
+          setIsScanning(false)
+          setScanId(null)
+          setScanStartTime(null)
+          clearInterval(interval)
+          setPollInterval(null)
+          loadDashboardData()
+          showToast(status.status === 'complete' ? 'Scan completed successfully' : 'Scan failed', status.status === 'complete' ? 'success' : 'danger')
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 3000)
+    setPollInterval(interval)
+    return () => clearInterval(interval)
+  }, [scanId])
 
   const handleScanTrigger = async (scanType) => {
     try {
       setIsScanning(true)
       setScanProgress(0)
+      setScanStatus('running')
+      setScanMessage('Starting scan...')
       setScanStartTime(Date.now())
-      await apiService.triggerScan(scanType)
+      const resp = await apiService.triggerScan(scanType)
+      // Backend does not return scan_id, so fetch latest scan
+      const scans = await apiService.getScanHistory()
+      const latest = scans.scans && scans.scans.length > 0 ? scans.scans[0] : null
+      if (latest) {
+        setScanId(latest.id)
+      }
       showToast(`${scanType} started`, 'info')
     } catch (error) {
       console.error('Error triggering scan:', error)
       setIsScanning(false)
       setScanProgress(null)
+      setScanStatus('idle')
+      setScanMessage('')
+      setScanId(null)
       setScanStartTime(null)
       showToast('Failed to start scan', 'danger')
     }
@@ -140,6 +189,51 @@ const Dashboard = () => {
         showToast('Failed to clear data', 'danger')
       }
     }
+  }
+
+  const deleteAllScans = async () => {
+    if (window.confirm('Are you sure you want to delete ALL scans? This cannot be undone.')) {
+      try {
+        await apiService.deleteAllScans()
+        showToast('All scans deleted successfully', 'success')
+        loadDashboardData()
+      } catch (error) {
+        showToast('Failed to delete all scans', 'danger')
+      }
+    }
+  }
+
+  const testConnection = async () => {
+    let httpStatus = 'unknown'
+    let socketStatus = 'unknown'
+    try {
+      const resp = await apiService.ping()
+      httpStatus = resp.status === 'ok' ? 'HTTP OK' : 'HTTP FAIL'
+    } catch {
+      httpStatus = 'HTTP FAIL'
+    }
+    return new Promise((resolve) => {
+      let pongReceived = false
+      if (socket) {
+        socket.emit('ping')
+        socket.once('pong', () => {
+          pongReceived = true
+          socketStatus = 'Socket.IO OK'
+          showToast(`API: ${httpStatus}, Socket: ${socketStatus}`, 'success')
+          resolve()
+        })
+        setTimeout(() => {
+          if (!pongReceived) {
+            socketStatus = 'Socket.IO FAIL'
+            showToast(`API: ${httpStatus}, Socket: ${socketStatus}`, 'danger')
+            resolve()
+          }
+        }, 2000)
+      } else {
+        showToast(`API: ${httpStatus}, Socket: Not initialized`, 'danger')
+        resolve()
+      }
+    })
   }
 
   // Accept use24Hour as a prop or fallback to false
@@ -188,6 +282,21 @@ const Dashboard = () => {
               <Trash2 className="w-6 h-6 text-red-500 group-hover:text-white transition-colors" />
               <span>Clear All Data</span>
             </button>
+            <button
+              onClick={deleteAllScans}
+              className="btn btn-danger btn-sm flex items-center space-x-2 hover:bg-red-800 hover:text-white transition-colors relative group ml-2"
+              title="Delete all scans from the database. This cannot be undone."
+            >
+              <Trash2 className="w-6 h-6 text-red-700 group-hover:text-white transition-colors" />
+              <span>Delete All Scans</span>
+            </button>
+            <button
+              onClick={testConnection}
+              className="btn btn-info btn-sm flex items-center space-x-2 hover:bg-blue-700 hover:text-white transition-colors relative group ml-2"
+              title="Test API and Socket.IO connection"
+            >
+              <span>Test Connection</span>
+            </button>
           </div>
         </div>
         {/* Shimmer/progress bar under header during scan */}
@@ -214,6 +323,8 @@ const Dashboard = () => {
             onScanTrigger={handleScanTrigger}
             isScanning={isScanning}
             scanProgress={scanProgress}
+            scanStatus={scanStatus}
+            scanMessage={scanMessage}
             isConnected={isConnected}
           />
         </div>

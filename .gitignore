@@ -48,3 +48,6 @@ frontend/react-sentinelzero/public/fonts/*.zip
 .cursor-server/*
 .cache/*
 .npm/*
+backend/.env
+.gitignore
+backend/scans/*

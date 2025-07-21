@@ -7,3 +7,4 @@ requests
 APScheduler>=3.10.0
 pytz
 flask-cors 
+python-dotenv 

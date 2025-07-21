@@ -17,35 +17,36 @@ export const SocketProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
+    console.log('Initializing Socket.IO client...');
     const newSocket = io('/', {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
-      autoConnect: false,
-    })
+      autoConnect: true,
+    });
 
     newSocket.on('connect', () => {
-      console.log('🔌 Socket connected')
-      setIsConnected(true)
-      setIsInitialized(true)
-    })
+      console.log('🔌 Socket connected');
+      setIsConnected(true);
+      setIsInitialized(true);
+    });
 
     newSocket.on('disconnect', () => {
-      console.log('🔌 Socket disconnected')
-      setIsConnected(false)
-    })
+      console.log('🔌 Socket disconnected');
+      setIsConnected(false);
+    });
 
     newSocket.on('connect_error', (error) => {
-      console.error('🔌 Socket connection error:', error)
-      setIsConnected(false)
-      setIsInitialized(true) // Still mark as initialized even if connection fails
-    })
+      console.error('🔌 Socket connection error:', error);
+      setIsConnected(false);
+      setIsInitialized(true); // Still mark as initialized even if connection fails
+    });
 
-    setSocket(newSocket)
+    setSocket(newSocket);
 
     return () => {
-      newSocket.close()
-    }
-  }, [])
+      newSocket.close();
+    };
+  }, []);
 
   const value = {
     socket,

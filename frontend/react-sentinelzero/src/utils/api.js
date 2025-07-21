@@ -38,6 +38,16 @@ export const apiService = {
     return response.data
   },
 
+  getScanStatus: async (scanId) => {
+    const response = await axios.get(`${API_BASE_URL}/scan-status/${scanId}`)
+    return response.data
+  },
+
+  getScan: async (scanId) => {
+    const response = await axios.get(`${API_BASE_URL}/scan/${scanId}`)
+    return response.data
+  },
+
   clearScan: async (scanId) => {
     const response = await axios.post(`/clear-scan/${scanId}`)
     return response.data
@@ -45,6 +55,11 @@ export const apiService = {
 
   clearAllData: async () => {
     const response = await axios.post('/clear-all-data')
+    return response.data
+  },
+
+  deleteAllScans: async () => {
+    const response = await axios.post(`${API_BASE_URL}/delete-all-scans`)
     return response.data
   },
 
@@ -81,12 +96,32 @@ export const apiService = {
     return response.data
   },
 
+  updateSettings: async (settings) => {
+    const response = await axios.post(`${API_BASE_URL}/settings`, settings)
+    return response.data
+  },
+
+  getNetworkInterfaces: async () => {
+    const response = await axios.get(`${API_BASE_URL}/network-interfaces`)
+    return response.data
+  },
+
+  testPushoverConnection: async () => {
+    const response = await axios.post(`${API_BASE_URL}/test-pushover`)
+    return response.data
+  },
+
   updateSetting: async (section, key, value) => {
     const response = await axios.post(`${API_BASE_URL}/settings`, {
       section,
       key,
       value,
     })
+    return response.data
+  },
+
+  ping: async () => {
+    const response = await axios.get(`${API_BASE_URL}/ping`)
     return response.data
   },
 } 

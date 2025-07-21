@@ -1,9 +1,12 @@
 import eventlet
 eventlet.monkey_patch()
 import os
+# Add dotenv support
+from dotenv import load_dotenv
+load_dotenv()
 import json
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, Response, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
 import logging
@@ -86,6 +89,8 @@ class Scan(db.Model):
     diff_from_previous = db.Column(db.Text)
     vulns_json = db.Column(db.Text)
     raw_xml_path = db.Column(db.String(256))
+    status = db.Column(db.String(32), default='pending')  # new: pending, running, parsing, saving, complete, error
+    percent = db.Column(db.Float, default=0.0)            # new: progress percent
     def as_dict(self):
         return {
             'id': self.id,
@@ -95,6 +100,8 @@ class Scan(db.Model):
             'diff_from_previous': self.diff_from_previous,
             'vulns_json': self.vulns_json,
             'raw_xml_path': self.raw_xml_path,
+            'status': self.status,
+            'percent': self.percent,
         }
 
 class Alert(db.Model):
@@ -135,7 +142,23 @@ if not scheduler.running:
 
 def run_nmap_scan(scan_type):
     with app.app_context():
+        scan = Scan(scan_type=scan_type, status='running', percent=0.0)
+        db.session.add(scan)
+        db.session.commit()
+        scan_id = scan.id
         try:
+            def emit_progress(status, percent, message):
+                scan.status = status
+                scan.percent = percent
+                db.session.commit()
+                socketio.emit('scan_progress', {
+                    'scan_id': scan_id,
+                    'status': status,
+                    'percent': percent,
+                    'message': message
+                })
+
+            emit_progress('running', 0, f'Started scan: {scan_type}')
             msg = f'Thread started for scan: {scan_type} (scheduled={threading.current_thread().name.startswith("APScheduler")})'
             try:
                 socketio.emit('scan_log', {'msg': msg})
@@ -162,6 +185,7 @@ def run_nmap_scan(scan_type):
                     '172.16.0.0/22', '-oX', xml_path
                 ]
             else:
+                emit_progress('error', 0, f'Unknown scan type: {scan_type}')
                 msg = f'Unknown scan type: {scan_type}'
                 try:
                     socketio.emit('scan_log', {'msg': msg})
@@ -191,11 +215,9 @@ def run_nmap_scan(scan_type):
                 match = re.search(r'About ([0-9.]+)% done', line)
                 if match:
                     percent = float(match.group(1))
-                    try:
-                        socketio.emit('scan_progress', {'percent': percent})
-                    except Exception as e:
-                        print(f'[DEBUG] Could not emit scan_progress: {e}')
+                    emit_progress('running', percent, f'Scanning: {percent:.1f}%')
             proc.wait()
+            emit_progress('parsing', 90, 'Parsing scan results...')
             msg = 'Nmap process finished.'
             try:
                 socketio.emit('scan_log', {'msg': msg})
@@ -207,6 +229,7 @@ def run_nmap_scan(scan_type):
                     break
                 time.sleep(1)
             if not os.path.exists(xml_path) or os.path.getsize(xml_path) < 100:
+                emit_progress('error', percent, 'XML file not found or too small')
                 msg = f'XML file not found or too small: {xml_path}'
                 try:
                     socketio.emit('scan_log', {'msg': msg})
@@ -222,6 +245,7 @@ def run_nmap_scan(scan_type):
                 print(f'[DEBUG] Could not emit to socketio: {e}')
             print(msg)
             if proc.returncode != 0:
+                emit_progress('error', percent, f'nmap error: {proc.returncode}')
                 msg = f'nmap error: {proc.returncode}'
                 try:
                     socketio.emit('scan_log', {'msg': msg})
@@ -230,12 +254,7 @@ def run_nmap_scan(scan_type):
                 print(msg)
                 send_pushover_alert(f'Scan failed: {scan_type}', 'danger')
                 return
-            msg = 'Parsing XML results...'
-            try:
-                socketio.emit('scan_log', {'msg': msg})
-            except Exception as e:
-                print(f'[DEBUG] Could not emit to socketio: {e}')
-            print(msg)
+            emit_progress('parsing', 95, 'Parsing XML results...')
             hosts = []
             vulns = []
             try:
@@ -257,6 +276,7 @@ def run_nmap_scan(scan_type):
                     print(f'[DEBUG] Could not emit to socketio: {e}')
                 print(msg)
             except Exception as e:
+                emit_progress('error', 95, f'XML parse error: {str(e)}')
                 msg = f'XML parse error: {str(e)}'
                 try:
                     socketio.emit('scan_log', {'msg': msg})
@@ -271,34 +291,28 @@ def run_nmap_scan(scan_type):
                 print(msg)
                 send_pushover_alert(f'Scan failed: {scan_type} (XML parse error)', 'danger')
                 return
-            msg = 'Saving scan results to database...'
-            try:
-                socketio.emit('scan_log', {'msg': msg})
-            except Exception as e:
-                print(f'[DEBUG] Could not emit to socketio: {e}')
-            print(msg)
-            scan = Scan(
-                scan_type=scan_type,
-                hosts_json=json.dumps(hosts),
-                diff_from_previous='{}',
-                vulns_json=json.dumps(vulns),
-                raw_xml_path=xml_path
-            )
-            db.session.add(scan)
+            emit_progress('saving', 98, 'Saving scan results to database...')
+            scan.hosts_json = json.dumps(hosts)
+            scan.vulns_json = json.dumps(vulns)
+            scan.raw_xml_path = xml_path
+            scan.status = 'complete'
+            scan.percent = 100.0
             db.session.commit()
+            emit_progress('complete', 100, 'Scan complete!')
             msg = 'Scan results saved.'
             try:
                 socketio.emit('scan_log', {'msg': msg})
             except Exception as e:
                 print(f'[DEBUG] Could not emit to socketio: {e}')
             print(msg)
-            socketio.emit('scan_complete', {'msg': f'Scan complete: {scan_type}'})
+            socketio.emit('scan_complete', {'msg': f'Scan complete: {scan_type}', 'scan_id': scan_id})
             send_pushover_alert(f'Scan complete: {scan_type}', 'info', scan.id)
         except Exception as e:
             try:
                 db.session.rollback()
             except Exception:
                 pass
+            emit_progress('error', 0, f'Error: {str(e)}')
             logging.exception('Scan trigger failed')
             msg = f'Error: {str(e)}'
             try:
@@ -428,7 +442,12 @@ def test_log():
 
 @socketio.on('connect')
 def handle_connect():
+    print('[Socket.IO] Client connected:', request.sid)
     emit('scan_log', {'msg': 'Connected to SentinelZero'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('[Socket.IO] Client disconnected:', request.sid)
 
 @app.template_filter('host_count')
 def host_count_filter(hosts_json):
@@ -579,6 +598,13 @@ def api_scan_history():
         import traceback; traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/scan/<int:scan_id>', methods=['GET'])
+def get_scan(scan_id):
+    scan = Scan.query.get(scan_id)
+    if not scan:
+        return jsonify({'error': 'Scan not found'}), 404
+    return jsonify(scan.as_dict())
+
 @app.route('/api/scan-xml/<int:scan_id>')
 def get_scan_xml(scan_id):
     """Get raw XML data for a scan"""
@@ -679,18 +705,35 @@ def get_settings():
             }
         
         # Load notification settings
-        settings['notifications'] = {
-            'pushover_enabled': bool(PUSHOVER_API_TOKEN and PUSHOVER_USER_KEY),
-            'pushover_token': PUSHOVER_API_TOKEN or '',
-            'pushover_user_key': PUSHOVER_USER_KEY or ''
-        }
+        if os.path.exists('notification_settings.json'):
+            with open('notification_settings.json', 'r') as f:
+                settings['notifications'] = json.load(f)
+        else:
+            settings['notifications'] = {
+                'pushover_enabled': bool(PUSHOVER_API_TOKEN and PUSHOVER_USER_KEY),
+                'pushover_token': PUSHOVER_API_TOKEN or '',
+                'pushover_user_key': PUSHOVER_USER_KEY or ''
+            }
+        # Always set pushoverConfigured based on env
+        settings['notifications']['pushoverConfigured'] = bool(os.environ.get('PUSHOVER_API_TOKEN') and os.environ.get('PUSHOVER_USER_KEY'))
         
         # Load security settings
-        settings['security'] = {
-            'vuln_scanning_enabled': True,
-            'os_detection_enabled': True,
-            'service_detection_enabled': True
-        }
+        if os.path.exists('security_settings.json'):
+            with open('security_settings.json', 'r') as f:
+                settings['security'] = json.load(f)
+        else:
+            settings['security'] = {
+                'vuln_scanning_enabled': True,
+                'os_detection_enabled': True,
+                'service_detection_enabled': True
+            }
+        
+        # Load scheduled scan settings
+        if os.path.exists('scheduled_scans_settings.json'):
+            with open('scheduled_scans_settings.json', 'r') as f:
+                settings['scheduledScans'] = json.load(f)
+        else:
+            settings['scheduledScans'] = load_schedule_config()
         
     except Exception as e:
         print(f'Error loading settings: {e}')
@@ -707,19 +750,83 @@ def update_settings():
             with open('network_settings.json', 'w') as f:
                 json.dump(data['network'], f)
         
-        # Update notification settings (environment variables)
+        # Update notification settings
         if 'notifications' in data:
-            # Note: In a real app, you'd want to persist these securely
-            # For now, we'll just acknowledge the update
-            pass
+            with open('notification_settings.json', 'w') as f:
+                json.dump(data['notifications'], f)
         
         # Update security settings
         if 'security' in data:
-            # Note: In a real app, you'd want to persist these
-            pass
+            with open('security_settings.json', 'w') as f:
+                json.dump(data['security'], f)
+        
+        # Update scheduled scan settings
+        if 'scheduledScans' in data:
+            with open('scheduled_scans_settings.json', 'w') as f:
+                json.dump(data['scheduledScans'], f)
         
         return jsonify({'status': 'ok'})
     except Exception as e:
+        print(f'Error saving settings: {e}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/network-interfaces', methods=['GET'])
+def get_network_interfaces():
+    """Get available network interfaces and their subnets"""
+    try:
+        import netifaces
+        
+        interfaces = []
+        for interface in netifaces.interfaces():
+            try:
+                addrs = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addrs:
+                    for addr_info in addrs[netifaces.AF_INET]:
+                        ip = addr_info['addr']
+                        netmask = addr_info['netmask']
+                        
+                        # Calculate CIDR notation
+                        if ip and netmask:
+                            # Convert netmask to CIDR
+                            netmask_bits = sum([bin(int(x)).count('1') for x in netmask.split('.')])
+                            cidr = f"{ip}/{netmask_bits}"
+                            
+                            interfaces.append({
+                                'name': interface,
+                                'ip': ip,
+                                'netmask': netmask,
+                                'cidr': cidr,
+                                'display': f"{interface} ({cidr})"
+                            })
+            except Exception as e:
+                print(f"Error processing interface {interface}: {e}")
+                continue
+        
+        # Add some common network ranges
+        common_networks = [
+            {'name': 'Localhost', 'ip': '127.0.0.1', 'netmask': '255.255.255.0', 'cidr': '127.0.0.0/24', 'display': 'Localhost (127.0.0.0/24)'},
+            {'name': 'Private Class A', 'ip': '10.0.0.1', 'netmask': '255.0.0.0', 'cidr': '10.0.0.0/8', 'display': 'Private Class A (10.0.0.0/8)'},
+            {'name': 'Private Class B', 'ip': '172.16.0.1', 'netmask': '255.240.0.0', 'cidr': '172.16.0.0/12', 'display': 'Private Class B (172.16.0.0/12)'},
+            {'name': 'Private Class C', 'ip': '192.168.0.1', 'netmask': '255.255.0.0', 'cidr': '192.168.0.0/16', 'display': 'Private Class C (192.168.0.0/16)'},
+        ]
+        
+        return jsonify({
+            'interfaces': interfaces,
+            'common_networks': common_networks
+        })
+    except ImportError:
+        # If netifaces is not available, return common networks only
+        return jsonify({
+            'interfaces': [],
+            'common_networks': [
+                {'name': 'Localhost', 'ip': '127.0.0.1', 'netmask': '255.255.255.0', 'cidr': '127.0.0.0/24', 'display': 'Localhost (127.0.0.0/24)'},
+                {'name': 'Private Class A', 'ip': '10.0.0.1', 'netmask': '255.0.0.0', 'cidr': '10.0.0.0/8', 'display': 'Private Class A (10.0.0.0/8)'},
+                {'name': 'Private Class B', 'ip': '172.16.0.1', 'netmask': '255.240.0.0', 'cidr': '172.16.0.0/12', 'display': 'Private Class B (172.16.0.0/12)'},
+                {'name': 'Private Class C', 'ip': '192.168.0.1', 'netmask': '255.255.0.0', 'cidr': '192.168.0.0/16', 'display': 'Private Class C (192.168.0.0/16)'},
+            ]
+        })
+    except Exception as e:
+        print(f'Error getting network interfaces: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/clear-all-data', methods=['POST'])
@@ -733,6 +840,70 @@ def clear_all_data():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-all-scans', methods=['POST'])
+def delete_all_scans():
+    try:
+        num_deleted = Scan.query.delete()
+        db.session.commit()
+        return jsonify({'status': 'ok', 'deleted': num_deleted})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/test-pushover', methods=['POST', 'GET', 'OPTIONS'])
+def test_pushover():
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response, 204
+    if request.method == 'GET':
+        return jsonify({'status': 'ok', 'message': 'GET method works. Use POST to send a test notification.'})
+    try:
+        import requests
+        import logging
+        PUSHOVER_API_TOKEN = os.environ.get('PUSHOVER_API_TOKEN')
+        PUSHOVER_USER_KEY = os.environ.get('PUSHOVER_USER_KEY')
+        message = 'Test notification from SentinelZero!'
+        resp = requests.post('https://api.pushover.net/1/messages.json', data={
+            'token': PUSHOVER_API_TOKEN,
+            'user': PUSHOVER_USER_KEY,
+            'message': message,
+            'priority': 0,
+            'title': 'SentinelZero',
+        })
+        logging.info(f"[PUSHOVER TEST] Status: {resp.status_code}, Response: {resp.text}")
+        if resp.status_code == 200:
+            return jsonify({'status': 'ok', 'message': 'Pushover test sent.'})
+        else:
+            return jsonify({'status': 'error', 'message': f'Pushover failed: {resp.text}', 'code': resp.status_code}), 500
+    except Exception as e:
+        import logging
+        logging.exception('[PUSHOVER TEST] Exception:')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/scan-status/<int:scan_id>', methods=['GET'])
+def get_scan_status(scan_id):
+    scan = Scan.query.get(scan_id)
+    if not scan:
+        return jsonify({'error': 'Scan not found'}), 404
+    return jsonify({
+        'scan_id': scan.id,
+        'status': scan.status,
+        'percent': scan.percent,
+        'message': f'Status: {scan.status}, {scan.percent:.1f}%',
+    })
+
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    return jsonify({'status': 'ok', 'message': 'pong'})
+
+@socketio.on('ping')
+def handle_ping():
+    print('[Socket.IO] Received ping from:', request.sid)
+    emit('pong', {'message': 'pong'})
 
 if __name__ == '__main__':
     with app.app_context():
