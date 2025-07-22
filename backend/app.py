@@ -22,6 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import json as pyjson
 import sys
+import psutil
 
 print("=== Flask app.py started ===")
 
@@ -140,7 +141,37 @@ scheduler = BackgroundScheduler(jobstores={
 if not scheduler.running:
     scheduler.start()
 
-def run_nmap_scan(scan_type):
+def parse_vulners_output(host_ip, cpe, output):
+    import re
+    vulns = []
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    for line in lines:
+        # Example: CVE-2017-14493 9.8 https://vulners.com/cve/CVE-2017-14493
+        m = re.match(r'^([A-Z0-9\-:]+)\s+(\d+\.\d+)\s+(https?://\S+)(.*)$', line)
+        if m:
+            id_ = m.group(1)
+            score = float(m.group(2))
+            url = m.group(3)
+            rest = m.group(4)
+            exploit = '*EXPLOIT*' in rest
+            vulns.append({
+                'host': host_ip,
+                'cpe': cpe,
+                'id': id_,
+                'score': score,
+                'url': url,
+                'exploit': exploit
+            })
+    return vulns
+
+def run_nmap_scan(scan_type, security_settings=None):
+    if security_settings is None:
+        security_settings = {
+            'vuln_scanning_enabled': True,
+            'os_detection_enabled': True,
+            'service_detection_enabled': True,
+            'aggressive_scanning': False
+        }
     with app.app_context():
         scan = Scan(scan_type=scan_type, status='running', percent=0.0)
         db.session.add(scan)
@@ -166,24 +197,16 @@ def run_nmap_scan(scan_type):
                 print(f'[DEBUG] Could not emit to socketio: {e}')
             print(msg)
             now = datetime.now().strftime('%Y-%m-%d_%H%M')
-            if scan_type == 'Full TCP':
-                xml_path = f'scans/full_tcp_{now}.xml'
-                cmd = [
-                    'nmap', '-v', '-sS', '-T4', '-p-', '--open', '-O', '-sV',
-                    '172.16.0.0/22', '-oX', xml_path
-                ]
-            elif scan_type == 'IoT Scan':
-                xml_path = f'scans/iot_scan_{now}.xml'
-                cmd = [
-                    'nmap', '-v', '-sU', '-T4', '-p', '53,67,68,80,443,1900,5353,554,8080',
-                    '172.16.0.0/22', '-oX', xml_path
-                ]
-            elif scan_type == 'Vuln Scripts':
-                xml_path = f'scans/vuln_scripts_{now}.xml'
-                cmd = [
-                    'nmap', '-v', '-sS', '-T4', '-p-', '--open', '-sV', '--script=vuln',
-                    '172.16.0.0/22', '-oX', xml_path
-                ]
+            # Normalize scan_type for robust matching
+            scan_type_normalized = scan_type.strip().lower()
+            xml_path = f'scans/{scan_type_normalized.replace(" ", "_")}_{now}.xml'
+            cmd = ['nmap', '-v', '-T4']
+            if scan_type_normalized == 'full tcp':
+                cmd += ['-sS', '-p-', '--open']
+            elif scan_type_normalized == 'iot scan':
+                cmd += ['-sU', '-p', '53,67,68,80,443,1900,5353,554,8080']
+            elif scan_type_normalized == 'vuln scripts':
+                cmd += ['-sS', '-p-', '--open']
             else:
                 emit_progress('error', 0, f'Unknown scan type: {scan_type}')
                 msg = f'Unknown scan type: {scan_type}'
@@ -193,6 +216,17 @@ def run_nmap_scan(scan_type):
                     print(f'[DEBUG] Could not emit to socketio: {e}')
                 print(msg)
                 return
+            # Apply security settings
+            if security_settings.get('os_detection_enabled'):
+                cmd.append('-O')
+            if security_settings.get('service_detection_enabled'):
+                cmd.append('-sV')
+            if security_settings.get('vuln_scanning_enabled') or scan_type_normalized == 'vuln scripts':
+                cmd.append('--script=vuln')
+            if security_settings.get('aggressive_scanning'):
+                cmd.append('-A')
+            # Target network
+            cmd += ['172.16.0.0/22', '-oX', xml_path]
             msg = f'Nmap command: {" ".join(cmd)}'
             try:
                 socketio.emit('scan_log', {'msg': msg})
@@ -208,6 +242,21 @@ def run_nmap_scan(scan_type):
             print(msg)
             percent = 0
             for line in proc.stdout:
+                # Check for cancellation
+                scan_check = Scan.query.get(scan_id)
+                if scan_check and scan_check.status == 'cancelled':
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                    emit_progress('cancelled', percent, 'Scan cancelled by user')
+                    msg = 'Scan cancelled by user.'
+                    try:
+                        socketio.emit('scan_log', {'msg': msg})
+                    except Exception as e:
+                        print(f'[DEBUG] Could not emit to socketio: {e}')
+                    print(msg)
+                    return
                 try:
                     socketio.emit('scan_log', {'msg': line.rstrip()})
                 except Exception as e:
@@ -263,12 +312,90 @@ def run_nmap_scan(scan_type):
                 for host in root.findall('host'):
                     status = host.find('status')
                     if status is not None and status.attrib.get('state') == 'up':
-                        addr = host.find('address')
+                        host_obj = {}
+                        addr = host.find('address[@addrtype="ipv4"]')
                         if addr is not None:
-                            hosts.append(addr.attrib.get('addr'))
+                            host_obj['ip'] = addr.attrib.get('addr')
+                        mac = host.find('address[@addrtype="mac"]')
+                        if mac is not None:
+                            host_obj['mac'] = mac.attrib.get('addr')
+                            if 'vendor' in mac.attrib:
+                                host_obj['vendor'] = mac.attrib['vendor']
+                        # Hostnames
+                        hostnames = host.find('hostnames')
+                        if hostnames is not None:
+                            host_obj['hostnames'] = [hn.attrib.get('name') for hn in hostnames.findall('hostname') if hn.attrib.get('name')]
+                        # Distance
+                        distance = host.find('distance')
+                        if distance is not None:
+                            host_obj['distance'] = distance.attrib.get('value')
+                        # OS
+                        os_elem = host.find('os/osmatch')
+                        if os_elem is not None:
+                            host_obj['os'] = {
+                                'name': os_elem.attrib.get('name'),
+                                'accuracy': os_elem.attrib.get('accuracy')
+                            }
+                        # Uptime
+                        uptime = host.find('uptime')
+                        if uptime is not None:
+                            host_obj['uptime'] = {
+                                'seconds': int(uptime.attrib.get('seconds', 0)),
+                                'lastboot': uptime.attrib.get('lastboot')
+                            }
+                        # Ports
+                        ports_elem = host.find('ports')
+                        ports = []
+                        if ports_elem is not None:
+                            for port in ports_elem.findall('port'):
+                                state = port.find('state')
+                                if state is not None and state.attrib.get('state') == 'open':
+                                    port_obj = {
+                                        'port': int(port.attrib.get('portid')),
+                                        'protocol': port.attrib.get('protocol'),
+                                        'service': None,
+                                        'product': None,
+                                        'version': None
+                                    }
+                                    service = port.find('service')
+                                    if service is not None:
+                                        port_obj['service'] = service.attrib.get('name')
+                                        port_obj['product'] = service.attrib.get('product') if 'product' in service.attrib else None
+                                        port_obj['version'] = service.attrib.get('version') if 'version' in service.attrib else None
+                                    ports.append(port_obj)
+                                    # Vulnerability scripts on this port
+                                    for script in port.findall('script'):
+                                        if 'vuln' in script.attrib.get('id', ''):
+                                            vuln_obj = {
+                                                'id': script.attrib.get('id'),
+                                                'output': script.attrib.get('output'),
+                                                'host': host_obj.get('ip'),
+                                                'port': port_obj['port'],
+                                                'protocol': port_obj['protocol']
+                                            }
+                                            vulns.append(vuln_obj)
+                        host_obj['ports'] = ports
+                        # Vulnerability scripts at host level
                     for script in host.findall('.//script'):
                         if 'vuln' in script.attrib.get('id', ''):
-                            vulns.append(script.attrib.get('output', ''))
+                                # Special handling for vulners output
+                                if script.attrib.get('id') == 'vulners' and script.attrib.get('output'):
+                                    cpe = None
+                                    # Try to extract CPE from output
+                                    cpe_match = re.search(r'(cpe:/[\w:.-]+)', script.attrib['output'])
+                                    if cpe_match:
+                                        cpe = cpe_match.group(1)
+                                    vulns += parse_vulners_output(host_obj.get('ip'), cpe, script.attrib['output'])
+                                else:
+                                    vuln_obj = {
+                                        'id': script.attrib.get('id'),
+                                        'output': script.attrib.get('output'),
+                                        'host': host_obj.get('ip'),
+                                        'port': None,
+                                        'protocol': None
+                                    }
+                                    vulns.append(vuln_obj)
+                        hosts.append(host_obj)
                 msg = f'Parsed {len(hosts)} hosts, {len(vulns)} vulns.'
                 try:
                     socketio.emit('scan_log', {'msg': msg})
@@ -415,7 +542,20 @@ def handle_exception(e):
 @app.route('/scan', methods=['POST'])
 def trigger_scan():
     scan_type = request.form.get('scan_type', 'Full TCP')
-    threading.Thread(target=run_nmap_scan, args=(scan_type,), daemon=True).start()
+    # Load security settings
+    security_settings = {
+        'vuln_scanning_enabled': True,
+        'os_detection_enabled': True,
+        'service_detection_enabled': True,
+        'aggressive_scanning': False
+    }
+    try:
+        if os.path.exists('security_settings.json'):
+            with open('security_settings.json', 'r') as f:
+                security_settings.update(json.load(f))
+    except Exception as e:
+        print(f'[DEBUG] Could not load security settings: {e}')
+    threading.Thread(target=run_nmap_scan, args=(scan_type, security_settings), daemon=True).start()
     return jsonify({'status': 'success', 'message': f'{scan_type} scan started'})
 
 @app.route('/clear-scan/<int:scan_id>', methods=['POST'])
@@ -597,6 +737,27 @@ def api_scan_history():
         print('Exception in /api/scan-history:', e)
         import traceback; traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/active-scans')
+def api_active_scans():
+    active_statuses = ['pending', 'running', 'parsing', 'saving']
+    scans = Scan.query.filter(Scan.status.in_(active_statuses)).order_by(Scan.timestamp.desc()).all()
+    denver = pytz.timezone('America/Denver')
+    scans_dicts = []
+    for scan in scans:
+        d = scan.as_dict()
+        if d['timestamp']:
+            d['timestamp'] = d['timestamp'].astimezone(denver)
+        try:
+            d['hosts'] = json.loads(d['hosts_json']) if d['hosts_json'] else []
+        except Exception:
+            d['hosts'] = []
+        try:
+            d['vulns'] = json.loads(d['vulns_json']) if d['vulns_json'] else []
+        except Exception:
+            d['vulns'] = []
+        scans_dicts.append(d)
+    return jsonify({'scans': scans_dicts})
 
 @app.route('/api/scan/<int:scan_id>', methods=['GET'])
 def get_scan(scan_id):
@@ -904,6 +1065,30 @@ def ping():
 def handle_ping():
     print('[Socket.IO] Received ping from:', request.sid)
     emit('pong', {'message': 'pong'})
+
+@app.route('/api/kill-all-scans', methods=['POST'])
+def kill_all_scans():
+    # Kill all running nmap processes
+    killed_pids = []
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if 'nmap' in proc.info['name'] or (proc.info['cmdline'] and any('nmap' in arg for arg in proc.info['cmdline'])):
+                proc.kill()
+                killed_pids.append(proc.info['pid'])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    # Update all active scans in DB
+    active_statuses = ['pending', 'running', 'parsing', 'saving']
+    scans = Scan.query.filter(Scan.status.in_(active_statuses)).all()
+    for scan in scans:
+        scan.status = 'cancelled'
+        scan.percent = 0
+    db.session.commit()
+    return jsonify({
+        'status': 'ok',
+        'killed_pids': killed_pids,
+        'cancelled_scans': [scan.id for scan in scans]
+    })
 
 if __name__ == '__main__':
     with app.app_context():

@@ -1,13 +1,31 @@
 import React from 'react'
 import { Rocket, Cpu, Bug, Loader2 } from 'lucide-react'
 
+const buildNmapCommand = (scanType, security) => {
+  let cmd = ['nmap', '-v', '-T4']
+  if (scanType === 'Full TCP') {
+    cmd.push('-sS', '-p-', '--open')
+  } else if (scanType === 'IoT Scan') {
+    cmd.push('-sU', '-p', '53,67,68,80,443,1900,5353,554,8080')
+  } else if (scanType === 'Vuln Scripts') {
+    cmd.push('-sS', '-p-', '--open')
+  }
+  if (security.osDetectionEnabled) cmd.push('-O')
+  if (security.serviceDetectionEnabled) cmd.push('-sV')
+  if (security.vulnScanningEnabled || scanType === 'Vuln Scripts') cmd.push('--script=vuln')
+  if (security.aggressiveScanning) cmd.push('-A')
+  cmd.push('172.16.0.0/22', '-oX', 'scan_output.xml')
+  return cmd.join(' ')
+}
+
 const ScanControls = ({
-  onScanTrigger,
   isScanning,
+  scanningType,
   scanProgress,
   scanStatus,
   scanMessage,
   isConnected,
+  onRequestScan,
 }) => {
   const DisconnectedDot = () => (
     <span className="relative flex h-3 w-3">
@@ -32,31 +50,33 @@ const ScanControls = ({
       <div className="flex flex-wrap gap-4">
         <button
           data-testid="scan-full-tcp-btn"
-          onClick={() => onScanTrigger('Full TCP')}
+          onClick={() => onRequestScan('Full TCP')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
           <Rocket className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
           <span>Full TCP Scan</span>
-          {isScanning && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+          {isScanning && scanningType === 'Full TCP' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </button>
         <button
           data-testid="scan-iot-btn"
-          onClick={() => onScanTrigger('IoT Scan')}
+          onClick={() => onRequestScan('IoT Scan')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-800 hover:bg-purple-700 focus:ring-2 focus:ring-purple-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
           <Cpu className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
           <span>IoT Scan</span>
+          {isScanning && scanningType === 'IoT Scan' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </button>
         <button
           data-testid="scan-vuln-btn"
-          onClick={() => onScanTrigger('Vuln Scripts')}
+          onClick={() => onRequestScan('Vuln Scripts')}
           disabled={isScanning}
           className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-700 hover:bg-red-700 focus:ring-2 focus:ring-red-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
           <Bug className="w-8 h-8 mr-2 text-red-400 group-hover:scale-125 transition-transform" />
           <span>Vuln Scripts</span>
+          {isScanning && scanningType === 'Vuln Scripts' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </button>
       </div>
       {/* Progress Bar */}
@@ -85,4 +105,5 @@ const ScanControls = ({
   )
 }
 
+export { buildNmapCommand }
 export default ScanControls 

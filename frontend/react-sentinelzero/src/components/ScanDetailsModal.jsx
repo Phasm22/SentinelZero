@@ -394,38 +394,52 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                         Vulnerabilities ({vulns.length})
                       </h3>
                     </div>
-                    
                     {vulns.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <p>No vulnerabilities found in this scan.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {vulns.map((vuln, index) => (
-                          <div key={index} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <h4 className="font-semibold text-red-800 dark:text-red-200">
-                                    {vuln.id || 'Vulnerability Detected'}
-                                  </h4>
-                                  {vuln.host && (
-                                    <span className="text-xs bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 px-2 py-1 rounded">
-                                      {vuln.host}
-                                    </span>
-                                  )}
+                      <div className="space-y-6">
+                        {/* Group by host and CPE if present */}
+                        {(() => {
+                          // Group by host and CPE
+                          const grouped = {}
+                          vulns.forEach(v => {
+                            const key = v.host + (v.cpe ? '|' + v.cpe : '')
+                            if (!grouped[key]) grouped[key] = { host: v.host, cpe: v.cpe, vulns: [] }
+                            grouped[key].vulns.push(v)
+                          })
+                          return Object.values(grouped).map((group, idx) => (
+                            <div key={group.host + (group.cpe || '') + idx} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                              <div className="mb-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">Host:</span> <span className="font-mono">{group.host}</span>
+                                {group.cpe && <span className="ml-4 text-xs text-blue-400">CPE: {group.cpe}</span>}
                                 </div>
-                                {vuln.output && (
-                                  <div className="text-red-700 dark:text-red-300 text-sm">
-                                    <pre className="whitespace-pre-wrap font-mono text-xs bg-white dark:bg-gray-800 p-3 rounded border overflow-x-auto">
-                                      {vuln.output}
-                                    </pre>
-                                  </div>
-                                )}
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                                  <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                                      <th className="px-3 py-2 text-left font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Score</th>
+                                      <th className="px-3 py-2 text-left font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Link</th>
+                                      <th className="px-3 py-2 text-left font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Exploit</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {group.vulns.map((v, i) => (
+                                      <tr key={v.id + v.url + i} className={v.exploit ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+                                        <td className="px-3 py-2 font-mono text-gray-900 dark:text-white">{v.id}</td>
+                                        <td className="px-3 py-2 text-gray-900 dark:text-white">{v.score}</td>
+                                        <td className="px-3 py-2 text-blue-600 dark:text-blue-300 underline"><a href={v.url} target="_blank" rel="noopener noreferrer">{v.url}</a></td>
+                                        <td className="px-3 py-2 text-center">{v.exploit ? <span className="text-red-600 dark:text-red-300 font-bold">Yes</span> : <span className="text-gray-400">No</span>}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        })()}
                       </div>
                     )}
                   </div>

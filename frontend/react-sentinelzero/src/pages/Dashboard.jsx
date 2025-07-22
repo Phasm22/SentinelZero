@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo } from 'react'
 import { useSocket } from '../contexts/SocketContext'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
@@ -26,6 +26,8 @@ import { formatTimestamp } from '../utils/date'
 import ScanControls from '../components/ScanControls'
 import RecentScansTable from '../components/RecentScansTable'
 import InsightsCard from '../components/InsightsCard'
+import Modal from '../components/Modal'
+import { buildNmapCommand } from '../components/ScanControls'
 
 const Dashboard = () => {
   const { preferences } = useUserPreferences()
@@ -34,6 +36,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [scanningType, setScanningType] = useState(null)
   const [scanProgress, setScanProgress] = useState(null)
   const [scanStatus, setScanStatus] = useState('idle')
   const [scanMessage, setScanMessage] = useState('')
@@ -44,6 +47,19 @@ const Dashboard = () => {
   const { socket, isConnected, isInitialized } = useSocket()
   const { showToast } = useToast()
   const [pollInterval, setPollInterval] = useState(null)
+  const [showScanConfirm, setShowScanConfirm] = useState(false)
+  const [pendingScanType, setPendingScanType] = useState(null)
+  const [security, setSecurity] = useState({
+    vulnScanningEnabled: true,
+    osDetectionEnabled: true,
+    serviceDetectionEnabled: true,
+    aggressiveScanning: false,
+  })
+  const [loadingSettings, setLoadingSettings] = useState(false)
+  const [activeTab, setActiveTab] = useState('active')
+  const [activeScans, setActiveScans] = useState([])
+  const [activeScansLoading, setActiveScansLoading] = useState(false)
+  const [stopAllLoading, setStopAllLoading] = useState(false)
 
   const loadDashboardData = async () => {
     try {
@@ -80,6 +96,7 @@ const Dashboard = () => {
       setScanMessage(data.message)
       if (data.status === 'complete' || data.status === 'error') {
         setIsScanning(false)
+        setScanningType(null)
         setScanId(null)
         setScanStartTime(null)
         setPollInterval(null)
@@ -91,6 +108,7 @@ const Dashboard = () => {
     const handleScanComplete = (data) => {
       if (!scanId || data.scan_id !== scanId) return
       setIsScanning(false)
+      setScanningType(null)
       setScanProgress(100)
       setScanStatus('complete')
       setScanMessage('Scan complete!')
@@ -126,6 +144,7 @@ const Dashboard = () => {
         setScanMessage(status.message)
         if (status.status === 'complete' || status.status === 'error') {
           setIsScanning(false)
+          setScanningType(null)
           setScanId(null)
           setScanStartTime(null)
           clearInterval(interval)
@@ -141,9 +160,29 @@ const Dashboard = () => {
     return () => clearInterval(interval)
   }, [scanId])
 
+  // Fetch active scans
+  useEffect(() => {
+    if (activeTab !== 'active') return
+    let interval = null
+    const fetchActive = async () => {
+      setActiveScansLoading(true)
+      try {
+        const resp = await apiService.getActiveScans ? await apiService.getActiveScans() : await fetch('/api/active-scans').then(r => r.json())
+        setActiveScans(resp.scans || [])
+      } catch {
+        setActiveScans([])
+      }
+      setActiveScansLoading(false)
+    }
+    fetchActive()
+    interval = setInterval(fetchActive, 3000)
+    return () => clearInterval(interval)
+  }, [activeTab])
+
   const handleScanTrigger = async (scanType) => {
     try {
       setIsScanning(true)
+      setScanningType(scanType)
       setScanProgress(0)
       setScanStatus('running')
       setScanMessage('Starting scan...')
@@ -159,6 +198,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error triggering scan:', error)
       setIsScanning(false)
+      setScanningType(null)
       setScanProgress(null)
       setScanStatus('idle')
       setScanMessage('')
@@ -250,6 +290,33 @@ const Dashboard = () => {
     </span>
   )
 
+  // Fetch security settings for scan confirmation modal
+  const fetchSecuritySettings = async () => {
+    setLoadingSettings(true)
+    try {
+      const data = await apiService.getSettings()
+      if (data && data.security) setSecurity(data.security)
+    } catch {}
+    setLoadingSettings(false)
+  }
+
+  const handleRequestScan = async (scanType) => {
+    setPendingScanType(scanType)
+    setShowScanConfirm(true)
+    await fetchSecuritySettings()
+  }
+
+  const handleConfirmScan = () => {
+    setShowScanConfirm(false)
+    if (pendingScanType) handleScanTrigger(pendingScanType)
+    setPendingScanType(null)
+  }
+
+  const handleCancelScan = () => {
+    setShowScanConfirm(false)
+    setPendingScanType(null)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -320,13 +387,82 @@ const Dashboard = () => {
           
           {/* Scan Controls */}
           <ScanControls
-            onScanTrigger={handleScanTrigger}
+            onRequestScan={handleRequestScan}
             isScanning={isScanning}
+            scanningType={scanningType}
             scanProgress={scanProgress}
             scanStatus={scanStatus}
             scanMessage={scanMessage}
             isConnected={isConnected}
           />
+          {/* Tabs for Active/Recent Scans */}
+          <div className="mt-6">
+            <div className="flex space-x-4 border-b border-gray-700 mb-4">
+              <button
+                className={`px-4 py-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-primary-500 text-primary-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+                onClick={() => setActiveTab('active')}
+              >
+                Active Scans
+              </button>
+              <button
+                className={`px-4 py-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'recent' ? 'border-primary-500 text-primary-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+                onClick={() => setActiveTab('recent')}
+              >
+                Recent Scans
+              </button>
+            </div>
+            {activeTab === 'active' && (
+              <div className="space-y-4">
+                <div className="flex justify-end mb-2">
+                  <button
+                    className="btn btn-danger btn-sm"
+                    disabled={stopAllLoading || activeScans.length === 0}
+                    onClick={async () => {
+                      setStopAllLoading(true)
+                      try {
+                        const resp = await fetch('/api/kill-all-scans', { method: 'POST' })
+                        const data = await resp.json()
+                        showToast('All scans stopped', 'success')
+                      } catch {
+                        showToast('Failed to stop scans', 'danger')
+                      }
+                      setStopAllLoading(false)
+                    }}
+                  >
+                    {stopAllLoading ? 'Stopping...' : 'Stop All Scans'}
+                  </button>
+                </div>
+                {activeScansLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  </div>
+                ) : activeScans.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No active scans at the moment.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {activeScans.map(scan => (
+                      <ActiveScanCard
+                        key={scan.id}
+                        scan={scan}
+                        onViewDetails={handleViewDetails}
+                        formatTimestamp={formatTimestamp}
+                        preferences={preferences}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'recent' && (
+              <RecentScansTable
+                recentScans={recentScans}
+                preferences={preferences}
+                handleViewDetails={handleViewDetails}
+              />
+            )}
+          </div>
         </div>
 
         {/* Right Column - Stats and Recent Scans */}
@@ -392,8 +528,68 @@ const Dashboard = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+      {/* Scan Confirmation Modal at root */}
+      <Modal
+        isOpen={showScanConfirm}
+        onClose={handleCancelScan}
+        title={pendingScanType ? `Confirm ${pendingScanType}` : 'Confirm Scan'}
+        size="md"
+      >
+        {loadingSettings ? (
+          <div className="text-gray-300">Loading scan settings...</div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <div className="text-gray-200 mb-2">The following nmap command will be used:</div>
+              <pre className="bg-gray-900 text-green-400 rounded p-3 text-sm overflow-x-auto whitespace-pre-wrap">
+                {buildNmapCommand(pendingScanType, security)}
+              </pre>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                className="btn btn-ghost"
+                onClick={handleCancelScan}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmScan}
+              >
+                Start Scan
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   )
 }
+
+const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, formatTimestamp, preferences }) {
+  return (
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-6 flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-lg font-title font-bold text-gray-100">{scan.scan_type}</div>
+        <div className="text-xs text-gray-400">ID: {scan.id}</div>
+      </div>
+      <div className="mb-2 text-sm text-gray-300">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
+      <div className="mb-2 text-sm text-gray-300">Status: <span className="font-semibold text-primary-400">{scan.status}</span></div>
+      <div className="mb-2 text-sm text-gray-300">Progress: <span className="font-semibold">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
+      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-2">
+        <div
+          className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
+          style={{ width: `${scan.percent || 0}%`, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
+        ></div>
+      </div>
+      <button
+        className="btn btn-outline btn-sm mt-2 w-full"
+        onClick={() => onViewDetails(scan)}
+      >
+        View Details
+      </button>
+    </div>
+  )
+})
 
 export default Dashboard 

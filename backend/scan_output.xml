@@ -1,15 +1,53 @@
+
+Dashboard
+Scan History
+Settings
+SentinelZero
+SentinelZero
+Recent Insights
+
+10.0.0.5: New port 8080 open7/20/2024, 6:34:00 AM
+10.0.0.7: New vulnerability CVE-2024-1234 detected7/20/2024, 6:35:00 AM
+
+    10.0.0.8: Vulnerability CVE-2023-9999 resolved7/20/2024, 6:36:00 AM
+
+Scan Controls
+Total Scans
+7
+Hosts Found
+13
+Vulnerabilities
+1
+Last Scan
+07/21/2025, 03:37 AM
+Recent Scans
+IoT Scan
+07/20/2025, 09:37 PM
+Vuln Scripts
+07/20/2025, 09:14 PM
+IoT Scan
+07/20/2025, 08:52 PM
+Scan Details - IoT Scan
+
+07/20/2025, 09:37 PM
+Raw XML Data
+
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE nmaprun>
 <?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
-<!-- Nmap 7.80 scan initiated Sun Jul 20 05:56:15 2025 as: nmap -v -Pn -sS -T3 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 1 -&#45;host-timeout 60s -&#45;max-rtt-timeout 500ms -&#45;initial-rtt-timeout 200ms -&#45;min-rtt-timeout 100ms -&#45;min-hostgroup 1 -&#45;max-hostgroup 1024 -oX scans/quick_scan_2025-07-20_0556.xml 172.16.0.0/22 -->
-<nmaprun scanner="nmap" args="nmap -v -Pn -sS -T3 -p 21,22,23,25,53,80,110,111,135,139,143,443,993,995,1723,3306,3389,5900,8080 -&#45;max-retries 1 -&#45;host-timeout 60s -&#45;max-rtt-timeout 500ms -&#45;initial-rtt-timeout 200ms -&#45;min-rtt-timeout 100ms -&#45;min-hostgroup 1 -&#45;max-hostgroup 1024 -oX scans/quick_scan_2025-07-20_0556.xml 172.16.0.0/22" start="1752990975" startstr="Sun Jul 20 05:56:15 2025" version="7.80" xmloutputversion="1.04">
-<scaninfo type="syn" protocol="tcp" numservices="19" services="21-23,25,53,80,110-111,135,139,143,443,993,995,1723,3306,3389,5900,8080"/>
+<!-- Nmap 7.80 scan initiated Mon Jul 21 03:37:41 2025 as: nmap -v -T4 -sU -p 53,67,68,80,443,1900,5353,554,8080 -O -sV -&#45;script=vuln -oX scans/iot_scan_2025-07-21_0337.xml 172.16.0.0/22 -->
+<nmaprun scanner="nmap" args="nmap -v -T4 -sU -p 53,67,68,80,443,1900,5353,554,8080 -O -sV -&#45;script=vuln -oX scans/iot_scan_2025-07-21_0337.xml 172.16.0.0/22" start="1753069061" startstr="Mon Jul 21 03:37:41 2025" version="7.80" xmloutputversion="1.04">
+<scaninfo type="udp" protocol="udp" numservices="9" services="53,67-68,80,443,554,1900,5353,8080"/>
 <verbose level="1"/>
 <debugging level="0"/>
-<taskbegin task="ARP Ping Scan" time="1752990975"/>
-<taskend task="ARP Ping Scan" time="1752990978" extrainfo="1023 total hosts"/>
-<taskbegin task="Parallel DNS resolution of 1023 hosts." time="1752990978"/>
-<taskend task="Parallel DNS resolution of 1023 hosts." time="1752990978"/>
+<taskbegin task="NSE" time="1753069062"/>
+<taskend task="NSE" time="1753069072"/>
+<taskbegin task="NSE" time="1753069072"/>
+<taskend task="NSE" time="1753069072"/>
+<taskbegin task="ARP Ping Scan" time="1753069072"/>
+<taskend task="ARP Ping Scan" time="1753069075" extrainfo="1023 total hosts"/>
+<taskbegin task="Parallel DNS resolution of 1023 hosts." time="1753069075"/>
+<taskend task="Parallel DNS resolution of 1023 hosts." time="1753069075"/>
 <host><status state="down" reason="no-response" reason_ttl="0"/>
 <address addr="172.16.0.0" addrtype="ipv4"/>
 </host>
@@ -3043,362 +3081,733 @@
 <host><status state="down" reason="no-response" reason_ttl="0"/>
 <address addr="172.16.3.255" addrtype="ipv4"/>
 </host>
-<taskbegin task="Parallel DNS resolution of 1 host." time="1752990978"/>
-<taskend task="Parallel DNS resolution of 1 host." time="1752990978"/>
-<taskbegin task="SYN Stealth Scan" time="1752990978"/>
-<taskend task="SYN Stealth Scan" time="1752990980" extrainfo="228 total ports"/>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<taskbegin task="Parallel DNS resolution of 1 host." time="1753069075"/>
+<taskend task="Parallel DNS resolution of 1 host." time="1753069075"/>
+<taskbegin task="UDP Scan" time="1753069075"/>
+<taskend task="UDP Scan" time="1753069082" extrainfo="108 total ports"/>
+<taskbegin task="Service scan" time="1753069082"/>
+<taskprogress task="Service scan" time="1753069132" percent="11.43" remaining="388" etc="1753069520"/>
+<taskprogress task="Service scan" time="1753069180" percent="14.29" remaining="588" etc="1753069768"/>
+<taskend task="Service scan" time="1753069277" extrainfo="35 services on 12 hosts"/>
+<taskbegin task="NSE" time="1753069280"/>
+<taskend task="NSE" time="1753069410"/>
+<taskbegin task="NSE" time="1753069410"/>
+<taskend task="NSE" time="1753069412"/>
+<host starttime="1753069072" endtime="1753069412"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.1" addrtype="ipv4"/>
 <address addr="BC:24:11:7C:04:E1" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="open" reason="udp-response" reason_ttl="64"/><service name="domain" product="Unbound" version="1.23.0" method="probed" conf="10"><cpe>cpe:/a:nlnetlabs:unbound:1.23.0</cpe></service><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="67"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcps" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="443"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="554"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="rtsp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="1900"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="upnp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="5353"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="zeroconf" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="8080"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http-alt" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
 </ports>
-<times srtt="525" rttvar="1701" to="100000"/>
+<os></os>
+<distance value="1"/>
+<times srtt="596" rttvar="1017" to="100000"/>
 </host>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069411"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.9" addrtype="ipv4"/>
 <address addr="00:1D:71:B9:11:C0" addrtype="mac" vendor="Cisco Systems"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="255"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcps" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="255"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="9080" rttvar="6793" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="825" rttvar="527" to="100000"/>
 </host>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069280"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.10" addrtype="ipv4"/>
 <address addr="50:91:E3:68:62:F6" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="654" rttvar="2304" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="463" rttvar="159" to="100000"/>
 </host>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069410"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.11" addrtype="ipv4"/>
 <address addr="B8:85:84:AD:F5:C4" addrtype="mac" vendor="Dell"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="open" reason="udp-response" reason_ttl="64"/><service name="domain" product="dnsmasq" version="2.90" method="probed" conf="10"><cpe>cpe:/a:thekelleys:dnsmasq:2.90</cpe></service><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/><script id="vulners" output="&#xa;  cpe:/a:thekelleys:dnsmasq:2.90: &#xa;    &#x9;95499236-C9FE-56A6-9D7D-E943A24B633A&#x9;10.0&#x9;https://vulners.com/githubexploit/95499236-C9FE-56A6-9D7D-E943A24B633A&#x9;*EXPLOIT*&#xa;    &#x9;2C119FFA-ECE0-5E14-A4A4-354A2C38071A&#x9;10.0&#x9;https://vulners.com/githubexploit/2C119FFA-ECE0-5E14-A4A4-354A2C38071A&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:42943&#x9;9.8&#x9;https://vulners.com/exploitdb/EDB-ID:42943&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:42942&#x9;9.8&#x9;https://vulners.com/exploitdb/EDB-ID:42942&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:42941&#x9;9.8&#x9;https://vulners.com/exploitdb/EDB-ID:42941&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2017-14493&#x9;9.8&#x9;https://vulners.com/cve/CVE-2017-14493&#xa;    &#x9;CVE-2017-14492&#x9;9.8&#x9;https://vulners.com/cve/CVE-2017-14492&#xa;    &#x9;CVE-2017-14491&#x9;9.8&#x9;https://vulners.com/cve/CVE-2017-14491&#xa;    &#x9;CVE-2020-25682&#x9;8.3&#x9;https://vulners.com/cve/CVE-2020-25682&#xa;    &#x9;CVE-2020-25681&#x9;8.3&#x9;https://vulners.com/cve/CVE-2020-25681&#xa;    &#x9;SSV:96623&#x9;7.8&#x9;https://vulners.com/seebug/SSV:96623&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:708148DF89AFEA44750A9B84E292A6B9&#x9;7.8&#x9;https://vulners.com/exploitpack/EXPLOITPACK:708148DF89AFEA44750A9B84E292A6B9&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:42946&#x9;7.8&#x9;https://vulners.com/exploitdb/EDB-ID:42946&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2017-14496&#x9;7.8&#x9;https://vulners.com/cve/CVE-2017-14496&#xa;    &#x9;1337DAY-ID-28727&#x9;7.8&#x9;https://vulners.com/zdt/1337DAY-ID-28727&#x9;*EXPLOIT*&#xa;    &#x9;SSV:96620&#x9;7.5&#x9;https://vulners.com/seebug/SSV:96620&#x9;*EXPLOIT*&#xa;    &#x9;SSV:96619&#x9;7.5&#x9;https://vulners.com/seebug/SSV:96619&#x9;*EXPLOIT*&#xa;    &#x9;SSV:96618&#x9;7.5&#x9;https://vulners.com/seebug/SSV:96618&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:E661AED6AF5BCC1565D1CB0F9878E40B&#x9;7.5&#x9;https://vulners.com/exploitpack/EXPLOITPACK:E661AED6AF5BCC1565D1CB0F9878E40B&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:95340EB39AF331E01096F2B1CF7F1DE2&#x9;7.5&#x9;https://vulners.com/exploitpack/EXPLOITPACK:95340EB39AF331E01096F2B1CF7F1DE2&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:572F56450B83EECCA41D07EF1B33B48B&#x9;7.5&#x9;https://vulners.com/exploitpack/EXPLOITPACK:572F56450B83EECCA41D07EF1B33B48B&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:42945&#x9;7.5&#x9;https://vulners.com/exploitdb/EDB-ID:42945&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2023-50387&#x9;7.5&#x9;https://vulners.com/cve/CVE-2023-50387&#xa;    &#x9;CVE-2023-49441&#x9;7.5&#x9;https://vulners.com/cve/CVE-2023-49441&#xa;    &#x9;CVE-2023-28450&#x9;7.5&#x9;https://vulners.com/cve/CVE-2023-28450&#xa;    &#x9;CVE-2022-0934&#x9;7.5&#x9;https://vulners.com/cve/CVE-2022-0934&#xa;    &#x9;CVE-2019-14513&#x9;7.5&#x9;https://vulners.com/cve/CVE-2019-14513&#xa;    &#x9;CVE-2017-15107&#x9;7.5&#x9;https://vulners.com/cve/CVE-2017-15107&#xa;    &#x9;CVE-2017-14495&#x9;7.5&#x9;https://vulners.com/cve/CVE-2017-14495&#xa;    &#x9;CVE-2017-13704&#x9;7.5&#x9;https://vulners.com/cve/CVE-2017-13704&#xa;    &#x9;CVE-2015-8899&#x9;7.5&#x9;https://vulners.com/cve/CVE-2015-8899&#xa;    &#x9;CVE-2005-0877&#x9;7.5&#x9;https://vulners.com/cve/CVE-2005-0877&#xa;    &#x9;CE8366BE-F17D-552A-B1B4-C2DBD31482C0&#x9;7.5&#x9;https://vulners.com/githubexploit/CE8366BE-F17D-552A-B1B4-C2DBD31482C0&#x9;*EXPLOIT*&#xa;    &#x9;BB688FBF-CEE2-5DD1-8561-8F76501DE2D4&#x9;7.5&#x9;https://vulners.com/githubexploit/BB688FBF-CEE2-5DD1-8561-8F76501DE2D4&#x9;*EXPLOIT*&#xa;    &#x9;79068BEF-A572-5A8A-88D0-177524BDAAFE&#x9;7.5&#x9;https://vulners.com/githubexploit/79068BEF-A572-5A8A-88D0-177524BDAAFE&#x9;*EXPLOIT*&#xa;    &#x9;5EFDF373-FBD1-5C09-A612-00ADBFE574CF&#x9;7.5&#x9;https://vulners.com/githubexploit/5EFDF373-FBD1-5C09-A612-00ADBFE574CF&#x9;*EXPLOIT*&#xa;    &#x9;1337DAY-ID-28724&#x9;7.5&#x9;https://vulners.com/zdt/1337DAY-ID-28724&#x9;*EXPLOIT*&#xa;    &#x9;1337DAY-ID-28723&#x9;7.5&#x9;https://vulners.com/zdt/1337DAY-ID-28723&#x9;*EXPLOIT*&#xa;    &#x9;1337DAY-ID-28720&#x9;7.5&#x9;https://vulners.com/zdt/1337DAY-ID-28720&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2020-25687&#x9;7.1&#x9;https://vulners.com/cve/CVE-2020-25687&#xa;    &#x9;CVE-2020-25683&#x9;7.1&#x9;https://vulners.com/cve/CVE-2020-25683&#xa;    &#x9;SSV:66871&#x9;6.8&#x9;https://vulners.com/seebug/SSV:66871&#x9;*EXPLOIT*&#xa;    &#x9;SSV:12710&#x9;6.8&#x9;https://vulners.com/seebug/SSV:12710&#x9;*EXPLOIT*&#xa;    &#x9;SSV:12174&#x9;6.8&#x9;https://vulners.com/seebug/SSV:12174&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:80896&#x9;6.8&#x9;https://vulners.com/packetstorm/PACKETSTORM:80896&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:ECB83F9533371579F3997366C239FB4D&#x9;6.8&#x9;https://vulners.com/exploitpack/EXPLOITPACK:ECB83F9533371579F3997366C239FB4D&#x9;*EXPLOIT*&#xa;    &#x9;EDB-ID:9617&#x9;6.8&#x9;https://vulners.com/exploitdb/EDB-ID:9617&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2009-2957&#x9;6.8&#x9;https://vulners.com/cve/CVE-2009-2957&#xa;    &#x9;CVE-2015-3294&#x9;6.4&#x9;https://vulners.com/cve/CVE-2015-3294&#xa;    &#x9;EDB-ID:42944&#x9;5.9&#x9;https://vulners.com/exploitdb/EDB-ID:42944&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2017-14494&#x9;5.9&#x9;https://vulners.com/cve/CVE-2017-14494&#xa;    &#x9;SSV:96622&#x9;5.0&#x9;https://vulners.com/seebug/SSV:96622&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:C0456C7DF1625677A211CB9799B79F9A&#x9;5.0&#x9;https://vulners.com/exploitpack/EXPLOITPACK:C0456C7DF1625677A211CB9799B79F9A&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2013-0198&#x9;5.0&#x9;https://vulners.com/cve/CVE-2013-0198&#xa;    &#x9;CVE-2012-3411&#x9;5.0&#x9;https://vulners.com/cve/CVE-2012-3411&#xa;    &#x9;1337DAY-ID-28726&#x9;5.0&#x9;https://vulners.com/zdt/1337DAY-ID-28726&#x9;*EXPLOIT*&#xa;    &#x9;SSV:96621&#x9;4.3&#x9;https://vulners.com/seebug/SSV:96621&#x9;*EXPLOIT*&#xa;    &#x9;SSV:12173&#x9;4.3&#x9;https://vulners.com/seebug/SSV:12173&#x9;*EXPLOIT*&#xa;    &#x9;EXPLOITPACK:22D470FAFA79A3DB978CC3F8766CC759&#x9;4.3&#x9;https://vulners.com/exploitpack/EXPLOITPACK:22D470FAFA79A3DB978CC3F8766CC759&#x9;*EXPLOIT*&#xa;    &#x9;CVE-2021-3448&#x9;4.3&#x9;https://vulners.com/cve/CVE-2021-3448&#xa;    &#x9;CVE-2020-25686&#x9;4.3&#x9;https://vulners.com/cve/CVE-2020-25686&#xa;    &#x9;CVE-2020-25685&#x9;4.3&#x9;https://vulners.com/cve/CVE-2020-25685&#xa;    &#x9;CVE-2020-25684&#x9;4.3&#x9;https://vulners.com/cve/CVE-2020-25684&#xa;    &#x9;CVE-2019-14834&#x9;4.3&#x9;https://vulners.com/cve/CVE-2019-14834&#xa;    &#x9;CVE-2009-2958&#x9;4.3&#x9;https://vulners.com/cve/CVE-2009-2958&#xa;    &#x9;1337DAY-ID-28725&#x9;4.3&#x9;https://vulners.com/zdt/1337DAY-ID-28725&#x9;*EXPLOIT*&#xa;    &#x9;CBF3EF2D-3A5B-5110-A374-4A5ADE9AC91A&#x9;3.7&#x9;https://vulners.com/githubexploit/CBF3EF2D-3A5B-5110-A374-4A5ADE9AC91A&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144480&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144480&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144479&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144479&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144473&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144473&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144471&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144471&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144468&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144468&#x9;*EXPLOIT*&#xa;    &#x9;PACKETSTORM:144462&#x9;0.0&#x9;https://vulners.com/packetstorm/PACKETSTORM:144462&#x9;*EXPLOIT*&#xa;    &#x9;1337DAY-ID-6998&#x9;0.0&#x9;https://vulners.com/zdt/1337DAY-ID-6998&#x9;*EXPLOIT*"><table key="cpe:/a:thekelleys:dnsmasq:2.90">
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">95499236-C9FE-56A6-9D7D-E943A24B633A</elem>
+<elem key="cvss">10.0</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">2C119FFA-ECE0-5E14-A4A4-354A2C38071A</elem>
+<elem key="cvss">10.0</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42943</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42942</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42941</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14493</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14492</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14491</elem>
+<elem key="cvss">9.8</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25682</elem>
+<elem key="cvss">8.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25681</elem>
+<elem key="cvss">8.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96623</elem>
+<elem key="cvss">7.8</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:708148DF89AFEA44750A9B84E292A6B9</elem>
+<elem key="cvss">7.8</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42946</elem>
+<elem key="cvss">7.8</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14496</elem>
+<elem key="cvss">7.8</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28727</elem>
+<elem key="cvss">7.8</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96620</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96619</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96618</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:E661AED6AF5BCC1565D1CB0F9878E40B</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:95340EB39AF331E01096F2B1CF7F1DE2</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:572F56450B83EECCA41D07EF1B33B48B</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42945</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2023-50387</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2023-49441</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2023-28450</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2022-0934</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2019-14513</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-15107</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14495</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-13704</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2015-8899</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2005-0877</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">CE8366BE-F17D-552A-B1B4-C2DBD31482C0</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">BB688FBF-CEE2-5DD1-8561-8F76501DE2D4</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">79068BEF-A572-5A8A-88D0-177524BDAAFE</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">5EFDF373-FBD1-5C09-A612-00ADBFE574CF</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28724</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28723</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28720</elem>
+<elem key="cvss">7.5</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25687</elem>
+<elem key="cvss">7.1</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25683</elem>
+<elem key="cvss">7.1</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:66871</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:12710</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:12174</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:80896</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:ECB83F9533371579F3997366C239FB4D</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:9617</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2009-2957</elem>
+<elem key="cvss">6.8</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2015-3294</elem>
+<elem key="cvss">6.4</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EDB-ID:42944</elem>
+<elem key="cvss">5.9</elem>
+<elem key="type">exploitdb</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2017-14494</elem>
+<elem key="cvss">5.9</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96622</elem>
+<elem key="cvss">5.0</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:C0456C7DF1625677A211CB9799B79F9A</elem>
+<elem key="cvss">5.0</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2013-0198</elem>
+<elem key="cvss">5.0</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2012-3411</elem>
+<elem key="cvss">5.0</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28726</elem>
+<elem key="cvss">5.0</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:96621</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">SSV:12173</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">seebug</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">EXPLOITPACK:22D470FAFA79A3DB978CC3F8766CC759</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">exploitpack</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2021-3448</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25686</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25685</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2020-25684</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2019-14834</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">false</elem>
+<elem key="id">CVE-2009-2958</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">cve</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-28725</elem>
+<elem key="cvss">4.3</elem>
+<elem key="type">zdt</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">CBF3EF2D-3A5B-5110-A374-4A5ADE9AC91A</elem>
+<elem key="cvss">3.7</elem>
+<elem key="type">githubexploit</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144480</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144479</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144473</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144471</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144468</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">PACKETSTORM:144462</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">packetstorm</elem>
+</table>
+<table>
+<elem key="is_exploit">true</elem>
+<elem key="id">1337DAY-ID-6998</elem>
+<elem key="cvss">0.0</elem>
+<elem key="type">zdt</elem>
+</table>
+</table>
+</script></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="236" rttvar="2155" to="100000"/>
+<os><portused state="closed" proto="udp" portid="67"/>
+</os>
+<distance value="1"/>
+<times srtt="497" rttvar="469" to="100000"/>
 </host>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069072" endtime="1753069280"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.12" addrtype="ipv4"/>
 <address addr="B8:85:84:AE:0E:7D" addrtype="mac" vendor="Dell"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="31" rttvar="2112" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="24" rttvar="72" to="100000"/>
 </host>
-<host starttime="1752990975" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069072" endtime="1753069411"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.13" addrtype="ipv4"/>
 <address addr="EE:7F:23:EA:BF:73" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="open" reason="udp-response" reason_ttl="64"/><service name="domain" product="dnsmasq" version="pi-hole-v2.90+1" method="probed" conf="10"><cpe>cpe:/a:thekelleys:dnsmasq:pi-hole-v2.90%2B1</cpe></service><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="322" rttvar="2185" to="100000"/>
+<os><portused state="closed" proto="udp" portid="67"/>
+</os>
+<distance value="1"/>
+<times srtt="481" rttvar="254" to="100000"/>
 </host>
-<host starttime="1752990978" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069073" endtime="1753069412"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.100" addrtype="ipv4"/>
 <address addr="BC:24:11:47:79:DE" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="67"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcps" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="443"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="554"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="rtsp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="1900"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="upnp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="5353"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="zeroconf" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="8080"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http-alt" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
 </ports>
-<times srtt="671" rttvar="3768" to="100000"/>
+<os></os>
+<distance value="1"/>
+<times srtt="556" rttvar="5000" to="100000"/>
 </host>
-<host starttime="1752990978" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069073" endtime="1753069411"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.106" addrtype="ipv4"/>
 <address addr="FE:E0:BC:B2:96:38" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="376" rttvar="2140" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="335" rttvar="185" to="100000"/>
 </host>
-<host starttime="1752990976" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069073" endtime="1753069412"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.107" addrtype="ipv4"/>
 <address addr="9A:D7:31:D5:A8:E8" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="128"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="67"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcps" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="443"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="554"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="rtsp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="1900"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="upnp" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="5353"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="zeroconf" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="8080"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="http-alt" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
 </ports>
-<times srtt="217" rttvar="3798" to="100000"/>
+<os></os>
+<distance value="1"/>
+<times srtt="685" rttvar="5000" to="100000"/>
 </host>
-<host starttime="1752990977" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069280"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.178" addrtype="ipv4"/>
 <address addr="BC:24:11:82:BA:EC" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="49" rttvar="5000" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="43" rttvar="88" to="100000"/>
 </host>
-<host starttime="1752990976" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069280"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.180" addrtype="ipv4"/>
 <address addr="BC:24:11:C6:18:28" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcpc" method="table" conf="3"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="170" rttvar="2136" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="156" rttvar="125" to="100000"/>
 </host>
-<host starttime="1752990978" endtime="1752990980"><status state="up" reason="arp-response" reason_ttl="0"/>
+<host starttime="1753069074" endtime="1753069411"><status state="up" reason="arp-response" reason_ttl="0"/>
 <address addr="172.16.0.182" addrtype="ipv4"/>
 <address addr="BC:24:11:A1:4B:1F" addrtype="mac"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcps" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="273" rttvar="2906" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="1"/>
+<times srtt="393" rttvar="252" to="100000"/>
 </host>
-<taskbegin task="SYN Stealth Scan" time="1752990980"/>
-<taskend task="SYN Stealth Scan" time="1752990980" extrainfo="19 total ports"/>
-<host starttime="1752990980" endtime="1752990980"><status state="up" reason="user-set" reason_ttl="0"/>
+<taskbegin task="UDP Scan" time="1753069412"/>
+<taskend task="UDP Scan" time="1753069414" extrainfo="9 total ports"/>
+<taskbegin task="Service scan" time="1753069414"/>
+<taskend task="Service scan" time="1753069511" extrainfo="1 service on 1 host"/>
+<taskbegin task="NSE" time="1753069513"/>
+<taskend task="NSE" time="1753069527"/>
+<taskbegin task="NSE" time="1753069527"/>
+<taskend task="NSE" time="1753069528"/>
+<host starttime="1753069412" endtime="1753069528"><status state="up" reason="localhost-response" reason_ttl="0"/>
 <address addr="172.16.0.183" addrtype="ipv4"/>
 <hostnames>
 </hostnames>
-<ports><port protocol="tcp" portid="21"><state state="closed" reason="reset" reason_ttl="64"/><service name="ftp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" method="table" conf="3"/></port>
-<port protocol="tcp" portid="23"><state state="closed" reason="reset" reason_ttl="64"/><service name="telnet" method="table" conf="3"/></port>
-<port protocol="tcp" portid="25"><state state="closed" reason="reset" reason_ttl="64"/><service name="smtp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="53"><state state="closed" reason="reset" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
-<port protocol="tcp" portid="80"><state state="closed" reason="reset" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
-<port protocol="tcp" portid="110"><state state="closed" reason="reset" reason_ttl="64"/><service name="pop3" method="table" conf="3"/></port>
-<port protocol="tcp" portid="111"><state state="closed" reason="reset" reason_ttl="64"/><service name="rpcbind" method="table" conf="3"/></port>
-<port protocol="tcp" portid="135"><state state="closed" reason="reset" reason_ttl="64"/><service name="msrpc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="139"><state state="closed" reason="reset" reason_ttl="64"/><service name="netbios-ssn" method="table" conf="3"/></port>
-<port protocol="tcp" portid="143"><state state="closed" reason="reset" reason_ttl="64"/><service name="imap" method="table" conf="3"/></port>
-<port protocol="tcp" portid="443"><state state="closed" reason="reset" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
-<port protocol="tcp" portid="993"><state state="closed" reason="reset" reason_ttl="64"/><service name="imaps" method="table" conf="3"/></port>
-<port protocol="tcp" portid="995"><state state="closed" reason="reset" reason_ttl="64"/><service name="pop3s" method="table" conf="3"/></port>
-<port protocol="tcp" portid="1723"><state state="closed" reason="reset" reason_ttl="64"/><service name="pptp" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3306"><state state="closed" reason="reset" reason_ttl="64"/><service name="mysql" method="table" conf="3"/></port>
-<port protocol="tcp" portid="3389"><state state="closed" reason="reset" reason_ttl="64"/><service name="ms-wbt-server" method="table" conf="3"/></port>
-<port protocol="tcp" portid="5900"><state state="closed" reason="reset" reason_ttl="64"/><service name="vnc" method="table" conf="3"/></port>
-<port protocol="tcp" portid="8080"><state state="closed" reason="reset" reason_ttl="64"/><service name="http-proxy" method="table" conf="3"/></port>
+<ports><port protocol="udp" portid="53"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="udp" portid="67"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="dhcps" method="table" conf="3"/></port>
+<port protocol="udp" portid="68"><state state="open|filtered" reason="no-response" reason_ttl="0"/><service name="dhcpc" method="table" conf="3"/><script id="clamav-exec" output="ERROR: Script execution failed (use -d to debug)"/></port>
+<port protocol="udp" portid="80"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="udp" portid="443"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="udp" portid="554"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="rtsp" method="table" conf="3"/></port>
+<port protocol="udp" portid="1900"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="upnp" method="table" conf="3"/></port>
+<port protocol="udp" portid="5353"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="zeroconf" method="table" conf="3"/></port>
+<port protocol="udp" portid="8080"><state state="closed" reason="port-unreach" reason_ttl="64"/><service name="http-alt" method="table" conf="3"/></port>
 </ports>
-<times srtt="7" rttvar="28" to="100000"/>
+<os><portused state="closed" proto="udp" portid="53"/>
+</os>
+<distance value="0"/>
+<times srtt="30" rttvar="31" to="100000"/>
 </host>
-<runstats><finished time="1752990980" timestr="Sun Jul 20 05:56:20 2025" elapsed="5.05" summary="Nmap done at Sun Jul 20 05:56:20 2025; 1024 IP addresses (13 hosts up) scanned in 5.05 seconds" exit="success"/><hosts up="13" down="1011" total="1024"/>
+<taskbegin task="NSE" time="1753069528"/>
+<taskend task="NSE" time="1753069528"/>
+<taskbegin task="NSE" time="1753069528"/>
+<taskend task="NSE" time="1753069528"/>
+<runstats><finished time="1753069528" timestr="Mon Jul 21 03:45:28 2025" elapsed="466.51" summary="Nmap done at Mon Jul 21 03:45:28 2025; 1024 IP addresses (13 hosts up) scanned in 466.51 seconds" exit="success"/><hosts up="13" down="1011" total="1024"/>
 </runstats>
 </nmaprun>
+

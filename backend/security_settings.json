@@ -1,1 +1,1 @@
-{"os_detection_enabled": true, "service_detection_enabled": true, "vuln_scanning_enabled": true}
+{"aggressiveScanning": true, "osDetectionEnabled": true, "os_detection_enabled": true, "serviceDetectionEnabled": true, "service_detection_enabled": true, "vulnScanningEnabled": true, "vuln_scanning_enabled": true}

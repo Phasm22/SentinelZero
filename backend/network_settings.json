@@ -1,1 +1,1 @@
-{"max_hosts": 1000, "scan_timeout": 300, "target_network": "172.16.0.0/22"}
+{"defaultTargetNetwork": "172.16.0.183/22", "max_hosts": 1000, "scanTimeout": 12, "scan_timeout": 300, "target_network": "172.16.0.0/22"}

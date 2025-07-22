@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "if ! command -v fuser >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y psmisc; fi; (fuser -k 5173/tcp || lsof -ti:5173 | xargs kill -9 || true)",
+    "predev": "if ! command -v fuser >/dev/null 2>&1; then apt-get update && apt-get install -y psmisc; fi; (fuser -k 5173/tcp || lsof -ti:5173 | xargs kill -9 || true)",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
