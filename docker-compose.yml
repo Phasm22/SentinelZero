@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  sentinelzero:
+    build: .
+    container_name: sentinelzero
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persistent storage for scan results
+      - ./data/scans:/app/scans
+      - ./data/database:/app/instance
+      - ./data/logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      # Network scanning configuration
+      - SCAN_NETWORK=172.16.0.0/22
+      - MAX_HOSTS=100
+    networks:
+      - sentinelzero-net
+    # Required for network scanning
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/dashboard-stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  sentinelzero-net:
+    driver: bridge

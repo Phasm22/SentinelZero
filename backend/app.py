@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import json
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, Response, make_response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, Response, make_response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
 import logging
@@ -72,7 +72,7 @@ def get_next_run():
         return job.next_run_time.astimezone(denver).isoformat()
     return None
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-to-a-random-secret')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sentinelzero.db'
@@ -154,15 +154,42 @@ def parse_vulners_output(host_ip, cpe, output):
             url = m.group(3)
             rest = m.group(4)
             exploit = '*EXPLOIT*' in rest
-            vulns.append({
-                'host': host_ip,
-                'cpe': cpe,
-                'id': id_,
-                'score': score,
-                'url': url,
-                'exploit': exploit
-            })
+            
+            # Filter out false positives and low-quality vulnerabilities
+            if should_include_vulnerability(id_, score, exploit):
+                vulns.append({
+                    'host': host_ip,
+                    'cpe': cpe,
+                    'id': id_,
+                    'score': score,
+                    'url': url,
+                    'exploit': exploit
+                })
     return vulns
+
+def should_include_vulnerability(vuln_id, score, has_exploit):
+    """Filter out false positives and low-value vulnerabilities"""
+    
+    # Skip very low scores unless they have active exploits
+    if score < 4.0 and not has_exploit:
+        return False
+    
+    # Skip common false positives
+    false_positive_patterns = [
+        'PACKETSTORM:140261',  # Common SSH false positive
+        'CVE-2025-32728',      # Future CVEs (likely false)
+        'CVE-2025-26465',      # Future CVEs (likely false)
+    ]
+    
+    for pattern in false_positive_patterns:
+        if pattern in vuln_id:
+            return False
+    
+    # Skip GitHub exploit entries with very generic IDs (often false positives)
+    if len(vuln_id) > 30 and '-' in vuln_id and vuln_id.count('-') >= 4:
+        return False
+    
+    return True
 
 def run_nmap_scan(scan_type, security_settings=None):
     if security_settings is None:
@@ -221,8 +248,12 @@ def run_nmap_scan(scan_type, security_settings=None):
                 cmd.append('-O')
             if security_settings.get('service_detection_enabled'):
                 cmd.append('-sV')
-            if security_settings.get('vuln_scanning_enabled') or scan_type_normalized == 'vuln scripts':
+            if scan_type_normalized == 'vuln scripts':
+                # Only run vulnerability scripts for explicit vulnerability scans
                 cmd.append('--script=vuln')
+            elif security_settings.get('vuln_scanning_enabled'):
+                # Use more targeted vulnerability scripts for regular scans
+                cmd.append('--script=ssl-cert,ssl-enum-ciphers,http-title,ssh-hostkey')
             if security_settings.get('aggressive_scanning'):
                 cmd.append('-A')
             # Target network
@@ -465,24 +496,29 @@ def scheduled_scan_job(scan_type='Full TCP'):
 
 @app.route('/')
 def index():
-    scans = Scan.query.order_by(Scan.timestamp.desc()).limit(5).all()
-    denver = pytz.timezone('America/Denver')
-    scans_dicts = []
-    for scan in scans:
-        d = scan.as_dict()
-        if d['timestamp']:
-            d['timestamp'] = d['timestamp'].astimezone(denver)
-        try:
-            d['hosts'] = json.loads(d['hosts_json']) if d['hosts_json'] else []
-        except Exception:
-            d['hosts'] = []
-        try:
-            d['vulns'] = json.loads(d['vulns_json']) if d['vulns_json'] else []
-        except Exception:
-            d['vulns'] = []
-        scans_dicts.append(d)
-    latest_scan = scans_dicts[0] if scans_dicts else None
-    return render_template('index.html', scans=scans_dicts, latest_scan=latest_scan)
+    # In production with Docker, serve the React app
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    else:
+        # Fallback to original template-based approach for development
+        scans = Scan.query.order_by(Scan.timestamp.desc()).limit(5).all()
+        denver = pytz.timezone('America/Denver')
+        scans_dicts = []
+        for scan in scans:
+            d = scan.as_dict()
+            if d['timestamp']:
+                d['timestamp'] = d['timestamp'].astimezone(denver)
+            try:
+                d['hosts'] = json.loads(d['hosts_json']) if d['hosts_json'] else []
+            except Exception:
+                d['hosts'] = []
+            try:
+                d['vulns'] = json.loads(d['vulns_json']) if d['vulns_json'] else []
+            except Exception:
+                d['vulns'] = []
+            scans_dicts.append(d)
+        latest_scan = scans_dicts[0] if scans_dicts else None
+        return render_template('index.html', scans=scans_dicts, latest_scan=latest_scan)
 
 @app.route('/scans-table')
 def scans_table():
@@ -1089,6 +1125,423 @@ def kill_all_scans():
         'killed_pids': killed_pids,
         'cancelled_scans': [scan.id for scan in scans]
     })
+
+# === WHAT'S UP STATUS MONITORING ===
+# 3-Layer Status Architecture: Loopbacks → DNS/Services → Health Checks
+
+# Layer 1: Host-Level Status (Loopback sentinels)
+LOOPBACKS = [
+    {"name": "LAN", "ip": "172.16.0.254", "description": "LAN health probe (172.16.0.0/22)", "interface": "eth0"},
+    {"name": "VPN", "ip": "192.168.68.254", "description": "VPN tunnel probe (192.168.68.0/22)", "interface": "eth1"},
+    {"name": "Localhost", "ip": "127.0.0.1", "description": "SentinelZero health probe", "interface": "lo"},
+]
+
+# Layer 2: DNS/Service Reachability  
+SERVICES = [
+    {"name": "Windows VM", "domain": "windowsVM.prox", "port": 3389, "type": "ping", "path": "/"},
+    {"name": "Code Server", "domain": "code-server.prox", "port": 8080, "type": "http", "path": "/"},
+    {"name": "Kali Linux", "domain": "kali.prox", "port": 22, "type": "ping", "path": "/"},
+    {"name": "TJ Server", "ip": "192.168.71.30", "port": 22, "type": "ping", "path": "/"},
+    {"name": "Homebridge", "ip": "192.168.68.79", "port": 22, "type": "ping", "path": "/"},
+    {"name": "AI Market Bot", "domain": "aiMarketBot.prox", "port": 22, "type": "ping", "path": "/"},
+]
+
+# Layer 3: Critical Infrastructure
+INFRASTRUCTURE = [
+    # Proxmox Cluster
+    {"name": "Proxmox Yin", "domain": "yin.prox", "type": "ping"},
+    {"name": "Proxmox Yang", "domain": "yang.prox", "type": "ping"},
+    {"name": "Proxmox Big", "domain": "proxBig.prox", "type": "ping"},
+    # Network Infrastructure
+    {"name": "OPNsense Firewall", "domain": "opnsense.prox", "type": "ping"},
+    {"name": "Pi-hole Lab DNS", "ip": "192.168.71.25", "type": "dns", "query": "google.com"},
+    {"name": "Home VPN", "ip": "192.168.71.40", "type": "ping"},
+    {"name": "WireGuard VPN", "ip": "10.16.0.1", "type": "ping"},
+    {"name": "Home Router", "ip": "192.168.68.1", "type": "ping"},
+    {"name": "Home DNS Primary", "ip": "192.168.71.25", "type": "http", "port": 443, "path": "/admin/login", "use_https": True},
+    {"name": "Home DNS Backup", "ip": "192.168.71.30", "type": "dns", "query": "windowsVM.prox"},
+    # External DNS for comparison
+    {"name": "Cloudflare DNS", "ip": "1.1.1.1", "type": "dns", "query": "google.com"},
+    {"name": "Google DNS", "ip": "8.8.8.8", "type": "dns", "query": "google.com"},
+]
+
+def ping_ip(ip, timeout=1):
+    """Fast connectivity check with timeout - uses TCP socket for compatibility"""
+    import subprocess
+    import socket
+    
+    # Special case for localhost
+    if ip == '127.0.0.1':
+        return True
+    
+    try:
+        # First try ICMP ping (will work if privileges allow)
+        result = subprocess.run(["ping", "-c1", f"-W1", ip], 
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+        if result.returncode == 0:
+            return True
+    except Exception:
+        pass
+    
+    # Fallback to TCP connectivity check for common ports
+    try:
+        # Test a broader range of common ports for better coverage
+        common_ports = [22, 80, 443, 3389, 8080, 8581, 5353, 53]
+        
+        for port in common_ports:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1.0)  # Slightly longer timeout for reliability
+                result = sock.connect_ex((ip, port))
+                sock.close()
+                if result == 0:
+                    return True
+            except:
+                continue
+        
+        # If no TCP ports respond, try a UDP ping to port 53 (DNS)
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(1.0)
+            sock.sendto(b'\x00', (ip, 53))
+            sock.close()
+            return True
+        except:
+            pass
+        
+        return False
+        
+    except Exception:
+        return False
+
+def resolve_domain(domain):
+    """Resolve domain to IP with error handling"""
+    import socket
+    try:
+        ip = socket.gethostbyname(domain)
+        return {"success": True, "ip": ip, "error": None}
+    except socket.gaierror as e:
+        return {"success": False, "ip": None, "error": str(e)}
+    except Exception as e:
+        return {"success": False, "ip": None, "error": f"Unknown error: {str(e)}"}
+
+def check_http_service(domain, port, path="/", use_https=False, timeout=3):
+    """Check HTTP/HTTPS service health"""
+    import requests
+    try:
+        protocol = "https" if use_https else "http"
+        url = f"{protocol}://{domain}:{port}{path}"
+        
+        response = requests.get(url, timeout=timeout, verify=False)  # Ignore SSL for internal services
+        return {
+            "success": True,
+            "status_code": response.status_code,
+            "response_time": response.elapsed.total_seconds(),
+            "error": None
+        }
+    except requests.exceptions.Timeout:
+        return {"success": False, "status_code": None, "response_time": None, "error": "Timeout"}
+    except requests.exceptions.ConnectionError:
+        return {"success": False, "status_code": None, "response_time": None, "error": "Connection refused"}
+    except Exception as e:
+        return {"success": False, "status_code": None, "response_time": None, "error": str(e)}
+
+def check_dns_query(dns_server, query_domain, timeout=2):
+    """Check DNS resolution capability"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["dig", "+short", f"@{dns_server}", query_domain],
+            capture_output=True, text=True, timeout=timeout
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return {"success": True, "result": result.stdout.strip(), "error": None}
+        else:
+            return {"success": False, "result": None, "error": "No response or query failed"}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "result": None, "error": "DNS query timeout"}
+    except Exception as e:
+        return {"success": False, "result": None, "error": str(e)}
+
+@app.route('/api/whatsup/loopbacks')
+def check_loopbacks():
+    """Layer 1: Check loopback sentinels for network health"""
+    results = []
+    for lb in LOOPBACKS:
+        start_time = time.time()
+        is_up = ping_ip(lb["ip"])
+        response_time = (time.time() - start_time) * 1000  # Convert to ms
+        
+        results.append({
+            "name": lb["name"],
+            "ip": lb["ip"],
+            "description": lb.get("description", ""),
+            "interface": lb.get("interface", "unknown"),
+            "status": "up" if is_up else "down",
+            "response_time_ms": round(response_time, 1) if is_up else None
+        })
+    return jsonify({"loopbacks": results})
+
+@app.route('/api/whatsup/services')
+def check_services():
+    """Layer 2: Check DNS resolution and service reachability"""
+    results = []
+    for service in SERVICES:
+        result = {
+            "name": service["name"],
+            "port": service["port"],
+            "type": service["type"],
+            "path": service.get("path", "/"),
+        }
+        
+        # Handle both domain-based and IP-based services
+        if "domain" in service:
+            # Domain-based service
+            result["domain"] = service["domain"]
+            
+            # Step 1: DNS Resolution
+            dns_result = resolve_domain(service["domain"])
+            result["dns"] = dns_result
+            
+            if dns_result["success"]:
+                target_ip = dns_result["ip"]
+                target_host = service["domain"]
+            else:
+                target_ip = None
+                target_host = service["domain"]
+        else:
+            # IP-based service
+            result["ip"] = service["ip"]
+            target_ip = service["ip"]
+            target_host = service["ip"]
+            result["dns"] = {"success": True, "ip": target_ip, "error": None}  # Skip DNS for IP-based
+        
+        if target_ip:
+            # Step 2: Ping IP
+            ping_result = ping_ip(target_ip)
+            result["ping"] = {"success": ping_result, "ip": target_ip}
+            
+            # Step 3: Service Health Check
+            if service["type"] in ["http", "https"]:
+                use_https = service["type"] == "https"
+                http_result = check_http_service(
+                    target_host, 
+                    service["port"], 
+                    service.get("path", "/"),
+                    use_https
+                )
+                result["service"] = http_result
+                dns_ok = result["dns"]["success"]
+                result["overall_status"] = "up" if (dns_ok and ping_result and http_result["success"]) else "down"
+            else:
+                result["service"] = {"success": ping_result, "error": None if ping_result else "Service unreachable"}
+                dns_ok = result["dns"]["success"]
+                result["overall_status"] = "up" if (dns_ok and ping_result) else "down"
+        else:
+            result["ping"] = {"success": False, "ip": None}
+            result["service"] = {"success": False, "error": "DNS resolution failed"}
+            result["overall_status"] = "down"
+            
+        results.append(result)
+    
+    return jsonify({"services": results})
+
+@app.route('/api/whatsup/infrastructure')
+def check_infrastructure():
+    """Layer 3: Check critical infrastructure components"""
+    results = []
+    for infra in INFRASTRUCTURE:
+        result = {
+            "name": infra["name"],
+            "type": infra["type"],
+        }
+        
+        # Handle both domain-based and IP-based infrastructure
+        if "domain" in infra:
+            result["domain"] = infra["domain"]
+            # Resolve domain to IP first
+            if infra["type"] == "ping":
+                dns_result = resolve_domain(infra["domain"])
+                if dns_result["success"]:
+                    target_ip = dns_result["ip"]
+                    start_time = time.time()
+                    is_up = ping_ip(target_ip)
+                    response_time = (time.time() - start_time) * 1000
+                    
+                    result["status"] = "up" if is_up else "down"
+                    result["response_time_ms"] = round(response_time, 1) if is_up else None
+                    result["ip"] = target_ip
+                else:
+                    result["status"] = "down"
+                    result["details"] = f"DNS resolution failed: {dns_result['error']}"
+            elif infra["type"] == "dns":
+                # For DNS queries against domains, we need to resolve the domain first
+                dns_result = resolve_domain(infra["domain"])
+                if dns_result["success"]:
+                    dns_query_result = check_dns_query(dns_result["ip"], infra["query"])
+                    result["status"] = "up" if dns_query_result["success"] else "down"
+                    result["details"] = dns_query_result["result"] if dns_query_result["success"] else dns_query_result["error"]
+                    result["query"] = infra["query"]
+                    result["ip"] = dns_result["ip"]
+                else:
+                    result["status"] = "down"
+                    result["details"] = f"DNS server resolution failed: {dns_result['error']}"
+                    result["query"] = infra["query"]
+        else:
+            # IP-based infrastructure
+            result["ip"] = infra["ip"]
+            
+            if infra["type"] == "ping":
+                start_time = time.time()
+                is_up = ping_ip(infra["ip"])
+                response_time = (time.time() - start_time) * 1000
+                
+                result["status"] = "up" if is_up else "down"
+                result["response_time_ms"] = round(response_time, 1) if is_up else None
+                result["details"] = None
+                
+            elif infra["type"] == "dns":
+                dns_result = check_dns_query(infra["ip"], infra["query"])
+                result["status"] = "up" if dns_result["success"] else "down"
+                result["details"] = dns_result["result"] if dns_result["success"] else dns_result["error"]
+                result["query"] = infra["query"]
+                
+            elif infra["type"] == "http":
+                # HTTP check for infrastructure (like Pi-hole admin interface)
+                port = infra.get("port", 80)
+                path = infra.get("path", "/")
+                use_https = infra.get("use_https", False)
+                
+                http_result = check_http_service(infra["ip"], port, path, use_https)
+                result["status"] = "up" if http_result["success"] else "down"
+                result["details"] = f"HTTP {http_result['status_code']}" if http_result["status_code"] else http_result["error"]
+                result["port"] = port
+                result["path"] = path
+                result["response_time_ms"] = round(http_result["response_time"] * 1000, 1) if http_result["response_time"] else None
+            
+        results.append(result)
+    
+    return jsonify({"infrastructure": results})
+
+@app.route('/api/whatsup/summary')
+def whatsup_summary():
+    """Consolidated status summary for dashboard"""
+    try:
+        # Get all layer results
+        from flask import current_app
+        with current_app.test_request_context():
+            loopbacks = check_loopbacks().get_json()["loopbacks"]
+            services = check_services().get_json()["services"] 
+            infrastructure = check_infrastructure().get_json()["infrastructure"]
+        
+        # Calculate summary stats
+        loopback_up = sum(1 for lb in loopbacks if lb["status"] == "up")
+        services_up = sum(1 for svc in services if svc["overall_status"] == "up")
+        infra_up = sum(1 for inf in infrastructure if inf["status"] == "up")
+        
+        total_checks = len(loopbacks) + len(services) + len(infrastructure)
+        total_up = loopback_up + services_up + infra_up
+        
+        overall_health = "healthy" if total_up == total_checks else "degraded" if total_up > total_checks * 0.7 else "critical"
+        
+        return jsonify({
+            "overall_health": overall_health,
+            "total_checks": total_checks,
+            "total_up": total_up,
+            "layers": {
+                "loopbacks": {"up": loopback_up, "total": len(loopbacks)},
+                "services": {"up": services_up, "total": len(services)},
+                "infrastructure": {"up": infra_up, "total": len(infrastructure)}
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/whatsup/config', methods=['GET'])
+def get_whatsup_config():
+    """Get current What's Up configuration"""
+    try:
+        if os.path.exists('whatsup_config.json'):
+            with open('whatsup_config.json', 'r') as f:
+                custom_config = json.load(f)
+                return jsonify(custom_config)
+        else:
+            # Return default configuration
+            return jsonify({
+                "loopbacks": LOOPBACKS,
+                "services": SERVICES,
+                "infrastructure": INFRASTRUCTURE
+            })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/whatsup/config', methods=['POST'])
+def update_whatsup_config():
+    """Update What's Up configuration"""
+    try:
+        data = request.json
+        
+        # Validate the structure
+        required_keys = ['loopbacks', 'services', 'infrastructure']
+        for key in required_keys:
+            if key not in data:
+                return jsonify({"error": f"Missing required key: {key}"}), 400
+        
+        # Save to file
+        with open('whatsup_config.json', 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        # Update global variables (for this session)
+        global LOOPBACKS, SERVICES, INFRASTRUCTURE
+        LOOPBACKS = data['loopbacks']
+        SERVICES = data['services'] 
+        INFRASTRUCTURE = data['infrastructure']
+        
+        return jsonify({"status": "ok", "message": "Configuration updated successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/whatsup/test/<test_type>')
+def test_individual_component(test_type):
+    """Test individual components for troubleshooting"""
+    test_ip = request.args.get('ip')
+    test_domain = request.args.get('domain')
+    test_port = request.args.get('port', type=int)
+    
+    if test_type == 'ping' and test_ip:
+        result = ping_ip(test_ip)
+        return jsonify({"test": "ping", "target": test_ip, "success": result})
+    
+    elif test_type == 'dns' and test_domain:
+        result = resolve_domain(test_domain)
+        return jsonify({"test": "dns", "target": test_domain, "result": result})
+    
+    elif test_type == 'http' and test_domain and test_port:
+        use_https = request.args.get('https', 'false').lower() == 'true'
+        path = request.args.get('path', '/')
+        result = check_http_service(test_domain, test_port, path, use_https)
+        return jsonify({"test": "http", "target": f"{test_domain}:{test_port}{path}", "result": result})
+    
+    else:
+        return jsonify({"error": "Invalid test type or missing parameters"}), 400
+
+# Catch-all route for React Router (must be last)
+@app.route('/<path:path>')
+def catch_all(path):
+    # Don't serve index.html for API routes
+    if path.startswith('api/'):
+        return jsonify({'error': 'API endpoint not found'}), 404
+    
+    # Serve static files if they exist
+    if os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    
+    # For all other routes, serve the React app
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    return "React app not found", 404
 
 if __name__ == '__main__':
     with app.app_context():

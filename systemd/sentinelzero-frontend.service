@@ -1,0 +1,31 @@
+[Unit]
+Description=SentinelZero Network Security Scanner - Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/root/sentinelZero/frontend/react-sentinelzero
+ExecStart=/usr/bin/npm run dev -- --host 0.0.0.0 --port 3173
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=25%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinelzero-frontend
+
+[Install]
+WantedBy=multi-user.target
