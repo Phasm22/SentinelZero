@@ -27,15 +27,15 @@ services:
     # Security settings
     security_opt:
       - no-new-privileges:true
-    # Resource limits
+    # Resource limits - use 90% of available resources (4 cores, 8GB RAM)
     deploy:
       resources:
         limits:
-          memory: 1G
-          cpus: '0.5'
+          memory: 7G          # 90% of 8GB available memory
+          cpus: '3.6'         # 90% of 4 available CPU cores
         reservations:
-          memory: 256M
-          cpus: '0.1'
+          memory: 1G          # Generous baseline for reliable startup
+          cpus: '0.5'         # Reserve half a core for OS operations
     # Health check
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/dashboard-stats"]

@@ -1216,8 +1216,9 @@ def ping_ip(ip, timeout=1, retries=2, log_results=True):
         """Try ICMP ping with structured error handling"""
         try:
             start_time = time.time()
-            result = subprocess.run(["ping", "-c1", f"-W{timeout}", ip], 
-                                  capture_output=True, text=True, timeout=timeout+1)
+            # Use sudo for ping since it may require raw socket privileges in some environments
+            result = subprocess.run(["sudo", "ping", "-c1", f"-W{timeout}", ip], 
+                                  capture_output=True, text=True, timeout=timeout+2)
             response_time = (time.time() - start_time) * 1000
             
             if result.returncode == 0:
@@ -1369,8 +1370,91 @@ def check_loopbacks():
     """Layer 1: Check loopback sentinels for network health"""
     return jsonify({"loopbacks": get_loopbacks_data()})
 
+def check_specific_port_hping(ip, port, timeout=2):
+    """Use hping3 for precise TCP port testing - much faster and more accurate"""
+    try:
+        start_time = time.time()
+        
+        # Use sudo for hping3 since it requires raw socket privileges
+        # -S: SYN flag, -p: port, -c: count (remove -W and -q flags that cause issues)
+        cmd = ['sudo', '/usr/sbin/hping3', '-S', '-p', str(port), '-c', '1', ip]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout + 2)
+        
+        response_time = (time.time() - start_time) * 1000
+        
+        # Parse hping3 output for different response types
+        output = result.stdout + result.stderr
+        
+        # Check for successful connection (SYN-ACK received) - look for flags=SA
+        if ("1 packets transmitted, 1 packets received" in output or 
+            "flags=SA" in output or "flags=18" in output):
+            return {"success": True, "response_time": response_time, "error": None, "method": "hping3", "detail": "port_open"}
+        
+        # Check for explicit rejection (RST received - port closed but host up)
+        elif ("flags=RA" in output or "flags=4" in output or "ICMP Port Unreachable" in output):
+            return {"success": False, "response_time": response_time, "error": f"Port {port} closed (RST)", "method": "hping3", "detail": "port_closed"}
+        
+        # Check for filtered/dropped packets (no response - firewalled)
+        elif ("100% packet loss" in output or "0 packets received" in output or 
+              result.returncode != 0):
+            return {"success": False, "response_time": None, "error": f"Port {port} filtered/firewalled", "method": "hping3", "detail": "port_filtered"}
+        
+        # Unexpected response
+        else:
+            return {"success": False, "response_time": None, "error": f"Port {port} unknown response: {output[:50]}", "method": "hping3", "detail": "unknown"}
+            
+    except subprocess.TimeoutExpired:
+        return {"success": False, "response_time": None, "error": f"Port {port} timeout", "method": "hping3", "detail": "timeout"}
+    except FileNotFoundError:
+        # hping3 not found, fallback to socket
+        print(f"[DEBUG] hping3 not found, falling back to socket for {ip}:{port}")
+        return check_specific_port_socket(ip, port, timeout)
+    except Exception as e:
+        # Any other error, fallback to socket method
+        print(f"[DEBUG] hping3 error for {ip}:{port}: {e}, falling back to socket")
+        return check_specific_port_socket(ip, port, timeout)
+        return check_specific_port_socket(ip, port, timeout)
+
+def check_specific_port_socket(ip, port, timeout=2):
+    """Fallback socket-based port checking with better error classification"""
+    try:
+        start_time = time.time()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((ip, port))
+        response_time = (time.time() - start_time) * 1000
+        sock.close()
+        
+        if result == 0:
+            return {"success": True, "response_time": response_time, "error": None, "method": "socket", "detail": "port_open"}
+        elif result == 61:  # Connection refused (port closed, host up)
+            return {"success": False, "response_time": response_time, "error": f"Port {port} closed (connection refused)", "method": "socket", "detail": "port_closed"}
+        elif result == 60:  # Timeout (filtered/firewalled)
+            return {"success": False, "response_time": None, "error": f"Port {port} filtered (timeout)", "method": "socket", "detail": "port_filtered"}
+        else:
+            return {"success": False, "response_time": None, "error": f"Port {port} error (code {result})", "method": "socket", "detail": "error"}
+    except socket.timeout:
+        return {"success": False, "response_time": None, "error": f"Port {port} timeout", "method": "socket", "detail": "timeout"}
+    except Exception as e:
+        return {"success": False, "response_time": None, "error": f"Port {port} error: {str(e)}", "method": "socket", "detail": "error"}
+
+def verify_hping3_availability():
+    """Check if hping3 is available and working"""
+    try:
+        result = subprocess.run(['/usr/sbin/hping3', '--version'], 
+                              capture_output=True, text=True, timeout=2)
+        return True
+    except:
+        try:
+            # Try alternative path
+            result = subprocess.run(['hping3', '--version'], 
+                                  capture_output=True, text=True, timeout=2)
+            return True
+        except:
+            return False
+
 def get_services_data():
-    """Core logic for checking services - returns raw data"""
+    """Core logic for checking services - returns raw data with fast hping3-based testing"""
     results = []
     for service in SERVICES:
         result = {
@@ -1385,7 +1469,7 @@ def get_services_data():
             # Domain-based service
             result["domain"] = service["domain"]
             
-            # Step 1: DNS Resolution
+            # Step 1: DNS Resolution (fast timeout)
             dns_result = resolve_domain(service["domain"])
             result["dns"] = dns_result
             
@@ -1403,33 +1487,51 @@ def get_services_data():
             result["dns"] = {"success": True, "ip": target_ip, "error": None}  # Skip DNS for IP-based
         
         if target_ip:
-            # Step 2: Smart Ping with retries and detailed logging
-            ping_result = ping_ip(target_ip, timeout=2, retries=1)
+            # Step 2: Basic ICMP connectivity check (short timeout)
+            try:
+                start_time = time.time()
+                icmp_result = subprocess.run(["ping", "-c1", "-W1", target_ip], 
+                                           capture_output=True, text=True, timeout=2)
+                icmp_time = (time.time() - start_time) * 1000
+                icmp_success = icmp_result.returncode == 0
+            except:
+                icmp_success = False
+                icmp_time = None
+            
             result["ping"] = {
-                "success": ping_result["success"], 
+                "success": icmp_success, 
                 "ip": target_ip,
-                "method": ping_result.get("method", "unknown"),
-                "response_time_ms": ping_result.get("response_time", None),
-                "attempts": ping_result.get("attempts", 1),
-                "error": ping_result.get("error", None) if not ping_result["success"] else None
+                "method": "icmp",
+                "response_time_ms": icmp_time if icmp_success else None,
+                "attempts": 1,
+                "error": "ICMP timeout/failed" if not icmp_success else None
             }
             
-            # Step 3: Service Health Check
+            # Step 3: Service-Specific Port Check (the critical part)
             if service["type"] in ["http", "https"]:
                 use_https = service["type"] == "https"
-                http_result = check_http_service(
+                service_result = check_http_service(
                     target_host, 
                     service["port"], 
                     service.get("path", "/"),
-                    use_https
+                    use_https,
+                    timeout=3  # Short timeout for HTTP
                 )
-                result["service"] = http_result
+                result["service"] = service_result
                 dns_ok = result["dns"]["success"]
-                result["overall_status"] = "up" if (dns_ok and ping_result["success"] and http_result["success"]) else "down"
+                result["overall_status"] = "up" if (dns_ok and service_result["success"]) else "down"
             else:
-                result["service"] = {"success": ping_result["success"], "error": ping_result.get("error") if not ping_result["success"] else None}
+                # Use hping3 for precise port testing
+                port_result = check_specific_port_hping(target_ip, service["port"], timeout=2)
+                result["service"] = {
+                    "success": port_result["success"],
+                    "response_time": port_result.get("response_time"),
+                    "error": port_result.get("error") if not port_result["success"] else None,
+                    "method": port_result.get("method", "unknown")
+                }
                 dns_ok = result["dns"]["success"]
-                result["overall_status"] = "up" if (dns_ok and ping_result["success"]) else "down"
+                # Service is up only if DNS works AND the specific port is accessible
+                result["overall_status"] = "up" if (dns_ok and port_result["success"]) else "down"
         else:
             result["ping"] = {"success": False, "ip": None}
             result["service"] = {"success": False, "error": "DNS resolution failed"}
