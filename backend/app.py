@@ -1165,54 +1165,130 @@ INFRASTRUCTURE = [
     {"name": "Google DNS", "ip": "8.8.8.8", "type": "dns", "query": "google.com"},
 ]
 
-def ping_ip(ip, timeout=1):
-    """Fast connectivity check with timeout - uses TCP socket for compatibility"""
+def ping_ip(ip, timeout=1, retries=2, log_results=True):
+    """Smart connectivity check with retries, detailed logging, and parallel execution support"""
     import subprocess
     import socket
+    import asyncio
+    import concurrent.futures
+    import time
+    import json
+    import os
+    from datetime import datetime
     
     # Special case for localhost
     if ip == '127.0.0.1':
-        return True
+        return {"success": True, "method": "localhost", "response_time": 0, "attempts": 1}
     
-    try:
-        # First try ICMP ping (will work if privileges allow)
-        result = subprocess.run(["ping", "-c1", f"-W1", ip], 
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
-        if result.returncode == 0:
-            return True
-    except Exception:
-        pass
+    def log_ping_result(ip, result):
+        """Log ping results with timestamp for debugging and monitoring"""
+        if not log_results:
+            return
+        try:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "ip": ip,
+                "success": result["success"],
+                "method": result.get("method", "unknown"),
+                "response_time": result.get("response_time", None),
+                "attempts": result.get("attempts", 1),
+                "error": result.get("error", None)
+            }
+            
+            # Append to daily log file
+            log_file = f"logs/ping_{datetime.now().strftime('%Y-%m-%d')}.log"
+            os.makedirs("logs", exist_ok=True)
+            with open(log_file, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            print(f"[DEBUG] Failed to log ping result: {e}")
     
-    # Fallback to TCP connectivity check for common ports
-    try:
-        # Test a broader range of common ports for better coverage
+    def try_icmp_ping(ip, timeout):
+        """Try ICMP ping with structured error handling"""
+        try:
+            start_time = time.time()
+            result = subprocess.run(["ping", "-c1", f"-W{timeout}", ip], 
+                                  capture_output=True, text=True, timeout=timeout+1)
+            response_time = (time.time() - start_time) * 1000
+            
+            if result.returncode == 0:
+                return {"success": True, "method": "icmp", "response_time": response_time, "error": None}
+            else:
+                # Parse ping error for better debugging
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                return {"success": False, "method": "icmp", "response_time": None, 
+                       "error": f"ICMP failed: {error_msg[:100]}"}
+        except subprocess.TimeoutExpired:
+            return {"success": False, "method": "icmp", "response_time": None, "error": "ICMP timeout"}
+        except Exception as e:
+            return {"success": False, "method": "icmp", "response_time": None, "error": f"ICMP error: {str(e)}"}
+    
+    def try_tcp_ports(ip, timeout):
+        """Try TCP connectivity on common ports with detailed results"""
         common_ports = [22, 80, 443, 3389, 8080, 8581, 5353, 53]
         
         for port in common_ports:
             try:
+                start_time = time.time()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1.0)  # Slightly longer timeout for reliability
+                sock.settimeout(timeout)
                 result = sock.connect_ex((ip, port))
+                response_time = (time.time() - start_time) * 1000
                 sock.close()
+                
                 if result == 0:
-                    return True
-            except:
+                    return {"success": True, "method": f"tcp:{port}", "response_time": response_time, "error": None}
+            except Exception as e:
                 continue
         
-        # If no TCP ports respond, try a UDP ping to port 53 (DNS)
+        return {"success": False, "method": "tcp", "response_time": None, "error": "No TCP ports responding"}
+    
+    def try_udp_ping(ip, timeout):
+        """Try UDP ping to DNS port as last resort"""
         try:
+            start_time = time.time()
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(1.0)
-            sock.sendto(b'\x00', (ip, 53))
+            sock.settimeout(timeout)
+            sock.sendto(b'\x12\x34', (ip, 53))  # Simple DNS-like packet
+            response_time = (time.time() - start_time) * 1000
             sock.close()
-            return True
-        except:
-            pass
+            return {"success": True, "method": "udp:53", "response_time": response_time, "error": None}
+        except Exception as e:
+            return {"success": False, "method": "udp", "response_time": None, "error": f"UDP error: {str(e)}"}
+    
+    # Retry logic with exponential backoff
+    for attempt in range(retries + 1):
+        if attempt > 0:
+            time.sleep(0.1 * (2 ** (attempt - 1)))  # Exponential backoff: 0.1s, 0.2s, 0.4s...
         
-        return False
-        
-    except Exception:
-        return False
+        # Try methods in order of preference
+        for method_func in [try_icmp_ping, try_tcp_ports, try_udp_ping]:
+            result = method_func(ip, timeout)
+            if result["success"]:
+                result["attempts"] = attempt + 1
+                log_ping_result(ip, result)
+                return result
+    
+    # All methods failed after retries
+    final_result = {"success": False, "method": "all_failed", "response_time": None, 
+                   "attempts": retries + 1, "error": "All ping methods failed after retries"}
+    log_ping_result(ip, final_result)
+    return final_result
+
+async def ping_multiple_ips_async(ip_list, timeout=1, retries=2):
+    """Async parallel ping for multiple IPs - much faster for large lists"""
+    import asyncio
+    import concurrent.futures
+    
+    async def ping_single_async(ip):
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(executor, ping_ip, ip, timeout, retries, False)
+            return ip, result
+    
+    tasks = [ping_single_async(ip) for ip in ip_list]
+    results = await asyncio.gather(*tasks)
+    return dict(results)
 
 def resolve_domain(domain):
     """Resolve domain to IP with error handling"""
@@ -1269,16 +1345,19 @@ def check_loopbacks():
     results = []
     for lb in LOOPBACKS:
         start_time = time.time()
-        is_up = ping_ip(lb["ip"])
-        response_time = (time.time() - start_time) * 1000  # Convert to ms
+        ping_result = ping_ip(lb["ip"], timeout=2, retries=1)  # Longer timeout for loopbacks
+        total_time = (time.time() - start_time) * 1000
         
         results.append({
             "name": lb["name"],
             "ip": lb["ip"],
             "description": lb.get("description", ""),
             "interface": lb.get("interface", "unknown"),
-            "status": "up" if is_up else "down",
-            "response_time_ms": round(response_time, 1) if is_up else None
+            "status": "up" if ping_result["success"] else "down",
+            "response_time_ms": ping_result.get("response_time", total_time) if ping_result["success"] else None,
+            "method": ping_result.get("method", "unknown"),
+            "attempts": ping_result.get("attempts", 1),
+            "error": ping_result.get("error", None) if not ping_result["success"] else None
         })
     return jsonify({"loopbacks": results})
 
@@ -1317,9 +1396,16 @@ def check_services():
             result["dns"] = {"success": True, "ip": target_ip, "error": None}  # Skip DNS for IP-based
         
         if target_ip:
-            # Step 2: Ping IP
-            ping_result = ping_ip(target_ip)
-            result["ping"] = {"success": ping_result, "ip": target_ip}
+            # Step 2: Smart Ping with retries and detailed logging
+            ping_result = ping_ip(target_ip, timeout=2, retries=1)
+            result["ping"] = {
+                "success": ping_result["success"], 
+                "ip": target_ip,
+                "method": ping_result.get("method", "unknown"),
+                "response_time_ms": ping_result.get("response_time", None),
+                "attempts": ping_result.get("attempts", 1),
+                "error": ping_result.get("error", None) if not ping_result["success"] else None
+            }
             
             # Step 3: Service Health Check
             if service["type"] in ["http", "https"]:
@@ -1332,11 +1418,11 @@ def check_services():
                 )
                 result["service"] = http_result
                 dns_ok = result["dns"]["success"]
-                result["overall_status"] = "up" if (dns_ok and ping_result and http_result["success"]) else "down"
+                result["overall_status"] = "up" if (dns_ok and ping_result["success"] and http_result["success"]) else "down"
             else:
-                result["service"] = {"success": ping_result, "error": None if ping_result else "Service unreachable"}
+                result["service"] = {"success": ping_result["success"], "error": ping_result.get("error") if not ping_result["success"] else None}
                 dns_ok = result["dns"]["success"]
-                result["overall_status"] = "up" if (dns_ok and ping_result) else "down"
+                result["overall_status"] = "up" if (dns_ok and ping_result["success"]) else "down"
         else:
             result["ping"] = {"success": False, "ip": None}
             result["service"] = {"success": False, "error": "DNS resolution failed"}
@@ -1365,12 +1451,15 @@ def check_infrastructure():
                 if dns_result["success"]:
                     target_ip = dns_result["ip"]
                     start_time = time.time()
-                    is_up = ping_ip(target_ip)
-                    response_time = (time.time() - start_time) * 1000
+                    ping_result = ping_ip(target_ip, timeout=2, retries=1)
+                    total_time = (time.time() - start_time) * 1000
                     
-                    result["status"] = "up" if is_up else "down"
-                    result["response_time_ms"] = round(response_time, 1) if is_up else None
+                    result["status"] = "up" if ping_result["success"] else "down"
+                    result["response_time_ms"] = ping_result.get("response_time", total_time) if ping_result["success"] else None
+                    result["method"] = ping_result.get("method", "unknown")
+                    result["attempts"] = ping_result.get("attempts", 1)
                     result["ip"] = target_ip
+                    result["details"] = ping_result.get("error") if not ping_result["success"] else None
                 else:
                     result["status"] = "down"
                     result["details"] = f"DNS resolution failed: {dns_result['error']}"
@@ -1393,12 +1482,14 @@ def check_infrastructure():
             
             if infra["type"] == "ping":
                 start_time = time.time()
-                is_up = ping_ip(infra["ip"])
-                response_time = (time.time() - start_time) * 1000
+                ping_result = ping_ip(infra["ip"], timeout=2, retries=1)
+                total_time = (time.time() - start_time) * 1000
                 
-                result["status"] = "up" if is_up else "down"
-                result["response_time_ms"] = round(response_time, 1) if is_up else None
-                result["details"] = None
+                result["status"] = "up" if ping_result["success"] else "down"
+                result["response_time_ms"] = ping_result.get("response_time", total_time) if ping_result["success"] else None
+                result["method"] = ping_result.get("method", "unknown")
+                result["attempts"] = ping_result.get("attempts", 1)
+                result["details"] = ping_result.get("error") if not ping_result["success"] else None
                 
             elif infra["type"] == "dns":
                 dns_result = check_dns_query(infra["ip"], infra["query"])
@@ -1457,6 +1548,130 @@ def whatsup_summary():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/whatsup/bulk-ping', methods=['POST'])
+def bulk_ping():
+    """Parallel ping multiple IPs for faster bulk monitoring"""
+    import asyncio
+    
+    data = request.json
+    ip_list = data.get('ips', [])
+    timeout = data.get('timeout', 2)
+    retries = data.get('retries', 1)
+    
+    if not ip_list:
+        return jsonify({"error": "No IPs provided"}), 400
+    
+    # Run async ping for all IPs
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        results = loop.run_until_complete(
+            ping_multiple_ips_async(ip_list, timeout, retries)
+        )
+        loop.close()
+        
+        return jsonify({
+            "results": results,
+            "summary": {
+                "total": len(ip_list),
+                "up": sum(1 for r in results.values() if r["success"]),
+                "down": sum(1 for r in results.values() if not r["success"])
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": f"Bulk ping failed: {str(e)}"}), 500
+
+@app.route('/api/whatsup/ping-logs')
+def get_ping_logs():
+    """Get recent ping logs for debugging and monitoring trends"""
+    import os
+    import json
+    from datetime import datetime, timedelta
+    
+    try:
+        logs = []
+        # Get logs from last 7 days
+        for i in range(7):
+            date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+            log_file = f"logs/ping_{date}.log"
+            
+            if os.path.exists(log_file):
+                with open(log_file, 'r') as f:
+                    for line in f:
+                        try:
+                            log_entry = json.loads(line.strip())
+                            logs.append(log_entry)
+                        except:
+                            continue
+        
+        # Sort by timestamp, most recent first
+        logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        # Limit to last 1000 entries to avoid overwhelming the client
+        logs = logs[:1000]
+        
+        return jsonify({
+            "logs": logs,
+            "summary": {
+                "total_entries": len(logs),
+                "failed_pings": len([l for l in logs if not l.get('success', True)]),
+                "unique_ips": len(set(l.get('ip') for l in logs if l.get('ip')))
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to load ping logs: {str(e)}"}), 500
+
+@app.route('/api/whatsup/network-topology')
+def check_network_topology():
+    """Check network topology and interface health before services"""
+    import subprocess
+    
+    try:
+        # Check our own interfaces first
+        interface_status = {}
+        for loopback in LOOPBACKS:
+            interface = loopback.get("interface", "unknown")
+            if interface != "unknown":
+                try:
+                    # Check if interface is up
+                    result = subprocess.run(["ip", "link", "show", interface], 
+                                          capture_output=True, text=True, timeout=5)
+                    interface_up = "state UP" in result.stdout
+                    interface_status[interface] = {
+                        "name": interface,
+                        "status": "up" if interface_up else "down", 
+                        "sentinel_ip": loopback["ip"],
+                        "description": loopback["description"]
+                    }
+                except Exception as e:
+                    interface_status[interface] = {
+                        "name": interface,
+                        "status": "error",
+                        "error": str(e),
+                        "sentinel_ip": loopback["ip"]
+                    }
+        
+        # Check routing table for default routes
+        try:
+            route_result = subprocess.run(["ip", "route", "show", "default"], 
+                                        capture_output=True, text=True, timeout=5)
+            default_routes = len(route_result.stdout.strip().split('\n')) if route_result.stdout.strip() else 0
+        except Exception:
+            default_routes = 0
+        
+        return jsonify({
+            "interfaces": interface_status,
+            "routing": {
+                "default_routes": default_routes,
+                "status": "ok" if default_routes > 0 else "no_default_route"
+            },
+            "recommendation": "Check interfaces before services" if any(
+                iface["status"] != "up" for iface in interface_status.values()
+            ) else "All interfaces healthy"
+        })
+    except Exception as e:
+        return jsonify({"error": f"Network topology check failed: {str(e)}"}), 500
 
 @app.route('/api/whatsup/config', methods=['GET'])
 def get_whatsup_config():

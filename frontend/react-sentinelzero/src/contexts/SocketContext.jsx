@@ -18,14 +18,19 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     console.log('Initializing Socket.IO client...');
-    const newSocket = io('/', {
+    
+    // Determine the backend URL
+    const backendUrl = import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin;
+    
+    const newSocket = io(backendUrl, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      forceNew: true,
     });
 
     newSocket.on('connect', () => {
-      console.log('🔌 Socket connected');
+      console.log('🔌 Socket connected to', backendUrl);
       setIsConnected(true);
       setIsInitialized(true);
     });
@@ -44,6 +49,7 @@ export const SocketProvider = ({ children }) => {
     setSocket(newSocket);
 
     return () => {
+      console.log('🔌 Cleaning up socket connection');
       newSocket.close();
     };
   }, []);
