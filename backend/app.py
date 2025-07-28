@@ -17,12 +17,20 @@ import subprocess
 import xml.etree.ElementTree as ET
 import time
 import re
+import socket
+import asyncio
+import concurrent.futures
+import traceback
+import warnings
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import json as pyjson
 import sys
 import psutil
+
+# Suppress SSL warnings for internal network monitoring
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 print("=== Flask app.py started ===")
 
@@ -547,24 +555,32 @@ def is_api_request():
 
 @app.errorhandler(404)
 def not_found_error(error):
-    socketio.emit('scan_log', {'msg': '404 Not Found'})
+    try:
+        socketio.emit('scan_log', {'msg': '404 Not Found'})
+    except Exception:
+        pass
     if is_api_request():
         return jsonify({'error': 'Not found', 'code': 404}), 404
-    return render_template('error.html', code=404, message='Page not found'), 404
+    # For non-API requests (like static files), serve the React app index.html
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    return jsonify({'error': 'Not found', 'code': 404}), 404
 
 @app.errorhandler(400)
 def bad_request_error(error):
-    socketio.emit('scan_log', {'msg': '400 Bad Request - Unicode error from nmap probes'})
-    if is_api_request():
-        return jsonify({'error': 'Bad request', 'code': 400}), 400
-    return render_template('error.html', code=400, message='Bad request - Unicode error from nmap probes'), 400
+    try:
+        socketio.emit('scan_log', {'msg': '400 Bad Request - Unicode error from nmap probes'})
+    except Exception:
+        pass
+    return jsonify({'error': 'Bad request - Unicode error from nmap probes', 'code': 400}), 400
 
 @app.errorhandler(500)
 def internal_error(error):
-    socketio.emit('scan_log', {'msg': '500 Internal Server Error'})
-    if is_api_request():
-        return jsonify({'error': 'Internal server error', 'code': 500}), 500
-    return render_template('error.html', code=500, message='Internal server error'), 500
+    try:
+        socketio.emit('scan_log', {'msg': '500 Internal Server Error'})
+    except Exception:
+        pass
+    return jsonify({'error': 'Internal server error', 'code': 500}), 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -1167,13 +1183,6 @@ INFRASTRUCTURE = [
 
 def ping_ip(ip, timeout=1, retries=2, log_results=True):
     """Smart connectivity check with retries, detailed logging, and parallel execution support"""
-    import subprocess
-    import socket
-    import asyncio
-    import concurrent.futures
-    import time
-    import json
-    import os
     from datetime import datetime
     
     # Special case for localhost
@@ -1277,8 +1286,6 @@ def ping_ip(ip, timeout=1, retries=2, log_results=True):
 
 async def ping_multiple_ips_async(ip_list, timeout=1, retries=2):
     """Async parallel ping for multiple IPs - much faster for large lists"""
-    import asyncio
-    import concurrent.futures
     
     async def ping_single_async(ip):
         loop = asyncio.get_event_loop()
@@ -1292,7 +1299,6 @@ async def ping_multiple_ips_async(ip_list, timeout=1, retries=2):
 
 def resolve_domain(domain):
     """Resolve domain to IP with error handling"""
-    import socket
     try:
         ip = socket.gethostbyname(domain)
         return {"success": True, "ip": ip, "error": None}
@@ -1303,7 +1309,6 @@ def resolve_domain(domain):
 
 def check_http_service(domain, port, path="/", use_https=False, timeout=3):
     """Check HTTP/HTTPS service health"""
-    import requests
     try:
         protocol = "https" if use_https else "http"
         url = f"{protocol}://{domain}:{port}{path}"
@@ -1324,7 +1329,6 @@ def check_http_service(domain, port, path="/", use_https=False, timeout=3):
 
 def check_dns_query(dns_server, query_domain, timeout=2):
     """Check DNS resolution capability"""
-    import subprocess
     try:
         result = subprocess.run(
             ["dig", "+short", f"@{dns_server}", query_domain],
@@ -1339,9 +1343,8 @@ def check_dns_query(dns_server, query_domain, timeout=2):
     except Exception as e:
         return {"success": False, "result": None, "error": str(e)}
 
-@app.route('/api/whatsup/loopbacks')
-def check_loopbacks():
-    """Layer 1: Check loopback sentinels for network health"""
+def get_loopbacks_data():
+    """Core logic for checking loopbacks - returns raw data"""
     results = []
     for lb in LOOPBACKS:
         start_time = time.time()
@@ -1359,11 +1362,15 @@ def check_loopbacks():
             "attempts": ping_result.get("attempts", 1),
             "error": ping_result.get("error", None) if not ping_result["success"] else None
         })
-    return jsonify({"loopbacks": results})
+    return results
 
-@app.route('/api/whatsup/services')
-def check_services():
-    """Layer 2: Check DNS resolution and service reachability"""
+@app.route('/api/whatsup/loopbacks')
+def check_loopbacks():
+    """Layer 1: Check loopback sentinels for network health"""
+    return jsonify({"loopbacks": get_loopbacks_data()})
+
+def get_services_data():
+    """Core logic for checking services - returns raw data"""
     results = []
     for service in SERVICES:
         result = {
@@ -1430,11 +1437,15 @@ def check_services():
             
         results.append(result)
     
-    return jsonify({"services": results})
+    return results
 
-@app.route('/api/whatsup/infrastructure')
-def check_infrastructure():
-    """Layer 3: Check critical infrastructure components"""
+@app.route('/api/whatsup/services')
+def check_services():
+    """Layer 2: Check DNS resolution and service reachability"""
+    return jsonify({"services": get_services_data()})
+
+def get_infrastructure_data():
+    """Core logic for checking infrastructure - returns raw data"""
     results = []
     for infra in INFRASTRUCTURE:
         result = {
@@ -1512,25 +1523,28 @@ def check_infrastructure():
             
         results.append(result)
     
-    return jsonify({"infrastructure": results})
+    return results
+
+@app.route('/api/whatsup/infrastructure')
+def check_infrastructure():
+    """Layer 3: Check critical infrastructure components"""
+    return jsonify({"infrastructure": get_infrastructure_data()})
 
 @app.route('/api/whatsup/summary')
 def whatsup_summary():
     """Consolidated status summary for dashboard"""
     try:
-        # Get all layer results
-        from flask import current_app
-        with current_app.test_request_context():
-            loopbacks = check_loopbacks().get_json()["loopbacks"]
-            services = check_services().get_json()["services"] 
-            infrastructure = check_infrastructure().get_json()["infrastructure"]
+        # Get all layer results by calling the logic functions directly
+        loopbacks_result = get_loopbacks_data()
+        services_result = get_services_data()
+        infrastructure_result = get_infrastructure_data()
         
         # Calculate summary stats
-        loopback_up = sum(1 for lb in loopbacks if lb["status"] == "up")
-        services_up = sum(1 for svc in services if svc["overall_status"] == "up")
-        infra_up = sum(1 for inf in infrastructure if inf["status"] == "up")
+        loopback_up = sum(1 for lb in loopbacks_result if lb["status"] == "up")
+        services_up = sum(1 for svc in services_result if svc["overall_status"] == "up")
+        infra_up = sum(1 for inf in infrastructure_result if inf["status"] == "up")
         
-        total_checks = len(loopbacks) + len(services) + len(infrastructure)
+        total_checks = len(loopbacks_result) + len(services_result) + len(infrastructure_result)
         total_up = loopback_up + services_up + infra_up
         
         overall_health = "healthy" if total_up == total_checks else "degraded" if total_up > total_checks * 0.7 else "critical"
@@ -1540,9 +1554,9 @@ def whatsup_summary():
             "total_checks": total_checks,
             "total_up": total_up,
             "layers": {
-                "loopbacks": {"up": loopback_up, "total": len(loopbacks)},
-                "services": {"up": services_up, "total": len(services)},
-                "infrastructure": {"up": infra_up, "total": len(infrastructure)}
+                "loopbacks": {"up": loopback_up, "total": len(loopbacks_result)},
+                "services": {"up": services_up, "total": len(services_result)},
+                "infrastructure": {"up": infra_up, "total": len(infrastructure_result)}
             },
             "timestamp": datetime.now().isoformat()
         })
@@ -1552,7 +1566,6 @@ def whatsup_summary():
 @app.route('/api/whatsup/bulk-ping', methods=['POST'])
 def bulk_ping():
     """Parallel ping multiple IPs for faster bulk monitoring"""
-    import asyncio
     
     data = request.json
     ip_list = data.get('ips', [])
@@ -1585,8 +1598,6 @@ def bulk_ping():
 @app.route('/api/whatsup/ping-logs')
 def get_ping_logs():
     """Get recent ping logs for debugging and monitoring trends"""
-    import os
-    import json
     from datetime import datetime, timedelta
     
     try:
@@ -1625,7 +1636,6 @@ def get_ping_logs():
 @app.route('/api/whatsup/network-topology')
 def check_network_topology():
     """Check network topology and interface health before services"""
-    import subprocess
     
     try:
         # Check our own interfaces first

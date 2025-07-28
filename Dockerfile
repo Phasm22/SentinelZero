@@ -12,11 +12,12 @@ RUN npm run build
 # Production stage
 FROM python:3.9-slim
 
-# Install system dependencies including nmap
+# Install system dependencies including nmap and DNS tools
 RUN apt-get update && apt-get install -y \
     nmap \
     netcat-openbsd \
     curl \
+    dnsutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user for security

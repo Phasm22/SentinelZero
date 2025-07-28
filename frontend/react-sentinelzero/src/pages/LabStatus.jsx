@@ -27,7 +27,7 @@ const LabStatus = () => {
     try {
       const baseUrl = import.meta.env.DEV ? 'http://localhost:5000' : '';
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout for proxy latency
       
       const response = await fetch(`${baseUrl}/api/whatsup/summary`, {
         signal: controller.signal
@@ -50,7 +50,7 @@ const LabStatus = () => {
     try {
       const baseUrl = import.meta.env.DEV ? 'http://localhost:5000' : '';
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 second timeout for proxy latency
       
       const requests = [
         fetch(`${baseUrl}/api/whatsup/loopbacks`, { signal: controller.signal }),
@@ -86,7 +86,7 @@ const LabStatus = () => {
       try {
         await Promise.race([
           Promise.all([fetchHealthData(), fetchDetailedData()]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 25000)) // 25 second initial timeout
         ])
       } catch (error) {
         console.log('Initial fetch timed out, using polling interval')
