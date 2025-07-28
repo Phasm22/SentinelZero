@@ -1,1 +1,7 @@
-{"enabled": false, "frequency": "daily", "scan_type": "Full TCP", "time": "03:00"}
+{
+    "enabled": false,
+    "frequency": "daily",
+    "time": "03:00",
+    "scan_type": "Full TCP",
+    "target_network": "172.16.0.0/22"
+}

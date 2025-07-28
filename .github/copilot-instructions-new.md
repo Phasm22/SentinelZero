@@ -154,18 +154,6 @@ nmap XML output can contain invalid UTF-8. Always handle encoding errors and val
 ### React State Management
 Uses Context pattern (no Redux). Custom hooks in `src/hooks/` for API state. WebSocket connections managed in SocketContext.
 
-**Pattern**: Always use optional chaining (`?.`) and provide fallbacks when accessing nested API response objects:
-```jsx
-// Correct - safe access with fallbacks
-const enabled = settings.scheduledScans?.enabled || false
-const backendData = { 
-  scheduledScansSettings: settings.scheduledScans || {} 
-}
-
-// Incorrect - can cause "cannot access property" errors
-const enabled = settings.scheduledScans.enabled
-```
-
 ## File Conventions
 
 - **Settings files**: JSON in backend root, loaded/saved via dedicated functions

@@ -39,7 +39,7 @@ if docker compose ps | grep -q "Up"; then
     echo "✅ SentinelZero is running successfully!"
     echo ""
     echo "🌐 Access your application at:"
-    echo "   - Direct: http://localhost:5000"
+    echo "   - Direct: http://localhost:5001
     echo "   - Proxy: http://localhost:80 (if nginx enabled)"
     echo ""
     echo "📊 Useful commands:"

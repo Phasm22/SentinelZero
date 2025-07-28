@@ -2,12 +2,7 @@
 New modular Flask application entry point
 """
 import os
-import sys
 import threading
-
-# Add the current directory to Python path for imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
@@ -21,9 +16,6 @@ from src.routes.settings_routes import create_settings_blueprint
 from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
 from src.services.whats_up import whats_up_monitor
-
-# Import models to register them with SQLAlchemy
-from src.models import Scan, Alert
 
 # Global instances
 db = None
@@ -39,14 +31,7 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = 'sentinelzero-dev-key-change-in-production'
-    
-    # Ensure instance directory exists
-    instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
-    os.makedirs(instance_dir, exist_ok=True)
-    
-    # Use absolute path for database
-    db_path = os.path.join(instance_dir, 'sentinelzero.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/sentinelzero.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions
@@ -55,15 +40,8 @@ def create_app():
     scheduler = init_scheduler()
     
     # Create database tables
-    try:
-        with app.app_context():
-            # For development: Drop and recreate tables to ensure schema updates
-            db.drop_all()
-            db.create_all()
-            print(f'[INFO] Database schema recreated at: {db_path}')
-    except Exception as e:
-        print(f'[ERROR] Failed to initialize database: {e}')
-        raise
+    with app.app_context():
+        db.create_all()
     
     # Register blueprints
     app.register_blueprint(create_scan_blueprint(db, socketio), url_prefix='/api')

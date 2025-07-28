@@ -1,20 +1,37 @@
 import React from 'react'
 import { Rocket, Cpu, Bug, Loader2 } from 'lucide-react'
 
-const buildNmapCommand = (scanType, security) => {
+const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') => {
+  // Handle null or undefined scanType
+  if (!scanType) {
+    return 'nmap -v -T4 -sS -p- --open 172.16.0.0/22 -oX scan_output.xml'
+  }
+  
   let cmd = ['nmap', '-v', '-T4']
-  if (scanType === 'Full TCP') {
+  const scanTypeNormalized = scanType.toLowerCase()
+  
+  if (scanTypeNormalized === 'full tcp') {
     cmd.push('-sS', '-p-', '--open')
-  } else if (scanType === 'IoT Scan') {
+  } else if (scanTypeNormalized === 'iot scan') {
     cmd.push('-sU', '-p', '53,67,68,80,443,1900,5353,554,8080')
-  } else if (scanType === 'Vuln Scripts') {
+  } else if (scanTypeNormalized === 'vuln scripts') {
     cmd.push('-sS', '-p-', '--open')
   }
+  
+  // Apply security settings - match backend exactly
   if (security.osDetectionEnabled) cmd.push('-O')
   if (security.serviceDetectionEnabled) cmd.push('-sV')
-  if (security.vulnScanningEnabled || scanType === 'Vuln Scripts') cmd.push('--script=vuln')
+  
+  if (scanTypeNormalized === 'vuln scripts') {
+    // Only run vulnerability scripts for explicit vulnerability scans
+    cmd.push('--script=vuln')
+  } else if (security.vulnScanningEnabled) {
+    // Use more targeted vulnerability scripts for regular scans
+    cmd.push('--script=ssl-cert,ssl-enum-ciphers,http-title,ssh-hostkey')
+  }
+  
   if (security.aggressiveScanning) cmd.push('-A')
-  cmd.push('172.16.0.0/22', '-oX', 'scan_output.xml')
+  cmd.push(targetNetwork, '-oX', 'scan_output.xml')
   return cmd.join(' ')
 }
 

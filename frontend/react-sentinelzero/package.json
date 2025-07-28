@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "if ! command -v fuser >/dev/null 2>&1; then apt-get update && apt-get install -y psmisc; fi; (fuser -k 5173/tcp || lsof -ti:5173 | xargs kill -9 || true)",
+    "predev": "lsof -ti:5173 | xargs kill -9 2>/dev/null || true",
     "dev": "vite",
+    "dev:all": "concurrently \"cd ../../backend && python3 app.py\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
@@ -24,6 +25,7 @@
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
+    "concurrently": "^9.2.0",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",

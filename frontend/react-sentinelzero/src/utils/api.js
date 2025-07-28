@@ -5,7 +5,7 @@ const API_BASE_URL = '/api'
 export const apiService = {
   // Scan operations
   triggerScan: async (scanType) => {
-    const response = await axios.post('/scan', 
+    const response = await axios.post(`${API_BASE_URL}/scan`, 
       `scan_type=${encodeURIComponent(scanType)}`,
       {
         headers: {

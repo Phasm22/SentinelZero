@@ -55,6 +55,9 @@ const Dashboard = () => {
     serviceDetectionEnabled: true,
     aggressiveScanning: false,
   })
+  const [networkSettings, setNetworkSettings] = useState({
+    defaultTargetNetwork: '172.16.0.0/22'
+  })
   const [loadingSettings, setLoadingSettings] = useState(false)
   const [activeTab, setActiveTab] = useState('active')
   const [activeScans, setActiveScans] = useState([])
@@ -290,20 +293,32 @@ const Dashboard = () => {
     </span>
   )
 
-  // Fetch security settings for scan confirmation modal
-  const fetchSecuritySettings = async () => {
+  // Fetch security and network settings for scan confirmation modal
+  const fetchScanSettings = async () => {
     setLoadingSettings(true)
     try {
       const data = await apiService.getSettings()
-      if (data && data.security) setSecurity(data.security)
-    } catch {}
+      if (data?.securitySettings) setSecurity(data.securitySettings)
+      
+      // Get target network from network settings or fallback to scheduled scans target
+      const targetNetwork = data?.networkSettings?.defaultTargetNetwork || 
+                           data?.scheduledScansSettings?.targetNetwork || 
+                           '172.16.0.0/22'
+      
+      setNetworkSettings({
+        ...data?.networkSettings,
+        defaultTargetNetwork: targetNetwork
+      })
+    } catch (error) {
+      console.error('Error loading scan settings:', error)
+    }
     setLoadingSettings(false)
   }
 
   const handleRequestScan = async (scanType) => {
     setPendingScanType(scanType)
     setShowScanConfirm(true)
-    await fetchSecuritySettings()
+    await fetchScanSettings()
   }
 
   const handleConfirmScan = () => {
@@ -541,8 +556,9 @@ const Dashboard = () => {
           <>
             <div className="mb-4">
               <div className="text-gray-200 mb-2">The following nmap command will be used:</div>
+              <div className="text-xs text-gray-400 mb-1">Target Network: {networkSettings.defaultTargetNetwork}</div>
               <pre className="bg-gray-900 text-green-400 rounded p-3 text-sm overflow-x-auto whitespace-pre-wrap">
-                {buildNmapCommand(pendingScanType, security)}
+                {pendingScanType ? buildNmapCommand(pendingScanType, security, networkSettings.defaultTargetNetwork) : 'Loading scan configuration...'}
               </pre>
             </div>
             <div className="flex justify-end space-x-3">

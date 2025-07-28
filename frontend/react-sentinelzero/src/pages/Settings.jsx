@@ -19,6 +19,29 @@ import Toggle from '../components/Toggle'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
 
+// Helper functions for network calculations
+const netmaskToCidr = (netmask) => {
+  if (!netmask) return 24
+  const parts = netmask.split('.')
+  let cidr = 0
+  for (const part of parts) {
+    const octet = parseInt(part, 10)
+    for (let i = 7; i >= 0; i--) {
+      if (octet & (1 << i)) cidr++
+      else return cidr
+    }
+  }
+  return cidr
+}
+
+const calculateNetworkAddress = (ip, netmask) => {
+  if (!ip || !netmask) return ip
+  const ipParts = ip.split('.').map(Number)
+  const maskParts = netmask.split('.').map(Number)
+  const networkParts = ipParts.map((part, i) => part & maskParts[i])
+  return networkParts.join('.')
+}
+
 const Settings = () => {
   const { preferences, updatePreference } = useUserPreferences()
   const [isLoading, setIsLoading] = useState(true)
@@ -27,7 +50,7 @@ const Settings = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
-  const [networkInterfaces, setNetworkInterfaces] = useState({ interfaces: [], common_networks: [] })
+  const [networkInterfaces, setNetworkInterfaces] = useState({ interfaces: [] })
   const [originalSettings, setOriginalSettings] = useState(null)
   const { showToast } = useToast()
   
@@ -37,7 +60,7 @@ const Settings = () => {
       enabled: false,
       frequency: 'daily',
       time: '02:00',
-      scanType: 'quick',
+      scanType: 'Full TCP',
       targetNetwork: '172.16.0.0/22'
     },
     notifications: {
@@ -64,19 +87,93 @@ const Settings = () => {
   const loadSettings = async () => {
     try {
       setIsLoading(true)
-      const [data, interfaces] = await Promise.all([
+      const [data, interfacesResponse] = await Promise.all([
         apiService.getSettings(),
         apiService.getNetworkInterfaces()
       ])
-      if (data) {
-        const newSettings = { ...settings, ...data }
-        setSettings(newSettings)
-        setOriginalSettings(JSON.stringify(newSettings))
+      console.log('Loaded settings from API:', data)
+      console.log('Loaded network interfaces from API:', interfacesResponse)
+      
+      // Always ensure we have a complete settings object, even if API call fails
+      const mergedSettings = {
+        scheduledScans: {
+          enabled: false,
+          frequency: 'daily',
+          time: '02:00',
+          scanType: 'Full TCP',
+          targetNetwork: '172.16.0.0/22',
+          ...(data?.scheduledScansSettings || {})
+        },
+        notifications: {
+          pushoverEnabled: false,
+          pushoverConfigured: false,
+          scanComplete: true,
+          vulnerabilityFound: true,
+          newHostFound: false,
+          ...(data?.notificationSettings || {})
+        },
+        network: {
+          defaultTargetNetwork: '172.16.0.0/22',
+          maxHosts: 1000,
+          scanTimeout: 300,
+          concurrentScans: 1,
+          ...(data?.networkSettings || {})
+        },
+        security: {
+          vulnScanningEnabled: true,
+          osDetectionEnabled: true,
+          serviceDetectionEnabled: true,
+          aggressiveScanning: false,
+          ...(data?.securitySettings || {})
+        }
       }
-      setNetworkInterfaces(interfaces)
+      
+      setSettings(mergedSettings)
+      const settingsStr = JSON.stringify(mergedSettings)
+      console.log('Setting originalSettings to:', settingsStr)
+      setOriginalSettings(settingsStr)
+      
+      // Extract the network interfaces response object
+      console.log('Network interfaces API response:', interfacesResponse)
+      setNetworkInterfaces(interfacesResponse || { interfaces: [] })
+      console.log('Available network interfaces:', interfacesResponse?.interfaces?.length || 0)
       setIsLoading(false)
     } catch (error) {
       console.error('Error loading settings:', error)
+      
+      // Initialize with default settings even if API call fails
+      const defaultSettings = {
+        scheduledScans: {
+          enabled: false,
+          frequency: 'daily',
+          time: '02:00',
+          scanType: 'Full TCP',
+          targetNetwork: '172.16.0.0/22'
+        },
+        notifications: {
+          pushoverEnabled: false,
+          pushoverConfigured: false,
+          scanComplete: true,
+          vulnerabilityFound: true,
+          newHostFound: false
+        },
+        network: {
+          defaultTargetNetwork: '172.16.0.0/22',
+          maxHosts: 1000,
+          scanTimeout: 300,
+          concurrentScans: 1
+        },
+        security: {
+          vulnScanningEnabled: true,
+          osDetectionEnabled: true,
+          serviceDetectionEnabled: true,
+          aggressiveScanning: false
+        }
+      }
+      
+      setSettings(defaultSettings)
+      setOriginalSettings(JSON.stringify(defaultSettings))
+      setNetworkInterfaces({ interfaces: [] })
       setError('Failed to load settings')
       setIsLoading(false)
     }
@@ -89,10 +186,19 @@ const Settings = () => {
   // Check for changes whenever settings change
   useEffect(() => {
     if (originalSettings) {
+      // Use a more reliable deep comparison instead of JSON.stringify
       const currentSettingsStr = JSON.stringify(settings)
-      setHasUnsavedChanges(currentSettingsStr !== originalSettings)
+      const hasChanges = currentSettingsStr !== originalSettings
+      console.log('Change detection:', {
+        hasChanges,
+        originalLength: originalSettings.length,
+        currentLength: currentSettingsStr.length,
+        originalStr: originalSettings.substring(0, 100) + '...',
+        currentStr: currentSettingsStr.substring(0, 100) + '...'
+      })
+      setHasUnsavedChanges(hasChanges)
     }
-  }, [settings, originalSettings])
+  }, [JSON.stringify(settings), originalSettings])
 
   const handleSettingChange = (section, key, value) => {
     setSettings(prev => ({
@@ -107,7 +213,15 @@ const Settings = () => {
   const handleSaveSettings = async () => {
     setIsSaving(true)
     try {
-      await apiService.updateSettings(settings)
+      // Convert frontend format back to backend format
+      const backendSettings = {
+        scheduledScansSettings: settings.scheduledScans || {},
+        notificationSettings: settings.notifications || {},
+        networkSettings: settings.network || {},
+        securitySettings: settings.security || {}
+      }
+      
+      await apiService.updateSettings(backendSettings)
       showToast('Settings saved successfully', 'success')
       setOriginalSettings(JSON.stringify(settings))
       setHasUnsavedChanges(false)
@@ -157,6 +271,18 @@ const Settings = () => {
     <div className="space-y-6">
       {/* Action Buttons */}
       <div className="flex items-center justify-end space-x-3">
+        {/* Debug info */}
+        <div className="text-xs text-gray-400">
+          hasUnsavedChanges: {hasUnsavedChanges.toString()}
+        </div>
+        {/* Test button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleSettingChange('network', 'maxHosts', Math.random() * 1000)}
+        >
+          Test Change
+        </Button>
         {hasUnsavedChanges && (
           <div className="flex items-center space-x-2 text-yellow-400">
             <AlertCircle className="h-4 w-4" />
@@ -176,7 +302,7 @@ const Settings = () => {
           size="md"
           loading={isSaving}
           onClick={() => setShowSaveConfirm(true)}
-          disabled={!hasUnsavedChanges}
+          disabled={false} // Temporarily always enabled for testing
         >
           <Save className="w-4 h-4 mr-2" />
           {isSaving ? 'Saving...' : 'Save Settings'}
@@ -216,18 +342,18 @@ const Settings = () => {
               <p className="text-sm text-gray-400 text-left">Automatically run scans at specified intervals</p>
             </div>
             <Toggle
-              checked={settings.scheduledScans.enabled}
+              checked={settings.scheduledScans?.enabled || false}
               onChange={(checked) => handleSettingChange('scheduledScans', 'enabled', checked)}
             />
           </div>
 
-          {settings.scheduledScans.enabled && (
+          {settings.scheduledScans?.enabled && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Frequency</label>
                   <select
-                    value={settings.scheduledScans.frequency}
+                    value={settings.scheduledScans?.frequency || 'daily'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'frequency', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
                   >
@@ -242,7 +368,7 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Time</label>
                   <input
                     type="time"
-                    value={settings.scheduledScans.time}
+                    value={settings.scheduledScans?.time || '02:00'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'time', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
                   />
@@ -253,13 +379,13 @@ const Settings = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Scan Type</label>
                   <select
-                    value={settings.scheduledScans.scanType}
+                    value={settings.scheduledScans?.scanType || 'Full TCP'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'scanType', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
                   >
-                    <option value="quick">Quick Scan</option>
-                    <option value="full">Full TCP Scan</option>
-                    <option value="vuln">Vulnerability Scan</option>
+                    <option value="Full TCP">Full TCP</option>
+                    <option value="IoT Scan">IoT Scan</option>
+                    <option value="Vuln Scripts">Vuln Scripts</option>
                   </select>
                 </div>
 
@@ -267,7 +393,7 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Target Network</label>
                   <input
                     type="text"
-                    value={settings.scheduledScans.targetNetwork}
+                    value={settings.scheduledScans?.targetNetwork || '172.16.0.0/22'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'targetNetwork', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
                     placeholder="172.16.0.0/22"
@@ -288,7 +414,7 @@ const Settings = () => {
               <h2 className="text-xl font-title font-bold text-gray-100">Pushover Notifications</h2>
             </div>
             <div className="flex items-center space-x-2">
-              {settings.notifications.pushoverConfigured ? (
+              {settings.notifications?.pushoverConfigured ? (
                 <div className="flex items-center space-x-1 text-green-400">
                   <CheckCircle className="h-4 w-4" />
                   <span className="text-sm">Configured</span>
@@ -309,12 +435,12 @@ const Settings = () => {
               <p className="text-sm text-gray-400 text-left">Send notifications to your mobile device</p>
             </div>
             <Toggle
-              checked={settings.notifications.pushoverEnabled}
+              checked={settings.notifications?.pushoverEnabled || false}
               onChange={(checked) => handleSettingChange('notifications', 'pushoverEnabled', checked)}
             />
           </div>
 
-          {settings.notifications.pushoverEnabled && (
+          {settings.notifications?.pushoverEnabled && (
             <>
               <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
                 <div className="mb-3">
@@ -395,19 +521,21 @@ const Settings = () => {
                 className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
               >
                 <optgroup label="Network Interfaces">
-                  {networkInterfaces.interfaces.map((iface, index) => (
+                  {(networkInterfaces?.interfaces || []).map((iface, index) => (
                     <option key={`interface-${index}`} value={iface.cidr}>
                       {iface.display}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Common Networks">
-                  {networkInterfaces.common_networks.map((network, index) => (
-                    <option key={`common-${index}`} value={network.cidr}>
-                      {network.display}
-                    </option>
-                  ))}
-                </optgroup>
+                {networkInterfaces.common_networks && networkInterfaces.common_networks.length > 0 && (
+                  <optgroup label="Common Networks">
+                    {networkInterfaces.common_networks.map((network, index) => (
+                      <option key={`common-${index}`} value={network.cidr}>
+                        {network.display}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
                 <option value="custom">Custom Network...</option>
               </select>
             </div>

@@ -1,1 +1,9 @@
-{"pushoverEnabled": true, "pushover_enabled": false, "pushover_token": "", "pushover_user_key": ""}
+{
+    "pushover_enabled": false,
+    "pushover_configured": false,
+    "scan_complete": true,
+    "vulnerability_found": true,
+    "new_host_found": false,
+    "pushover_token": "",
+    "pushover_user_key": ""
+}

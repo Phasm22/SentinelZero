@@ -49,5 +49,6 @@ frontend/react-sentinelzero/public/fonts/*.zip
 .cache/*
 .npm/*
 backend/.env
+backend/venv
 .gitignore
 backend/scans/*
