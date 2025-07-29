@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { formatTimestamp } from '../utils/date'
-import ScanControls from '../components/ScanControls'
+import ScanningSection from '../components/ScanningSection'
 import RecentScansTable from '../components/RecentScansTable'
 import InsightsCard from '../components/InsightsCard'
 import Modal from '../components/Modal'
@@ -279,6 +279,15 @@ const Dashboard = () => {
     })
   }
 
+  const handleUploadComplete = (result) => {
+    showToast(`Upload successful! Found ${result.hosts_count} hosts and ${result.vulns_count} vulnerabilities.`, 'success')
+    loadDashboardData() // Refresh the dashboard to show the new scan
+  }
+
+  const handleUploadError = (error) => {
+    showToast(error, 'danger')
+  }
+
   // Accept use24Hour as a prop or fallback to false
   const VulnIcon = ({ count }) =>
     count === 0
@@ -400,8 +409,8 @@ const Dashboard = () => {
           {/* Insights Card */}
           <InsightsCard />
           
-          {/* Scan Controls */}
-          <ScanControls
+          {/* Scanning Section - Tabbed Interface */}
+          <ScanningSection
             onRequestScan={handleRequestScan}
             isScanning={isScanning}
             scanningType={scanningType}
@@ -409,7 +418,10 @@ const Dashboard = () => {
             scanStatus={scanStatus}
             scanMessage={scanMessage}
             isConnected={isConnected}
+            onUploadComplete={handleUploadComplete}
+            onUploadError={handleUploadError}
           />
+          
           {/* Tabs for Active/Recent Scans */}
           <div className="mt-6">
             <div className="flex space-x-4 border-b border-gray-700 mb-4">

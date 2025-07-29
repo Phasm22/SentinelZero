@@ -52,11 +52,12 @@ def create_scan_blueprint(db, socketio):
         except Exception as e:
             print(f'[DEBUG] Could not load network settings: {e}, using default: {target_network}')
         
-        # Start scan in background thread
+        # Start scan in background thread with proper app context
         from flask import current_app
+        app = current_app._get_current_object()  # Get the actual app instance
         threading.Thread(
             target=run_nmap_scan, 
-            args=(scan_type, security_settings, socketio, current_app, target_network),
+            args=(scan_type, security_settings, socketio, app, target_network),
             daemon=True
         ).start()
         

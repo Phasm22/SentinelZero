@@ -117,7 +117,7 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             xml_path = f'scans/{scan_type_normalized.replace(" ", "_")}_{now}.xml'
             
             # Build nmap command
-            cmd = ['nmap', '-v', '-T4']
+            cmd = ['nmap', '-v', '-T4', '-Pn']  # -Pn bypasses host discovery for macOS Wi-Fi compatibility
             if scan_type_normalized == 'full tcp':
                 cmd += ['-sS', '-p-', '--open']
             elif scan_type_normalized == 'iot scan':

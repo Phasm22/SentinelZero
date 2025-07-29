@@ -1,1 +1,6 @@
-{"defaultTargetNetwork": "172.16.0.0/22", "maxHosts": 1000, "scanTimeout": 300, "concurrentScans": 1}
+{
+    "default_target_network": "192.168.68.0/22",
+    "max_hosts": 883.3287952379764,
+    "scan_timeout": 300,
+    "concurrent_scans": 1
+}

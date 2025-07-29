@@ -63,6 +63,15 @@ export const apiService = {
     return response.data
   },
 
+  uploadScan: async (formData) => {
+    const response = await axios.post(`${API_BASE_URL}/upload-scan`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  },
+
   // Dashboard stats
   getDashboardStats: async () => {
     const response = await axios.get(`${API_BASE_URL}/dashboard-stats`)

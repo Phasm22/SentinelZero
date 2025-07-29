@@ -4,11 +4,11 @@ import { Rocket, Cpu, Bug, Loader2 } from 'lucide-react'
 const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') => {
   // Handle null or undefined scanType
   if (!scanType) {
-    return 'nmap -v -T4 -sS -p- --open 172.16.0.0/22 -oX scan_output.xml'
+    return 'nmap -v -T4 -Pn -sS -p- --open 172.16.0.0/22 -oX scan_output.xml'
   }
   
-  let cmd = ['nmap', '-v', '-T4']
-  const scanTypeNormalized = scanType.toLowerCase()
+  let cmd = ['nmap', '-v', '-T4', '-Pn']  // -Pn bypasses host discovery for macOS Wi-Fi compatibility
+  const scanTypeNormalized = String(scanType).toLowerCase()
   
   if (scanTypeNormalized === 'full tcp') {
     cmd.push('-sS', '-p-', '--open')
@@ -52,18 +52,7 @@ const ScanControls = ({
   )
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-2xl p-8 flex flex-col gap-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl font-title font-bold text-gray-100">Scan Controls</h2>
-        <div className="flex items-center space-x-2">
-          {!isConnected && (
-            <div className="flex items-center space-x-2 text-red-500" title="Scanner not connected to agent">
-              <DisconnectedDot />
-              <span className="text-sm font-semibold">Disconnected</span>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
         <button
           data-testid="scan-full-tcp-btn"
@@ -96,6 +85,16 @@ const ScanControls = ({
           {isScanning && scanningType === 'Vuln Scripts' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </button>
       </div>
+
+      {/* Connection Status */}
+      {!isConnected && (
+        <div className="flex items-center space-x-2 text-red-400 bg-red-900/20 border border-red-700/30 rounded-lg p-3">
+          <DisconnectedDot />
+          <span className="text-sm font-medium">Scanner Disconnected</span>
+          <span className="text-xs text-red-300">- Try uploading manual scan results instead</span>
+        </div>
+      )}
+
       {/* Progress Bar */}
       {isScanning && (
         <div className="mt-4">

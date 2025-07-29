@@ -20,6 +20,7 @@ from src.routes.scan_routes import create_scan_blueprint
 from src.routes.settings_routes import create_settings_blueprint
 from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
+from src.routes.upload_routes import create_upload_blueprint
 from src.services.whats_up import whats_up_monitor
 
 # Import models to register them with SQLAlchemy
@@ -70,6 +71,7 @@ def create_app():
     app.register_blueprint(create_settings_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_schedule_blueprint(db, socketio, scheduler), url_prefix='/api')
     app.register_blueprint(create_api_blueprint(db), url_prefix='/api')
+    app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
     
     # Serve React static files in production
     @app.route('/', defaults={'path': ''})

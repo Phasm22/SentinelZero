@@ -120,6 +120,8 @@ cd backend && python migrate.py modular|monolithic
 - **Frontend**: Playwright for E2E testing (`npm run test:playwright`)
 - **Integration**: Mixed pytest + Playwright tests in `backend/tests/`
 
+**Critical Test Pattern**: When fixing scan command mismatches, test both frontend modal display AND backend execution logs to ensure they match.
+
 ## What's Up Monitoring System
 
 Three-layer health monitoring architecture:
@@ -130,6 +132,23 @@ Three-layer health monitoring architecture:
 **Pattern**: Each layer builds on the previous - services check DNS resolution before connectivity, infrastructure checks include specialized probes.
 
 ## Common Gotchas
+
+### Null/Undefined Runtime Errors
+**Most Critical**: Always validate function parameters before use:
+```jsx
+// Correct - safe parameter handling
+const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') => {
+  if (!scanType) return 'nmap -v -T4 -sS -p- --open 172.16.0.0/22 -oX scan_output.xml'
+  const scanTypeNormalized = String(scanType).toLowerCase()
+  // ... rest of function
+}
+
+// Incorrect - will crash with "can't access property 'toLowerCase', scanType is null"
+const scanTypeNormalized = scanType.toLowerCase()
+```
+
+### Frontend/Backend Command Mismatch
+**Major Issue**: Users expect scan modal commands to match actual execution. Backend `run_nmap_scan()` and frontend `buildNmapCommand()` must generate identical commands. Test by comparing modal preview with backend logs.
 
 ### Database Context
 SQLAlchemy operations in background threads need `with app.app_context():` wrapper. Database uses absolute paths for Docker compatibility.
@@ -154,7 +173,7 @@ nmap XML output can contain invalid UTF-8. Always handle encoding errors and val
 ### React State Management
 Uses Context pattern (no Redux). Custom hooks in `src/hooks/` for API state. WebSocket connections managed in SocketContext.
 
-**Pattern**: Always use optional chaining (`?.`) and provide fallbacks when accessing nested API response objects:
+**Critical Pattern**: Always use optional chaining (`?.`) and provide fallbacks when accessing nested API response objects:
 ```jsx
 // Correct - safe access with fallbacks
 const enabled = settings.scheduledScans?.enabled || false
@@ -166,6 +185,27 @@ const backendData = {
 const enabled = settings.scheduledScans.enabled
 ```
 
+**Null Safety Pattern**: When passing data to functions, always validate and provide defaults:
+```jsx
+// Correct - handle null/undefined scanType
+const scanTypeNormalized = String(scanType || 'Full TCP').toLowerCase()
+
+// Incorrect - will crash if scanType is null
+const scanTypeNormalized = scanType.toLowerCase()
+```
+
+### Scan Command Synchronization
+**Critical**: Frontend command preview (`buildNmapCommand`) must exactly match backend execution (`run_nmap_scan`):
+
+```javascript
+// Frontend buildNmapCommand must match these backend patterns:
+// Full TCP: nmap -v -T4 -sS -p- --open -O -sV --script=ssl-cert,... target -oX file
+// IoT Scan: nmap -v -T4 -sU -p 53,67,68,... -O -sV --script=vuln target -oX file  
+// Vuln Scripts: nmap -v -T4 -sS -p- --open --script=vuln target -oX file
+```
+
+**Pattern**: Backend uses `target_network` parameter from `network_settings.json`, not hardcoded values.
+
 ## File Conventions
 
 - **Settings files**: JSON in backend root, loaded/saved via dedicated functions
@@ -175,6 +215,11 @@ const enabled = settings.scheduledScans.enabled
 - **Component naming**: PascalCase for React components, kebab-case for CSS classes
 
 When adding new scan types, update both the nmap command logic in `src/services/scanner.py` and the frontend dropdown options in scan components.
+
+**Critical Pattern**: Scan types are hardcoded strings that must match exactly:
+- Backend: `scan_type_normalized = scan_type.strip().lower()`
+- Frontend: `const scanTypeNormalized = String(scanType).toLowerCase()`
+- Valid types: "full tcp", "iot scan", "vuln scripts"
 
 ## Docker & Deployment
 
