@@ -25,7 +25,7 @@ const LabStatus = () => {
   // Fetch health summary with timeout
   const fetchHealthData = async () => {
     try {
-      const baseUrl = import.meta.env.DEV ? 'http://localhost:5001' : '';
+      const baseUrl = import.meta.env.DEV ? 'http://localhost:5000' : '';
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout for proxy latency
       

@@ -20,7 +20,7 @@ export const SocketProvider = ({ children }) => {
     console.log('Initializing Socket.IO client...');
     
     // Determine the backend URL
-    const backendUrl = import.meta.env.DEV ? 'http://localhost:5001' : window.location.origin;
+    const backendUrl = import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin;
     
     const newSocket = io(backendUrl, {
       path: '/socket.io',

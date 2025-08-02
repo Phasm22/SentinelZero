@@ -49,7 +49,7 @@ frontend/react-sentinelzero/
 │   ├── contexts/           # React contexts (SocketContext, ToastContext, UserPreferences)
 │   ├── utils/              # API service layer and helpers
 │   └── App.jsx             # Main router with BackgroundCrossfade component
-├── vite.config.js          # Proxy config: /api → localhost:5001
+├── vite.config.js          # Proxy config: /api → localhost:5000
 └── tailwind.config.js      # Custom theme with Sentient fonts
 ```
 
@@ -110,7 +110,7 @@ cd backend && python migrate.py modular|monolithic
 ```
 
 ### Key Ports & URLs
-- **Backend**: `http://localhost:5001` (changed from 5000)
+- **Backend**: `http://localhost:5000` (changed from 5000)
 - **Frontend Dev**: `http://localhost:3173/3174` (Vite dev server)  
 - **API Base**: `/api/*` routes proxied through Vite
 - **WebSocket**: `/socket.io` proxied for real-time updates

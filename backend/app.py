@@ -113,7 +113,7 @@ def main():
         print('='*60)
         print('🛡️  SentinelZero Network Security Scanner')
         print('='*60)
-        print('📡 Backend Server: http://localhost:5001')
+        print('📡 Backend Server: http://localhost:5000')
         print('🌐 Frontend (dev): http://localhost:3174') 
         print('📊 Dashboard: http://localhost:3174/dashboard')
         print('⚙️  Settings: http://localhost:3174/settings')
@@ -124,7 +124,7 @@ def main():
         print('='*60)
         
         # Run with SocketIO
-        socketio.run(app, host='0.0.0.0', port=5001, debug=True, allow_unsafe_werkzeug=True)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
 
 if __name__ == '__main__':
     main()

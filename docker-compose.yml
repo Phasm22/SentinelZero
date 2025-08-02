@@ -6,7 +6,7 @@ services:
     container_name: sentinelzero
     restart: unless-stopped
     ports:
-      - "5001:5001"
+      - "5000:5000"
     volumes:
       # Persistent storage for scan results
       - ./data/scans:/app/scans
@@ -38,7 +38,7 @@ services:
           cpus: '0.5'         # Reserve half a core for OS operations
     # Health check
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/dashboard-stats"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/dashboard-stats"]
       interval: 30s
       timeout: 10s
       retries: 3

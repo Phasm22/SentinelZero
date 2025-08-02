@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from ..models.scan import Scan
-from ..services.scanner import parse_vulners_output, should_include_vulnerability
+from ..services.scanner import parse_vulners_output
 
 def create_upload_blueprint(db, socketio):
     bp = Blueprint('upload', __name__)
@@ -13,6 +13,7 @@ def create_upload_blueprint(db, socketio):
     @bp.route('/upload-scan', methods=['POST'])
     def upload_scan():
         """Upload and parse an nmap XML file"""
+        print("[DEBUG] Upload route called!")
         try:
             if 'file' not in request.files:
                 return jsonify({'error': 'No file provided'}), 400
@@ -39,8 +40,7 @@ def create_upload_blueprint(db, socketio):
             scan = Scan(
                 scan_type=scan_type,
                 status='parsing',
-                percent=0.0,
-                timestamp=datetime.utcnow()
+                percent=0.0
             )
             db.session.add(scan)
             db.session.commit()
@@ -64,8 +64,8 @@ def create_upload_blueprint(db, socketio):
             scan.raw_xml_path = xml_path
             scan.status = 'complete'
             scan.percent = 100.0
-            scan.hosts_count = len(hosts)
-            scan.vulns_count = len(vulns)
+            scan.total_hosts = len(hosts)
+            scan.hosts_up = len([h for h in hosts if h.get('status') == 'up'])
             scan.completed_at = datetime.utcnow()
             
             db.session.commit()
@@ -91,7 +91,11 @@ def create_upload_blueprint(db, socketio):
             })
             
         except ET.ParseError as e:
-            return jsonify({'error': f'Invalid XML format: {str(e)}'}), 400
+            # Provide more helpful error message for incomplete XML
+            error_msg = f'Invalid XML format: {str(e)}'
+            if 'no element found' in str(e) or 'not well-formed' in str(e):
+                error_msg += '. This often happens when the scan was interrupted or the XML file is incomplete.'
+            return jsonify({'error': error_msg}), 400
         except Exception as e:
             print(f'[DEBUG] Upload error: {e}')
             return jsonify({'error': f'Upload failed: {str(e)}'}), 500
@@ -104,6 +108,43 @@ def parse_nmap_xml(xml_content, scan_id):
     vulns = []
     
     try:
+        # First, check if the XML is well-formed and complete
+        if not xml_content.strip().endswith('</nmaprun>'):
+            # XML is incomplete (scan was interrupted)
+            print(f'[UPLOAD] Warning: XML appears to be incomplete (scan interrupted)')
+            
+            # Try to salvage what we can by finding the last complete element
+            xml_content_fixed = xml_content.rstrip()
+            
+            # Look for incomplete tags at the end and remove them
+            lines = xml_content_fixed.split('\n')
+            while lines:
+                last_line = lines[-1].strip()
+                # If the last line looks like an incomplete tag, remove it
+                if ('<' in last_line and not last_line.endswith('>')) or \
+                   (last_line.endswith('"') and not last_line.endswith('"/>') and not last_line.endswith('">')):
+                    print(f'[UPLOAD] Removing incomplete line: {last_line[:50]}...')
+                    lines.pop()
+                else:
+                    break
+            
+            xml_content_fixed = '\n'.join(lines)
+            
+            # Now add any missing closing tags
+            if '<host' in xml_content_fixed and '</host>' not in xml_content_fixed:
+                # Add missing host closing tags
+                open_hosts = xml_content_fixed.count('<host') - xml_content_fixed.count('</host>')
+                for _ in range(open_hosts):
+                    xml_content_fixed += '</host>'
+                print(f'[UPLOAD] Added {open_hosts} missing host closing tags')
+            
+            # Close the nmaprun element
+            xml_content_fixed += '</nmaprun>'
+            print(f'[UPLOAD] Added closing nmaprun tag')
+            
+            # Use the fixed XML
+            xml_content = xml_content_fixed
+        
         root = ET.fromstring(xml_content)
         
         for host in root.findall('host'):

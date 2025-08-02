@@ -48,7 +48,7 @@ const ScanUpload = ({ onUploadSuccess }) => {
 
     try {
       const formData = new FormData()
-      formData.append('xml_file', file)
+      formData.append('file', file)  // Changed from 'xml_file' to 'file'
       formData.append('scan_type', 'Manual Upload')
 
       const response = await apiService.uploadScan(formData)

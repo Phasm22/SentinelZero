@@ -3,8 +3,9 @@ General API routes for dashboard and system status
 """
 import json
 import os
+import pytz
 from datetime import datetime
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, Response
 from ..models import Scan, Alert
 
 def create_api_blueprint(db):
@@ -85,8 +86,55 @@ def create_api_blueprint(db):
 
     @bp.route('/scan-history', methods=['GET'])
     def get_scan_history():
-        """Get scan history (alias for scans)"""
-        return get_scans()
+        """Get scan history for the React frontend"""
+        try:
+            import pytz
+            
+            scans = Scan.query.order_by(Scan.created_at.desc()).all()
+            denver = pytz.timezone('America/Denver')
+            scans_data = []
+            
+            for scan in scans:
+                scan_dict = {
+                    'id': scan.id,
+                    'scan_type': scan.scan_type,
+                    'status': scan.status,
+                    'percent': scan.percent,
+                    'created_at': scan.created_at.isoformat() if scan.created_at else None,
+                    'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
+                    'timestamp': scan.created_at,  # Add timestamp field for frontend compatibility
+                    'total_hosts': scan.total_hosts,
+                    'hosts_up': scan.hosts_up,
+                    'total_ports': scan.total_ports,
+                    'open_ports': scan.open_ports
+                }
+                
+                # Convert timestamp to Denver timezone
+                if scan_dict['timestamp']:
+                    scan_dict['timestamp'] = scan_dict['timestamp'].astimezone(denver)
+                
+                # Parse hosts and vulns for count
+                try:
+                    hosts = json.loads(scan.hosts_json) if scan.hosts_json else []
+                    scan_dict['hosts_count'] = len(hosts)
+                except Exception:
+                    scan_dict['hosts_count'] = 0
+                
+                try:
+                    vulns = json.loads(scan.vulns_json) if scan.vulns_json else []
+                    scan_dict['vulns_count'] = len(vulns)
+                except Exception:
+                    scan_dict['vulns_count'] = 0
+                    
+                scans_data.append(scan_dict)
+            
+            return jsonify({'scans': scans_data})
+            
+        except Exception as e:
+            print(f'[DEBUG] Error getting scan history: {e}')
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
     
     @bp.route('/active-scans', methods=['GET'])
     def get_active_scans():
@@ -150,6 +198,122 @@ def create_api_blueprint(db):
                 return jsonify({'status': 'success', 'message': 'Alert marked as read'})
             else:
                 return jsonify({'status': 'error', 'message': 'Alert not found'}), 404
+        except Exception as e:
+            db.session.rollback()
+            print(f'[DEBUG] Error marking alert as read: {e}')
+            return jsonify({'status': 'error', 'message': f'Error marking alert as read: {str(e)}'}), 500
+
+    @bp.route('/scan/<int:scan_id>', methods=['GET'])
+    def get_scan(scan_id):
+        """Get individual scan details"""
+        try:
+            scan = Scan.query.get(scan_id)
+            if not scan:
+                return jsonify({'error': 'Scan not found'}), 404
+            
+            # Convert scan to dictionary
+            scan_data = {
+                'id': scan.id,
+                'scan_type': scan.scan_type,
+                'status': scan.status,
+                'percent': scan.percent,
+                'created_at': scan.created_at.isoformat() if scan.created_at else None,
+                'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
+                'timestamp': scan.created_at,
+                'total_hosts': scan.total_hosts,
+                'hosts_up': scan.hosts_up,
+                'total_ports': scan.total_ports,
+                'open_ports': scan.open_ports,
+                'raw_xml_path': scan.raw_xml_path
+            }
+            
+            # Convert timestamp to Denver timezone
+            if scan_data['timestamp']:
+                denver = pytz.timezone('America/Denver')
+                scan_data['timestamp'] = scan_data['timestamp'].astimezone(denver)
+            
+            # Add hosts and vulns count
+            try:
+                hosts = json.loads(scan.hosts_json) if scan.hosts_json else []
+                scan_data['hosts_count'] = len(hosts)
+            except Exception:
+                scan_data['hosts_count'] = 0
+            
+            try:
+                vulns = json.loads(scan.vulns_json) if scan.vulns_json else []
+                scan_data['vulns_count'] = len(vulns)
+            except Exception:
+                scan_data['vulns_count'] = 0
+                
+            return jsonify(scan_data)
+            
+        except Exception as e:
+            print(f'[DEBUG] Error getting scan {scan_id}: {e}')
+            return jsonify({'error': f'Error retrieving scan: {str(e)}'}), 500
+
+    @bp.route('/hosts/<int:scan_id>', methods=['GET'])
+    def get_scan_hosts(scan_id):
+        """Get hosts for a specific scan"""
+        try:
+            scan = Scan.query.get(scan_id)
+            if not scan:
+                return jsonify({'error': 'Scan not found'}), 404
+            
+            if scan.hosts_json:
+                hosts = json.loads(scan.hosts_json)
+                return jsonify({'hosts': hosts})
+            return jsonify({'hosts': []})
+            
+        except Exception as e:
+            print(f'[DEBUG] Error getting hosts for scan {scan_id}: {e}')
+            return jsonify({'error': f'Error retrieving hosts: {str(e)}'}), 500
+
+    @bp.route('/vulns/<int:scan_id>', methods=['GET'])
+    def get_scan_vulns(scan_id):
+        """Get vulnerabilities for a specific scan"""
+        try:
+            scan = Scan.query.get(scan_id)
+            if not scan:
+                return jsonify({'error': 'Scan not found'}), 404
+            
+            if scan.vulns_json:
+                vulns = json.loads(scan.vulns_json)
+                return jsonify({'vulns': vulns})
+            return jsonify({'vulns': []})
+            
+        except Exception as e:
+            print(f'[DEBUG] Error getting vulns for scan {scan_id}: {e}')
+            return jsonify({'error': f'Error retrieving vulnerabilities: {str(e)}'}), 500
+
+    @bp.route('/scan-xml/<int:scan_id>', methods=['GET'])
+    def get_scan_xml(scan_id):
+        """Get raw XML data for a scan"""
+        try:
+            from flask import Response
+            
+            scan = Scan.query.get(scan_id)
+            if not scan:
+                return jsonify({'error': 'Scan not found'}), 404
+            
+            if not scan.raw_xml_path:
+                return jsonify({'error': 'No XML file path recorded for this scan'}), 404
+            
+            if not os.path.exists(scan.raw_xml_path):
+                return jsonify({'error': f'XML file not found at path: {scan.raw_xml_path}'}), 404
+            
+            try:
+                with open(scan.raw_xml_path, 'r', encoding='utf-8') as f:
+                    xml_content = f.read()
+                
+                # Return as plain text for frontend processing
+                return Response(xml_content, mimetype='text/plain')
+                
+            except Exception as e:
+                return jsonify({'error': f'Error reading XML file: {str(e)}'}), 500
+                
+        except Exception as e:
+            print(f'[DEBUG] Error getting XML for scan {scan_id}: {e}')
+            return jsonify({'error': f'Error retrieving XML: {str(e)}'}), 500
                 
         except Exception as e:
             db.session.rollback()

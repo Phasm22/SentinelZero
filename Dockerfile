@@ -51,7 +51,7 @@ USER root
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5001/api/dashboard-stats || exit 1
+    CMD curl -f http://localhost:5000/api/dashboard-stats || exit 1
 
 # Expose ports
 EXPOSE 5000

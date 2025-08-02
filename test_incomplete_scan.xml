@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///opt/homebrew/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.97 scan initiated Tue Jul 29 12:31:16 2025 as: nmap -v -T4 -sS -p- -open -n -Pn -disable-arp-ping -oX scan_output.xml 192.168.68.0/24 -->
+<nmaprun scanner="nmap" args="nmap -v -T4 -sS -p- -open -n -Pn -disable-arp-ping -oX scan_output.xml 192.168.68.0/24" start="1753813876" startstr="Tue Jul 29 12:31:16 2025" version="7.97" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="1"/>
+<debugging level="0"/>
+<taskbegin task="SYN Stealth Scan" time="1753813876"/>
+<taskprogress task="SYN Stealth Scan" time="1753813907" percent="5.64" remaining="520" etc="1753814426"/>
+<taskprogress task="SYN Stealth Scan" time="1753813937" percent="12.03" remaining="447" etc="1753814383"/>
+<host starttime="1753813970" endtime="1753813985">
+<status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="192.168.68.1" addrtype="ipv4"/>
+<hostnames>
+<hostname name="router.local" type="PTR"/>
+</hostnames>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open" reason="syn-ack" reason_ttl="64"/>
+<service name="ssh" product="OpenSSH" version="8.0" method="probed" conf="10"/>
+</port>
+<port protocol="tcp" portid="80">
+<state state="open" reason="syn-ack" reason_ttl="64"/>
+<service name="http" product="nginx" version="1.18.0" method="probed" conf="10"/>
+</port>
+</ports>
+</host>
+<host starttime="1753813990">
+<status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="192.168.68.100" addrtype="ipv4"/>
