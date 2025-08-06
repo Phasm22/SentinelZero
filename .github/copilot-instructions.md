@@ -1,287 +1,353 @@
-# SentinelZero Development Guide
+# SentinelZero Copilot Instructions
 
 ## Architecture Overview
 
-SentinelZero is a homelab network security scanner with modular Flask/SQLAlchemy backend and React/Vite frontend. The app orchestrates nmap scans, parses XML results, and provides real-time progress via WebSockets.
+SentinelZero is a homelab network security scanner with a modular Flask/SQLAlchemy backend and React/Vite frontend. It orchestrates nmap scans, parses XML results, and provides real-time progress via WebSockets.
 
 **Key Components:**
-- **Backend**: Modular Flask application in `backend/src/` with Blueprint architecture
-- **Frontend**: React SPA in `frontend/react-sentinelzero/` with Vite, Tailwind CSS, and custom components  
-- **Database**: SQLite with models: `Scan` (results + metadata) and `Alert` (notifications)
-- **Real-time**: Flask-SocketIO for scan progress, logs, and completion events
-- **Scheduling**: APScheduler with SQLite job persistence for automated scans
-- **Monitoring**: What's Up system for network health monitoring
+- **Backend**: Modular Flask app (`backend/src/`) using Blueprints, APScheduler, and Flask-SocketIO, managed with `uv`
+- **Frontend**: React SPA (`frontend/react-sentinelzero/`) with Vite, Tailwind CSS, and custom contexts
+- **Database**: SQLite models for `Scan` and `Alert` in `backend/src/models/`
+- **Settings**: JSON files in backend root, auto-converted between camelCase and snake_case
+- **Scanning**: Background thread-based nmap execution with real-time progress tracking
 
-## Modular Backend Structure
+## Essential Development Commands
 
-**Current Architecture (Post-Migration):**
-```
-backend/
-├── app.py                    # Application factory entry point
-├── src/
-│   ├── models/
-│   │   ├── scan.py          # Scan database model with created_at, completed_at, total_hosts
-│   │   └── alert.py         # Alert model with title, severity, read status
-│   ├── routes/              # Blueprint-based API routes
-│   │   ├── scan_routes.py   # /api/scan, /api/clear-scan/<id>
-│   │   ├── settings_routes.py # /api/settings with field normalization
-│   │   ├── schedule_routes.py # /api/scheduled-scans
-│   │   └── api_routes.py    # /api/dashboard-stats, /api/network-interfaces, /api/whatsup/summary
-│   ├── services/
-│   │   ├── scanner.py       # Nmap scan orchestration with progress tracking
-│   │   ├── notifications.py # Pushover notification system
-│   │   └── whats_up.py      # Network health monitoring service
-│   └── config/
-│       ├── database.py      # SQLAlchemy initialization with absolute paths
-│       └── scheduler.py     # APScheduler background service setup
-```
-
-**Migration Note**: The monolithic `app.py` (~2000 lines) was refactored into this modular structure. Use `python migrate.py modular|monolithic` to switch between architectures.
-
-## Development Workflows
-
-### Running Development Environment
 ```bash
-# Backend only (modular)
-cd backend && python app.py
+# Full stack development (from frontend/)
+npm run dev:all  # Starts both backend and frontend with concurrently
+
+# Backend only (modular architecture)
+cd backend && uv run python app.py
 
 # Frontend only
 cd frontend/react-sentinelzero && npm run dev
 
-# Full stack (from frontend/)
-npm run dev:all
+# Switch architectures (modular/monolithic)
+cd backend && uv run python migrate.py modular|monolithic
 
-# Switch architecture
-cd backend && python migrate.py modular|monolithic
+# Testing
+npm run test                  # All tests (backend + frontend)
+npm run test:backend         # pytest with coverage
+npm run test:playwright      # E2E tests
+
+# Dependencies
+cd backend && uv sync        # Install backend deps
+cd backend && uv add pkg     # Add backend package
+cd frontend/react-sentinelzero && npm install  # Frontend deps
+```
+## Modular Backend Architecture
+
+```
+backend/src/
+├── models/              # SQLAlchemy models
+│   ├── scan.py         # Scan model with progress tracking, XML storage
+│   └── alert.py        # Alert model with severity levels
+├── routes/             # Flask Blueprints for API endpoints
+│   ├── scan_routes.py  # /api/scan, /api/clear-scan/<id>, scan triggers
+│   ├── settings_routes.py # /api/settings with camelCase↔snake_case conversion
+│   ├── api_routes.py   # /api/dashboard-stats, /api/network-interfaces
+│   └── upload_routes.py # XML file upload handling
+├── services/           # Business logic layer
+│   ├── scanner.py      # Nmap orchestration with threading & progress
+│   ├── notifications.py # Pushover integration for alerts
+│   └── whats_up.py     # Network health monitoring (loopbacks/services)
+└── config/             # Configuration management
+    ├── database.py     # SQLAlchemy setup with absolute paths
+    └── scheduler.py    # APScheduler background service
 ```
 
-### Key Ports & URLs
-- **Backend**: `http://localhost:5000`
-- **Frontend Dev**: `http://localhost:3173` (Vite dev server)  
-- **API Base**: `/api/*` routes proxied through Vite
-- **WebSocket**: `/socket.io` proxied for real-time updates
+**Migration Pattern**: The system supports both modular and monolithic architectures. Use `python migrate.py modular|monolithic` to switch. The modular version separates concerns into services/routes/models for better maintainability.
 
-### Testing Strategy
-```bash
-# Run all tests (backend + frontend)
-npm run test
+## Critical Real-Time Communication Patterns
 
-# Backend tests with coverage
-npm run test:backend
-
-# Playwright E2E tests
-npm run test:playwright
-```
-
-## Frontend Architecture
-
-**React + Vite Structure:**
-```
-frontend/react-sentinelzero/
-├── src/
-│   ├── components/          # Reusable UI components (Layout, Modal, etc.)
-│   ├── pages/              # Page components (Dashboard, Settings, ScanHistory)
-│   ├── contexts/           # React contexts (SocketContext, ToastContext, UserPreferences)
-│   ├── utils/              # API service layer and helpers
-│   └── App.jsx             # Main router with BackgroundCrossfade component
-├── vite.config.js          # Proxy config: /api → localhost:5000
-└── tailwind.config.js      # Custom theme with Sentient fonts
-```
-
-## Critical Development Patterns
-
-### Scan Orchestration & Threading
-Scans run in background threads with real-time progress updates:
+### Threading & Progress Tracking
+Scans run in background threads with real-time WebSocket updates:
 ```python
 def emit_progress(status, percent, message):
     scan.status = status
-    scan.percent = percent
+    scan.percent = percent  
     db.session.commit()
-    socketio.emit('scan_progress', {...})
+    if socketio:
+        socketio.emit('scan_progress', {
+            'scan_id': scan_id, 'status': status, 
+            'percent': percent, 'message': message
+        })
 ```
 
-**Key insights**:
-- All scan operations must handle database rollback and socketio emission errors gracefully since scans run in separate threads
-- Use `with app.app_context():` wrapper for SQLAlchemy operations in background threads
-- nmap assertion errors (return code -6) are handled gracefully - continue processing if valid XML exists
+**Critical**: Always wrap SocketIO emissions in try/except blocks and use `with app.app_context()` for database operations in threads.
 
-### SocketIO Communication  
-Three main event types for real-time updates:
-- `scan_progress`: Status updates with percentage completion  
-- `scan_log`: Real-time nmap output and debug messages
-- `scan_complete`: Final completion notification
+### SocketIO Event Architecture
+Three primary event channels for frontend communication:
+- `scan_progress`: Status updates with percentage and scan_id
+- `scan_log`: Real-time nmap output streaming
+- `scan_complete`: Final completion with results summary
 
-**Pattern**: Always wrap socketio.emit in try/except blocks since WebSocket connections can drop during long-running scans:
-```python
-try:
-    socketio.emit('scan_log', {'msg': msg})
-except Exception as e:
-    print(f'[DEBUG] Could not emit to socketio: {e}')
-```
+Frontend components must handle disconnections gracefully since scans can run for extended periods.
 
-### Nmap Command Architecture
-Scan types are hardcoded strings that must match exactly between frontend and backend:
-- Backend: `scan_type_normalized = scan_type.strip().lower()`
-- Frontend: `const scanTypeNormalized = String(scanType).toLowerCase()`
-- Valid types: "full tcp", "iot scan", "vuln scripts"
+## Nmap Command Synchronization (Critical)
 
-**Critical Pattern**: Frontend `buildNmapCommand()` in `ScanControls.jsx` must exactly match backend execution in `src/services/scanner.py`. Test by comparing modal preview with backend logs.
-
-### Settings Architecture & Field Normalization
-Settings stored in JSON files (not database) with camelCase ↔ snake_case conversion:
-```
-backend/
-├── network_settings.json      # Target networks, scan timeouts
-├── security_settings.json     # nmap flags, vulnerability scanning  
-├── notification_settings.json # Pushover configuration
-└── scheduled_scans_settings.json # Cron schedules
-```
-
-**Pattern**: Backend automatically converts field names for frontend compatibility in settings routes.
-
-### Large Network Handling
-For networks >256 hosts, the system:
-1. Uses conservative timing (T3 instead of T4)
-2. Reduces max retries (1 instead of 2) 
-3. Implements fallback to individual host scanning when nmap fails
-4. Adds comprehensive timeout settings for stability
-
-**Function**: `get_network_size()` calculates hosts in CIDR ranges to trigger adaptive behavior.
-
-## Development Workflows
-
-### Running Development Environment
-```bash
-# Backend only (modular)
-cd backend && python app.py
-
-# Frontend only
-cd frontend/react-sentinelzero && npm run dev
-
-# Full stack (from frontend/)
-npm run dev:all
-
-# Switch architecture
-cd backend && python migrate.py modular|monolithic
-```
-
-### Key Ports & URLs
-- **Backend**: `http://localhost:5000` (changed from 5000)
-- **Frontend Dev**: `http://localhost:3173/3174` (Vite dev server)  
-- **API Base**: `/api/*` routes proxied through Vite
-- **WebSocket**: `/socket.io` proxied for real-time updates
-
-### Testing Strategy
-- **Backend**: pytest with coverage reports (`npm run test:backend`)
-- **Frontend**: Playwright for E2E testing (`npm run test:playwright`)
-- **Integration**: Mixed pytest + Playwright tests in `backend/tests/`
-
-**Critical Test Pattern**: When fixing scan command mismatches, test both frontend modal display AND backend execution logs to ensure they match.
-
-## What's Up Monitoring System
-
-Three-layer health monitoring architecture:
-1. **Loopbacks**: Basic network connectivity (`LOOPBACKS` array)
-2. **Services**: DNS + application health (`SERVICES` array)
-3. **Infrastructure**: Critical components (`INFRASTRUCTURE` array)
-
-**Pattern**: Each layer builds on the previous - services check DNS resolution before connectivity, infrastructure checks include specialized probes.
-
-## Common Gotchas & Critical Patterns
-
-### Null Safety in React Components
-**Most Critical**: Always validate function parameters and use optional chaining:
-```jsx
-// Correct - safe parameter handling
-const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') => {
-  if (!scanType) return 'nmap -v -T4 -sS -p- --open 172.16.0.0/22 -oX scan_output.xml'
-  const scanTypeNormalized = String(scanType).toLowerCase()
-  // ... rest of function
-}
-
-// Correct - safe settings access
-const enabled = settings.scheduledScans?.enabled || false
-```
-
-### Frontend/Backend Command Synchronization
-**Major Issue**: Users expect scan modal commands to match actual execution. Backend `run_nmap_scan()` and frontend `buildNmapCommand()` must generate identical commands:
+**Major Integration Point**: Frontend and backend must generate identical nmap commands for user confirmation modals:
 
 ```javascript
-// Frontend buildNmapCommand must match these backend patterns:
-// Full TCP: nmap -v -T4 -Pn -sS -p- --open -O -sV target -oX file
-// IoT Scan: nmap -v -T4 -Pn -sU -p 53,67,68,... target -oX file  
-// Vuln Scripts: nmap -v -T4 -Pn -sS -p- --open --script=vuln target -oX file
+// Frontend: ScanControls.jsx buildNmapCommand()
+const buildNmapCommand = (scanType, security, targetNetwork) => {
+  let cmd = ['nmap', '-v', '-T4', '-Pn']
+  const scanTypeNormalized = String(scanType).toLowerCase()
+  if (scanTypeNormalized === 'full tcp') {
+    cmd.push('-sS', '-p-', '--open')
+  }
+  // Security settings application must match backend exactly
+  if (security.osDetectionEnabled) cmd.push('-O')
+  if (security.serviceDetectionEnabled) cmd.push('-sV')
+  // ... rest must mirror backend scanner.py
+}
 ```
 
-### WebSocket Context Management
-Avoid duplicate event listeners between SocketContext and page components. The SocketContext should only handle connection events:
-```jsx
-// SocketContext - connection only
-socket.on('connect', () => console.log('Connected'))
-socket.on('disconnect', () => console.log('Disconnected'))
-
-// Dashboard component - scan events
-socket.on('scan_progress', handleProgress)
-socket.on('scan_log', handleLog)
+```python  
+# Backend: src/services/scanner.py run_nmap_scan()
+scan_type_normalized = scan_type.strip().lower()
+cmd = ['nmap', '-v', '-T4', '-Pn']
+if scan_type_normalized == 'full tcp':
+    cmd += ['-sS', '-p-', '--open']
+# Security settings must match frontend exactly
 ```
 
-### XML Parsing & Unicode Handling
-nmap XML output can contain invalid UTF-8. Always handle encoding errors and validate file size before parsing:
+**Testing Pattern**: When modifying scan commands, test both the frontend modal preview AND backend execution logs to ensure synchronization.
+
+## Large Network Handling & Adaptive Scanning
+
+The system implements intelligent network size detection and adaptive scanning strategies:
+
 ```python
+def get_network_size(network):
+    """Calculate number of hosts in CIDR range"""
+    
+# For networks >256 hosts:
+network_size = get_network_size(target_network)  
+if network_size > 256:
+    timing_level = 'T3'  # Conservative timing
+    max_retries = '1'    # Reduced retries
+    # Individual host scanning fallback for nmap assertion errors
+```
+
+**Fallback Pattern**: When nmap fails with error -6 on large networks, the system automatically switches to scanning individual hosts (up to 50) spread across the network range for better coverage.
+
+## React Context Architecture & State Management
+
+**No Redux** - Uses React Context pattern exclusively:
+
+```jsx
+// Socket connection with automatic reconnection
+export const SocketProvider = ({ children }) => {
+  const [socket, setSocket] = useState(null)
+  const [isConnected, setIsConnected] = useState(false)
+  // Auto-detection of development vs production socket URLs
+  const backendUrl = isDevelopment ? window.location.origin : 'http://${hostname}:5000'
+}
+
+// User preferences with localStorage persistence  
+export const UserPreferencesProvider = ({ children }) => {
+  const [preferences, setPreferences] = useState({
+    use24Hour: false,
+    // ... other UI preferences
+  })
+}
+```
+
+**Critical Pattern**: Always validate context availability and provide fallbacks when accessing nested API response objects.
+
+## Settings & Configuration Patterns
+
+Settings stored as JSON files (not database) with automatic field name conversion:
+
+```
+backend/
+├── network_settings.json      # Target networks, max_hosts, scan timeouts
+├── security_settings.json     # nmap flags, vulnerability scanning options
+├── notification_settings.json # Pushover API configuration
+└── scheduled_scans_settings.json # Cron schedules, target networks
+```
+
+**Field Normalization**: Backend `/api/settings` routes automatically convert between camelCase (frontend) and snake_case (backend):
+```python
+# Backend uses: vuln_scanning_enabled, os_detection_enabled
+# Frontend receives: vulnScanningEnabled, osDetectionEnabled
+```
+
+## Vulnerability Detection & False Positive Filtering
+
+The system implements intelligent vulnerability filtering to reduce noise:
+
+```python
+def should_include_vulnerability(vuln_id, score, has_exploit):
+    # Skip very low scores unless they have active exploits
+    if score < 4.0 and not has_exploit:
+        return False
+    # Skip known false positives
+    false_positive_patterns = ['PACKETSTORM:140261', 'CVE-2025-*']
+```
+
+**Vulnerability Sources**: 
+- NSE vulnerability scripts (`--script=vuln`)
+- Custom vulnerability patterns from nmap XML parsing
+- Vulners.com integration for CVE scoring
+
+## Key Development Ports & URLs
+
+- **Backend**: `http://localhost:5000`
+- **Frontend Dev**: `http://localhost:3173` (Vite with HMR)
+- **API Proxy**: All `/api/*` and `/socket.io/*` routes proxied through Vite
+- **Production**: Single-container deployment with Flask serving React build
+
+## Essential File Patterns & Conventions
+
+### Database & Storage
+- **SQLite**: `backend/instance/sentinelzero.db` (dev), `/app/instance/` (Docker)
+- **Scan Results**: XML files in `backend/scans/` with timestamp naming
+- **Logs**: Structured logging in `backend/logs/` with daily rotation
+
+### Component Architecture
+```
+frontend/src/
+├── components/
+│   ├── ScanControls.jsx    # Critical: buildNmapCommand() must match backend
+│   ├── ScanDetailsModal.jsx # Handles large scan results with performance optimization
+│   └── Layout.jsx          # App shell with navigation and theme handling
+├── contexts/
+│   ├── SocketContext.jsx   # WebSocket connection with auto-reconnection
+│   └── ToastContext.jsx    # Global notification system
+└── utils/
+    └── api.js              # Centralized API client with error handling
+```
+
+## Testing & Quality Assurance
+
+```bash
+# Backend testing with coverage
+npm run test:backend        # pytest with coverage reports
+npm run test:unit          # Unit tests only
+npm run test:integration   # API endpoint tests
+
+# Frontend E2E testing  
+npm run test:playwright    # Full browser automation tests
+npm run test:playwright:ui # Interactive test debugging
+
+# Code quality
+npm run lint               # ESLint + flake8
+npm run format             # Prettier + black
+```
+
+**Test Organization**:
+- `backend/tests/unit/` - Database models, utility functions
+- `backend/tests/integration/` - API endpoints, scan execution
+- Frontend E2E tests cover critical user flows (scan execution, results viewing)
+
+## Critical Error Handling Patterns
+
+### WebSocket Connection Resilience
+```jsx
+// Always provide fallbacks for socket state
+const { socket, isConnected, isInitialized } = useSocket()
+if (!socket || !isConnected) {
+  return <LoadingSpinner message="Connecting to server..." />
+}
+
+// Backend: Graceful socket emission failures
+try:
+    socketio.emit('scan_progress', data)
+except Exception as e:
+    print(f'[DEBUG] Could not emit to socketio: {e}')
+    # Continue scan execution regardless
+```
+
+### Database Operations in Threads
+```python
+# Always use app context for SQLAlchemy in background threads
+with app.app_context():
+    try:
+        scan.status = 'complete'
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Log error but don't crash the scan
+```
+
+### Large Scan Result Handling
+```python
+# XML size validation before parsing
 if not os.path.exists(xml_path) or os.path.getsize(xml_path) < 100:
     emit_progress('error', percent, 'XML file not found or too small')
     return
+
+# Unicode error handling for nmap output
+try:
+    tree = ET.parse(xml_path)
+except ET.ParseError as e:
+    # nmap XML can contain invalid UTF-8 from network probes
+    emit_progress('error', 95, f'XML parse error: {str(e)}')
 ```
 
-### React State Management
-Uses Context pattern (no Redux). Custom hooks in `src/hooks/` for API state. Always provide fallbacks when accessing nested objects from API responses.
+## Performance & Scalability Considerations
 
-## File Conventions & Critical Patterns
-
-### File Structure & Naming
-- **Settings files**: JSON in backend root, loaded/saved via dedicated functions
-- **Scan results**: XML files in `scans/` directory with timestamp naming
-- **Database**: SQLite in `instance/` directory for dev, `/app/instance` in Docker
-- **React builds**: Served directly by Flask in production via catch-all route
-- **Component naming**: PascalCase for React components, kebab-case for CSS classes
-
-### Scan Type String Matching
-**Critical**: Scan types are hardcoded strings that must match exactly between frontend and backend:
+### Large Network Scanning Strategy
 ```python
-# Backend normalization
-scan_type_normalized = scan_type.strip().lower()
+def get_network_size(network):
+    # Calculate hosts in CIDR notation
+    return ipaddress.ip_network(network, strict=False).num_addresses
 
-# Frontend normalization  
-const scanTypeNormalized = String(scanType).toLowerCase()
-
-# Valid types: "full tcp", "iot scan", "vuln scripts"
+# Adaptive timing based on network size
+network_size = get_network_size(target_network)
+if network_size > 256:
+    timing_level = 'T3'  # Conservative timing
+    max_retries = '1'    # Reduced retries
+    # Use individual host fallback if nmap fails
 ```
-
-### What's Up Monitoring System
-Three-layer health monitoring architecture:
-1. **Loopbacks**: Basic network connectivity (`LOOPBACKS` array)
-2. **Services**: DNS + application health (`SERVICES` array)
-3. **Infrastructure**: Critical components (`INFRASTRUCTURE` array)
-
-Each layer builds on the previous - services check DNS resolution before connectivity.
-
-## Docker & Deployment
-
-- Production uses single Dockerfile with multi-stage build
-- Requires `NET_ADMIN` and `NET_RAW` capabilities for nmap
-- Health checks via `/api/dashboard-stats` endpoint
-- Frontend build output served by Flask catch-all route
-
-## Performance Optimizations
-
-### Large Network Scanning
-For networks >256 hosts:
-- Conservative timing (T3 instead of T4)
-- Reduced max retries (1 instead of 2)
-- Individual host scanning fallback
-- Comprehensive timeout settings
 
 ### Memory Management
-- Scan results cached in SQLite, not memory
-- XML files stored on disk, referenced by path
-- Lazy loading for large scan result sets
+- Scan results stored as JSON in database, not held in memory
+- XML files referenced by path, loaded on-demand for viewing
+- Background cleanup of old scan files based on retention settings
+- Progressive loading for large scan result tables
+
+## Docker & Production Deployment
+
+**Multi-stage Build Pattern**:
+```dockerfile
+# Frontend build stage
+FROM node:18 AS frontend-build
+COPY frontend/react-sentinelzero/ .
+RUN npm install && npm run build
+
+# Runtime stage
+FROM python:3.12
+COPY --from=frontend-build /app/dist ./frontend/dist/
+# Flask serves React build via catch-all route
+```
+
+**Required Capabilities**: `NET_ADMIN` and `NET_RAW` for nmap execution
+
+## Common Development Gotchas
+
+### Scan Command Synchronization
+**Critical**: Users see scan commands in confirmation modals that must match actual execution:
+```jsx
+// Frontend ScanControls.jsx must exactly mirror backend scanner.py
+// Test: Compare modal preview with backend execution logs
+```
+
+### React Context Patterns
+```jsx
+// Safe context access with fallbacks
+const preferences = useUserPreferences()
+const enabled = preferences?.scheduledScans?.enabled || false
+
+// Avoid duplicate SocketIO listeners
+// SocketContext handles connection events only
+// Component handles scan-specific events
+```
+
+### Settings Field Naming
+Backend JSON files use snake_case, but API automatically converts to camelCase for frontend consumption.
+
+When modifying settings, always verify both the JSON structure and the API transformation layer.

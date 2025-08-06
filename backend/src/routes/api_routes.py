@@ -12,6 +12,15 @@ def create_api_blueprint(db):
     """Create and configure general API routes blueprint"""
     bp = Blueprint('api', __name__)
     
+    @bp.route('/ping', methods=['GET'])
+    def ping():
+        """Simple ping endpoint for health checks"""
+        return jsonify({
+            'status': 'success',
+            'message': 'Server received ping',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    
     @bp.route('/dashboard-stats', methods=['GET'])
     def dashboard_stats():
         """Get dashboard statistics"""
@@ -422,52 +431,6 @@ def create_api_blueprint(db):
                 'count': 0
             })
 
-    @bp.route('/whatsup/summary', methods=['GET'])
-    def get_whatsup_summary():
-        """Get What's Up monitoring summary"""
-        try:
-            # This would typically come from a shared state or cache
-            # For now, return a basic structure that matches the monitoring service
-            summary = {
-                'overall_status': 'degraded',  # healthy, degraded, critical
-                'health_percentage': 57.1,
-                'last_check': datetime.utcnow().isoformat(),
-                'categories': {
-                    'loopbacks': {
-                        'total': 2,
-                        'up': 2,
-                        'status': 'healthy'
-                    },
-                    'services': {
-                        'total': 3,
-                        'up': 2,
-                        'status': 'degraded'
-                    },
-                    'infrastructure': {
-                        'total': 2,
-                        'up': 0,
-                        'status': 'critical'
-                    }
-                },
-                'alerts': [
-                    {
-                        'type': 'warning',
-                        'message': 'Some services may be unreachable',
-                        'timestamp': datetime.utcnow().isoformat()
-                    }
-                ]
-            }
-            return jsonify(summary)
-        except Exception as e:
-            print(f'[DEBUG] Error getting What\'s Up summary: {e}')
-            return jsonify({
-                'overall_status': 'unknown',
-                'health_percentage': 0,
-                'last_check': datetime.utcnow().isoformat(),
-                'categories': {},
-                'alerts': []
-            })
-
     @bp.route('/health', methods=['GET'])
     def health_check():
         """Health check endpoint"""
@@ -476,5 +439,56 @@ def create_api_blueprint(db):
             'timestamp': datetime.utcnow().isoformat(),
             'version': '1.0.0'
         })
+    
+    @bp.route('/test-pushover', methods=['POST', 'GET', 'OPTIONS'])
+    def test_pushover():
+        """Test Pushover notification system"""
+        from flask import request, make_response
+        import requests
+        import logging
+        
+        if request.method == 'OPTIONS':
+            response = make_response()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            return response, 204
+            
+        if request.method == 'GET':
+            return jsonify({'status': 'ok', 'message': 'GET method works. Use POST to send a test notification.'})
+        
+        try:
+            PUSHOVER_API_TOKEN = os.environ.get('PUSHOVER_API_TOKEN')
+            PUSHOVER_USER_KEY = os.environ.get('PUSHOVER_USER_KEY')
+            
+            if not PUSHOVER_API_TOKEN or not PUSHOVER_USER_KEY:
+                return jsonify({
+                    'status': 'error', 
+                    'message': 'Pushover credentials not configured on server'
+                }), 400
+            
+            message = 'Test notification from SentinelZero!'
+            resp = requests.post('https://api.pushover.net/1/messages.json', data={
+                'token': PUSHOVER_API_TOKEN,
+                'user': PUSHOVER_USER_KEY,
+                'message': message,
+                'priority': 0,
+                'title': 'SentinelZero',
+            })
+            
+            logging.info(f"[PUSHOVER TEST] Status: {resp.status_code}, Response: {resp.text}")
+            
+            if resp.status_code == 200:
+                return jsonify({'status': 'ok', 'message': 'Pushover test sent successfully!'})
+            else:
+                return jsonify({
+                    'status': 'error', 
+                    'message': f'Pushover failed: {resp.text}', 
+                    'code': resp.status_code
+                }), 500
+                
+        except Exception as e:
+            logging.exception('[PUSHOVER TEST] Exception:')
+            return jsonify({'status': 'error', 'message': str(e)}), 500
     
     return bp

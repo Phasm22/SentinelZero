@@ -17,10 +17,14 @@ echo "📦 Installing system dependencies..."
 apt-get update
 apt-get install -y python3 python3-pip nodejs npm nmap
 
+# Install uv for Python package management
+echo "🚀 Installing uv..."
+pip3 install uv
+
 # Install Python dependencies
 echo "🐍 Installing Python dependencies..."
 cd /root/sentinelZero/backend
-pip3 install -r requirements.txt
+uv sync
 
 # Install Node.js dependencies and build frontend
 echo "⚛️ Building React frontend..."

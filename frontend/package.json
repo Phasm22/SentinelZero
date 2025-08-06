@@ -5,23 +5,29 @@
   "main": "app.py",
   "scripts": {
     "dev": "cd react-sentinelzero && npm run dev",
-    "dev:backend": "python3 app.py",
+    "dev:backend": "cd ../backend && uv run python app.py",
     "dev:frontend": "cd react-sentinelzero && npm run dev",
     "dev:all": "cd react-sentinelzero && npm run dev:all",
     "install:frontend": "cd react-sentinelzero && npm install",
+    "install:backend": "cd ../backend && uv sync",
     "build:frontend": "cd react-sentinelzero && npm run build",
     "test": "npm run test:backend && npm run test:frontend",
-    "test:backend": "python3 -m pytest tests/ -v --cov=app --cov-report=html --cov-report=term",
+    "test:backend": "cd ../backend && uv run pytest tests/ -v --cov=src --cov=app.py --cov-report=html --cov-report=term",
     "test:frontend": "cd react-sentinelzero && npm run test",
-    "test:unit": "python3 -m pytest tests/unit/ -v",
-    "test:integration": "python3 -m pytest tests/integration/ -v",
-    "test:e2e": "python3 -m pytest tests/e2e/ -v",
-    "test:coverage": "python3 -m pytest tests/ --cov=app --cov-report=html --cov-report=term-missing",
+    "test:unit": "cd ../backend && uv run pytest tests/unit/ -v",
+    "test:integration": "cd ../backend && uv run pytest tests/integration/ -v",
+    "test:e2e": "cd ../backend && uv run pytest tests/e2e/ -v",
+    "test:coverage": "cd ../backend && uv run pytest tests/ --cov=src --cov=app.py --cov-report=html --cov-report=term-missing",
     "test:playwright": "npx playwright test",
     "test:playwright:ui": "npx playwright test --ui",
-    "lint": "python3 -m flake8 app.py tests/",
-    "format": "python3 -m black app.py tests/",
-    "pre-commit": "npm run lint && npm run test:backend"
+    "lint": "cd ../backend && uv run flake8 app.py src/ tests/",
+    "lint:frontend": "cd react-sentinelzero && npm run lint",
+    "format": "cd ../backend && uv run black app.py src/ tests/",
+    "format:frontend": "cd react-sentinelzero && npm run format",
+    "pre-commit": "npm run lint && npm run test:backend",
+    "sync": "cd ../backend && uv sync",
+    "add": "cd ../backend && uv add",
+    "remove": "cd ../backend && uv remove"
   },
   "repository": {
     "type": "git",
@@ -42,7 +48,6 @@
     "@playwright/test": "^1.54.1"
   },
   "devDependencies": {
-    "flake8": "^6.0.0",
-    "black": "^23.0.0"
+    "vite": "^7.0.6"
   }
 }

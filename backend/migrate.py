@@ -30,7 +30,7 @@ def switch_to_modular():
         print('   3. ✅ Modular structure ready in src/ directory')
         
         print('\n🔧 Manual Steps Required:')
-        print('   1. Install dependencies: pip install -r requirements.txt')
+        print('   1. Install dependencies: uv sync')
         print('   2. Test the application: python app.py')
         print('   3. Verify all functionality works')
         print('   4. Update any deployment scripts to use new structure')

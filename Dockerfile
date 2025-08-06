@@ -27,9 +27,12 @@ RUN useradd -m -u 1000 sentinelzero && \
 
 WORKDIR /app
 
-# Copy Python requirements and install
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv for faster Python package management
+RUN pip install --no-cache-dir uv
+
+# Copy Python project configuration and install dependencies
+COPY backend/pyproject.toml backend/uv.lock* ./
+RUN uv sync --frozen --no-dev
 
 # Copy backend application
 COPY backend/ ./

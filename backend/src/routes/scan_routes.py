@@ -81,4 +81,19 @@ def create_scan_blueprint(db, socketio):
             print(f'[DEBUG] Error deleting scan {scan_id}: {e}')
             return jsonify({'status': 'error', 'message': f'Error clearing scan: {str(e)}'}), 500
     
+    @bp.route('/delete-all-scans', methods=['POST'])
+    def delete_all_scans():
+        """Delete all scan records"""
+        try:
+            # Delete all scans
+            deleted_count = Scan.query.count()
+            Scan.query.delete()
+            db.session.commit()
+            print(f'[DEBUG] {deleted_count} scans deleted.')
+            return jsonify({'status': 'success', 'message': f'{deleted_count} scans deleted'})
+        except Exception as e:
+            db.session.rollback()
+            print(f'[DEBUG] Error deleting all scans: {e}')
+            return jsonify({'status': 'error', 'message': f'Error deleting all scans: {str(e)}'}), 500
+    
     return bp

@@ -249,34 +249,26 @@ const Dashboard = () => {
   const testConnection = async () => {
     let httpStatus = 'unknown'
     let socketStatus = 'unknown'
+    
+    // Test HTTP API
     try {
       const resp = await apiService.ping()
-      httpStatus = resp.status === 'ok' ? 'HTTP OK' : 'HTTP FAIL'
+      httpStatus = resp.status === 'success' ? 'HTTP OK' : 'HTTP FAIL'
     } catch {
       httpStatus = 'HTTP FAIL'
     }
-    return new Promise((resolve) => {
-      let pongReceived = false
-      if (socket) {
-        socket.emit('ping')
-        socket.once('pong', () => {
-          pongReceived = true
-          socketStatus = 'Socket.IO OK'
-          showToast(`API: ${httpStatus}, Socket: ${socketStatus}`, 'success')
-          resolve()
-        })
-        setTimeout(() => {
-          if (!pongReceived) {
-            socketStatus = 'Socket.IO FAIL'
-            showToast(`API: ${httpStatus}, Socket: ${socketStatus}`, 'danger')
-            resolve()
-          }
-        }, 2000)
-      } else {
-        showToast(`API: ${httpStatus}, Socket: Not initialized`, 'danger')
-        resolve()
-      }
-    })
+    
+    // Test Socket.IO
+    if (socket && socket.connected) {
+      socketStatus = 'Socket.IO OK'
+    } else if (socket && !socket.connected) {
+      socketStatus = 'Socket.IO FAIL (Disconnected)'
+    } else {
+      socketStatus = 'Socket.IO FAIL (Not initialized)'
+    }
+    
+    const isSuccess = httpStatus === 'HTTP OK' && socketStatus === 'Socket.IO OK'
+    showToast(`API: ${httpStatus}, Socket: ${socketStatus}`, isSuccess ? 'success' : 'danger')
   }
 
   const handleUploadComplete = (result) => {

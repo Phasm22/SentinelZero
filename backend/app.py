@@ -4,13 +4,18 @@ New modular Flask application entry point
 import os
 import sys
 import threading
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
+from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # Import our modular components
@@ -21,6 +26,7 @@ from src.routes.settings_routes import create_settings_blueprint
 from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
 from src.routes.upload_routes import create_upload_blueprint
+from src.routes.whatsup_routes import bp as whatsup_bp
 from src.services.whats_up import whats_up_monitor
 
 # Import models to register them with SQLAlchemy
@@ -37,6 +43,9 @@ def create_app():
     
     # Create Flask app
     app = Flask(__name__)
+    
+    # Enable CORS for all routes
+    CORS(app, origins="*", supports_credentials=True)
     
     # Configuration
     app.config['SECRET_KEY'] = 'sentinelzero-dev-key-change-in-production'
@@ -55,6 +64,21 @@ def create_app():
     socketio = SocketIO(app, cors_allowed_origins="*")
     scheduler = init_scheduler()
     
+    # Socket.IO event handlers
+    @socketio.on('connect')
+    def handle_connect():
+        print(f'[SOCKET] Client connected')
+        socketio.emit('scan_log', {'msg': 'Connected to SentinelZero'})
+    
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        print(f'[SOCKET] Client disconnected')
+    
+    @socketio.on('ping')
+    def handle_ping(data=None):
+        print(f'[SOCKET] Ping received from client: {data}')
+        socketio.emit('pong', {'message': 'Server received ping'})
+    
     # Create database tables
     try:
         with app.app_context():
@@ -72,6 +96,26 @@ def create_app():
     app.register_blueprint(create_schedule_blueprint(db, socketio, scheduler), url_prefix='/api')
     app.register_blueprint(create_api_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
+    app.register_blueprint(whatsup_bp)
+    
+    # Legacy routes for compatibility with Vite proxy
+    @app.route('/clear-all-data', methods=['POST'])
+    def clear_all_data():
+        """Legacy route to clear all scan data"""
+        try:
+            from src.models import Scan, Alert
+            # Delete all scans and alerts
+            scan_count = Scan.query.count()
+            alert_count = Alert.query.count()
+            Scan.query.delete()
+            Alert.query.delete()
+            db.session.commit()
+            print(f'[DEBUG] Cleared {scan_count} scans and {alert_count} alerts.')
+            return jsonify({'status': 'success', 'message': f'Cleared {scan_count} scans and {alert_count} alerts'})
+        except Exception as e:
+            db.session.rollback()
+            print(f'[DEBUG] Error clearing all data: {e}')
+            return jsonify({'status': 'error', 'message': f'Error clearing all data: {str(e)}'}), 500
     
     # Serve React static files in production
     @app.route('/', defaults={'path': ''})
@@ -113,18 +157,23 @@ def main():
         print('='*60)
         print('🛡️  SentinelZero Network Security Scanner')
         print('='*60)
-        print('📡 Backend Server: http://localhost:5000')
-        print('🌐 Frontend (dev): http://localhost:3174') 
-        print('📊 Dashboard: http://localhost:3174/dashboard')
-        print('⚙️  Settings: http://localhost:3174/settings')
+        print('📡 Backend Server: http://0.0.0.0:5000 (accessible from any interface)')
+        print('🌐 Frontend (dev): http://localhost:3173 or http://sentinelzero.prox:3173') 
+        print('📊 Dashboard: http://localhost:3173/dashboard')
+        print('⚙️  Settings: http://localhost:3173/settings')
         print('='*60)
         print('🔍 Starting scan engine...')
         print('📡 Initializing network monitoring...')
         print('🚀 Server ready!')
         print('='*60)
         
-        # Run with SocketIO
-        socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+        # Disable debug mode completely to prevent multiple processes
+        # This fixes socket connection conflicts caused by Flask's reloader
+        print('🔧 Running in production mode to prevent multiple processes')
+        print('🔧 Debug mode disabled for stable socket connections')
+        
+        # Run with SocketIO - debug=False prevents reloader
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
 
 if __name__ == '__main__':
     main()

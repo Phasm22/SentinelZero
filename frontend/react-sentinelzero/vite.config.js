@@ -17,6 +17,17 @@ export default defineConfig({
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         ws: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request to: ', proxyReq.path);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Received response:', proxyRes.statusCode);
+          });
+        }
       },
       '/scan': {
         target: 'http://127.0.0.1:5000',

@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react'
 
-const AnimatedValue = ({ value, className = '' }) => {
+const AnimatedValue = ({ value, className = '', suffix = '' }) => {
   const [displayValue, setDisplayValue] = useState(0)
   const rafRef = useRef()
 
   useEffect(() => {
-    let start = displayValue
-    let end = Number(value)
+    // Handle null, undefined, NaN values more robustly
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue) || isNaN(numericValue)) {
+      setDisplayValue(0)
+      return
+    }
+
+    let start = Number.isFinite(displayValue) ? displayValue : 0
+    let end = numericValue
     let startTime = null
     const duration = 700
 
@@ -20,11 +27,15 @@ const AnimatedValue = ({ value, className = '' }) => {
       }
     }
     rafRef.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafRef.current)
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+      }
+    }
     // eslint-disable-next-line
   }, [value])
 
-  return <span className={className}>{displayValue}</span>
+  return <span className={className}>{Number.isFinite(displayValue) ? displayValue : 0}{suffix}</span>
 }
 
 export default AnimatedValue 

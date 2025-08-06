@@ -205,7 +205,7 @@ This restores the original monolithic structure while preserving the modular fil
 
 ## 💡 Tips
 
-- **Import Errors**: Normal during development - install dependencies with `pip install -r requirements.txt`
+- **Import Errors**: Normal during development - install dependencies with `uv sync`
 - **Database**: Uses same SQLite database, no migration needed
 - **Settings**: All JSON settings files remain unchanged
 - **Frontend**: No changes needed - API endpoints remain the same

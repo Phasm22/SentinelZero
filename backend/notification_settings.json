@@ -1,5 +1,5 @@
 {
-    "pushover_enabled": false,
+    "pushover_enabled": true,
     "pushover_configured": false,
     "scan_complete": true,
     "vulnerability_found": true,

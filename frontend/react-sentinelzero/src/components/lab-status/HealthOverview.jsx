@@ -4,11 +4,26 @@ import HealthIndicator from './HealthIndicator'
 import AnimatedValue from '../AnimatedValue'
 
 const HealthOverview = ({ healthData }) => {
-  if (!healthData) return null
+  // Provide safe defaults for all values
+  const safeHealthData = {
+    total_up: 0,
+    total_checks: 1, // Avoid division by zero
+    timestamp: null,
+    layers: {
+      loopbacks: { up: 0, total: 0 },
+      services: { up: 0, total: 0 },
+      infrastructure: { up: 0, total: 0 }
+    },
+    ...healthData
+  }
+
+  // Ensure numeric values are valid
+  const totalUp = Number.isFinite(safeHealthData.total_up) ? safeHealthData.total_up : 0
+  const totalChecks = Number.isFinite(safeHealthData.total_checks) && safeHealthData.total_checks > 0 ? safeHealthData.total_checks : 1
 
   const getOverallStatus = () => {
-    if (healthData.total_up === healthData.total_checks) return 'healthy'
-    if (healthData.total_up > healthData.total_checks * 0.8) return 'warning'
+    if (totalUp === totalChecks) return 'healthy'
+    if (totalUp > totalChecks * 0.8) return 'warning'
     return 'critical'
   }
 
@@ -51,8 +66,8 @@ const HealthOverview = ({ healthData }) => {
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
                 <span className="text-lg sm:text-xl text-gray-300 dark:text-gray-300">
-                  <AnimatedValue value={healthData.total_up} />
-                  <span className="text-gray-600 dark:text-gray-500">/{healthData.total_checks}</span>
+                  <AnimatedValue value={totalUp} />
+                  <span className="text-gray-600 dark:text-gray-500">/{totalChecks}</span>
                   <span className="text-gray-700 dark:text-gray-400 ml-2">systems operational</span>
                 </span>
               </div>
@@ -64,7 +79,7 @@ const HealthOverview = ({ healthData }) => {
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
             <Clock className="w-4 h-4" />
             <span>
-              Last updated: {getTimeAgo(healthData.timestamp)}
+              Last updated: {getTimeAgo(safeHealthData.timestamp)}
             </span>
           </div>
           
@@ -72,7 +87,7 @@ const HealthOverview = ({ healthData }) => {
           <div className="mt-2">
             <div className="text-xl sm:text-2xl font-bold text-green-400 dark:text-green-400">
               <AnimatedValue 
-                value={Math.round((healthData.total_up / healthData.total_checks) * 100)} 
+                value={Math.round((totalUp / totalChecks) * 100)} 
                 suffix="%" 
               />
             </div>
@@ -85,22 +100,22 @@ const HealthOverview = ({ healthData }) => {
       <div className="mt-6">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-3">
           <span>System Health</span>
-          <span>{healthData.total_up}/{healthData.total_checks}</span>
+          <span>{totalUp}/{totalChecks}</span>
         </div>
         
         {/* Tactical Sparkline Pills */}
         <div className="flex gap-1">
-          {[...Array(healthData.total_checks)].map((_, i) => (
+          {[...Array(totalChecks)].map((_, i) => (
             <div
               key={i}
               className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                i < healthData.total_up 
+                i < totalUp 
                   ? 'bg-gradient-to-t from-green-500 to-green-400 dark:from-green-500 dark:to-green-400 shadow-sm shadow-green-400/50' 
                   : 'bg-gray-700/50 dark:bg-gray-600/50'
               }`}
               style={{
                 animationDelay: `${i * 50}ms`,
-                animation: i < healthData.total_up ? 'pulse-glow 2s ease-in-out infinite' : 'none'
+                animation: i < totalUp ? 'pulse-glow 2s ease-in-out infinite' : 'none'
               }}
             />
           ))}
@@ -112,21 +127,21 @@ const HealthOverview = ({ healthData }) => {
             <div className="w-2 h-2 rounded-full bg-blue-400/80 dark:bg-blue-400/80"></div>
             <span className="text-xs text-gray-600 dark:text-gray-400">Loopbacks</span>
             <span className="text-xs text-blue-400 dark:text-blue-400 font-mono">
-              {healthData.layers?.loopbacks?.up || 0}/{healthData.layers?.loopbacks?.total || 0}
+              {safeHealthData.layers?.loopbacks?.up || 0}/{safeHealthData.layers?.loopbacks?.total || 0}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-purple-400/80 dark:bg-purple-400/80"></div>
             <span className="text-xs text-gray-600 dark:text-gray-400">Services</span>
             <span className="text-xs text-purple-400 dark:text-purple-400 font-mono">
-              {healthData.layers?.services?.up || 0}/{healthData.layers?.services?.total || 0}
+              {safeHealthData.layers?.services?.up || 0}/{safeHealthData.layers?.services?.total || 0}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-cyan-400/80 dark:bg-cyan-400/80"></div>
             <span className="text-xs text-gray-600 dark:text-gray-400">Infrastructure</span>
             <span className="text-xs text-cyan-400 dark:text-cyan-400 font-mono">
-              {healthData.layers?.infrastructure?.up || 0}/{healthData.layers?.infrastructure?.total || 0}
+              {safeHealthData.layers?.infrastructure?.up || 0}/{safeHealthData.layers?.infrastructure?.total || 0}
             </span>
           </div>
         </div>

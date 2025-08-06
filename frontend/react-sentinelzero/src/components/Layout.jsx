@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import SpaceDots from './SpaceDots'
+import ConnectionStatus from './ConnectionStatus'
 import { useLocation, Link } from 'react-router-dom'
 import { navigation } from './navigation'
 
@@ -22,28 +23,33 @@ const Layout = ({ children }) => {
         {/* Main content area - maximum width */}
         <div className="flex flex-col min-h-screen lg:ml-40 w-full">
           {/* Custom header - minimal padding */}
-          <header className="flex items-center gap-4 px-2 py-2 w-full">
-            <button
-              type="button"
-              className="lg:hidden text-gray-700 dark:text-gray-200 focus:outline-none"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Open sidebar"
-              data-testid="open-sidebar-btn"
-            >
-              <Menu className="h-8 w-8" />
-            </button>
-            <div className="flex items-center gap-3">
-              {/* Logo placeholder */}
-              <div className="w-12 h-12 bg-transparent flex items-center justify-center" data-testid="logo-container">
-                {/* Replace this div with your logo image */}
-                <img src="/favicon.png" alt="SentinelZero" className="w-full h-full object-contain" />
-                {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">S</span>
-                </div> */}
+          <header className="flex items-center justify-between gap-4 px-2 py-2 w-full">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                className="lg:hidden text-gray-700 dark:text-gray-200 focus:outline-none"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open sidebar"
+                data-testid="open-sidebar-btn"
+              >
+                <Menu className="h-8 w-8" />
+              </button>
+              <div className="flex items-center gap-3">
+                {/* Logo placeholder */}
+                <div className="w-12 h-12 bg-transparent flex items-center justify-center" data-testid="logo-container">
+                  {/* Replace this div with your logo image */}
+                  <img src="/favicon.png" alt="SentinelZero" className="w-full h-full object-contain" />
+                  {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">S</span>
+                  </div> */}
+                </div>
+                <h1 className="text-4xl md:text-5xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight" data-testid="main-header-title">
+                  SentinelZero
+                </h1>
               </div>
-              <h1 className="text-4xl md:text-5xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight" data-testid="main-header-title">
-                SentinelZero
-              </h1>
+            </div>
+            <div className="flex items-center">
+              <ConnectionStatus />
             </div>
           </header>
           <main className="flex-1 w-full px-2 pb-2">
