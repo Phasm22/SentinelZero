@@ -77,7 +77,7 @@ const ScanUpload = ({ onUploadSuccess }) => {
       <div className="mb-6 p-4 bg-gray-900 rounded-lg">
         <h3 className="text-sm font-semibold text-gray-300 mb-2">Run this in your terminal:</h3>
         <pre className="text-xs text-green-400 overflow-x-auto">
-          sudo nmap -v -T4 -sS -p- --open -O -sV -Pn \<br />
+          nmap -v -T4 -sS -p- --open -O -sV -Pn \<br />
           &nbsp;&nbsp;--script=ssl-cert,ssl-enum-ciphers,http-title,ssh-hostkey \<br />
           &nbsp;&nbsp;192.168.68.0/22 -oX scan_results.xml
         </pre>

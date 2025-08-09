@@ -23,7 +23,7 @@ const Layout = ({ children }) => {
         {/* Main content area - maximum width */}
         <div className="flex flex-col min-h-screen lg:ml-40 w-full">
           {/* Custom header - minimal padding */}
-          <header className="flex items-center justify-between gap-4 px-2 py-2 w-full">
+          <header className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-2 py-2 w-full">
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -48,7 +48,7 @@ const Layout = ({ children }) => {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <ConnectionStatus />
             </div>
           </header>

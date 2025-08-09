@@ -71,14 +71,23 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
           <span className="text-sm font-medium">Filter:</span>
         </div>
         <button
-          onClick={() => setFilter('all')}
+          onClick={() => setFilter(filter === 'all' ? 'loopbacks' : 'all')}
           className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 self-start ${
             filter === 'all' 
               ? 'bg-white/20 dark:bg-white/20 text-white dark:text-white border border-white/30 dark:border-white/30' 
-              : 'text-gray-400 dark:text-gray-400 hover:text-white dark:hover:text-white hover:bg-white/10 dark:hover:bg-white/10'
+              : 'bg-blue-500/20 dark:bg-blue-500/20 text-blue-300 dark:text-blue-300 border border-blue-400/40 dark:border-blue-400/40'
           }`}
+          title="Click to toggle all layers or choose a specific layer below"
         >
-          All Layers
+          {(() => {
+            const labels = {
+              all: 'All Layers',
+              loopbacks: 'Loopbacks',
+              services: 'Services',
+              infrastructure: 'Infrastructure'
+            }
+            return `Viewing: ${labels[filter]}`
+          })()}
         </button>
       </div>
 

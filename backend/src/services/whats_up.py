@@ -15,7 +15,7 @@ from datetime import datetime
 LOOPBACKS = [
     {"name": "LAN Gateway", "ip": "172.16.0.1", "description": "Network gateway health", "interface": "enp6s18"},
     {"name": "LAN Sentinel", "ip": "172.16.0.254", "description": "LAN health probe (172.16.0.0/22)", "interface": "dummy0"},
-    {"name": "VPN Sentinel", "ip": "192.168.68.254", "description": "VPN probe via dummy interface", "interface": "dummy0"},
+    {"name": "Home Sentinel", "ip": "192.168.68.254", "description": "Home network probe via dummy interface", "interface": "dummy0"},
     {"name": "Localhost", "ip": "127.0.0.1", "description": "SentinelZero health probe", "interface": "lo"},
 ]
 

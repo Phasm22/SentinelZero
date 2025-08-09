@@ -1,12 +1,12 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { SocketProvider } from './contexts/SocketContext'
 import { ToastProvider } from './contexts/ToastContext'
-import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
-import Dashboard from './pages/Dashboard'
-import ScanHistory from './pages/ScanHistory'
-import LabStatus from './pages/LabStatus'
-import Settings from './pages/Settings'
+// Lazy route chunks
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ScanHistory = lazy(() => import('./pages/ScanHistory'))
+const LabStatus = lazy(() => import('./pages/LabStatus'))
+const Settings = lazy(() => import('./pages/Settings'))
 import Layout from './components/Layout'
 import BackgroundCrossfade from './components/BackgroundCrossfade'
 import './App.css'
@@ -17,19 +17,18 @@ function App() {
     <Router>
       <SocketProvider>
         <ToastProvider>
-          <UserPreferencesProvider>
-            <BackgroundCrossfade />
-            <Layout>
+          <BackgroundCrossfade />
+          <Layout>
+            <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading...</div>}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/scan-history" element={<ScanHistory />} />
                 <Route path="/lab-status" element={<LabStatus />} />
                 <Route path="/settings" element={<Settings />} />
-                {/* Fallback route for unmatched paths */}
                 <Route path="*" element={<div className="p-8 text-center text-red-600">404: Page Not Found</div>} />
               </Routes>
-            </Layout>
-          </UserPreferencesProvider>
+            </Suspense>
+          </Layout>
         </ToastProvider>
       </SocketProvider>
     </Router>

@@ -133,4 +133,36 @@ export const apiService = {
     const response = await axios.get(`${API_BASE_URL}/ping`)
     return response.data
   },
+
+  // Insights operations
+  getInsights: async (params = {}) => {
+    const queryParams = new URLSearchParams()
+    
+    if (params.limit) queryParams.append('limit', params.limit)
+    if (params.type) queryParams.append('type', params.type)
+    if (params.priority_min) queryParams.append('priority_min', params.priority_min)
+    if (params.unread_only) queryParams.append('unread_only', params.unread_only)
+    
+    const response = await axios.get(`${API_BASE_URL}/insights?${queryParams}`)
+    return response.data
+  },
+
+  getScanInsights: async (scanId) => {
+    const response = await axios.get(`${API_BASE_URL}/insights/scan/${scanId}`)
+    return response.data
+  },
+
+  markInsightsRead: async (insightIds) => {
+    const response = await axios.post(`${API_BASE_URL}/insights/mark-read`, {
+      insight_ids: insightIds
+    })
+    return response.data
+  },
+
+  clearOldInsights: async (days = 30) => {
+    const response = await axios.post(`${API_BASE_URL}/insights/clear-old`, {
+      days
+    })
+    return response.data
+  },
 } 

@@ -147,15 +147,21 @@ def create_api_blueprint(db):
     
     @bp.route('/active-scans', methods=['GET'])
     def get_active_scans():
-        """Get currently active scans"""
+        """Get currently active scans.
+        Returns shape { scans: [...], count: n } for frontend compatibility.
+        Treat the following statuses as active: running, parsing, saving, postprocessing.
+        Older transitional statuses (starting, in_progress) are also included for backward compatibility.
+        """
         try:
-            active_scans = Scan.query.filter(
-                Scan.status.in_(['running', 'starting', 'in_progress'])
-            ).order_by(Scan.id.desc()).all()
-            
+            active_statuses = ['running', 'parsing', 'saving', 'postprocessing', 'starting', 'in_progress']
+            active_scans = (Scan.query
+                                .filter(Scan.status.in_(active_statuses))
+                                .order_by(Scan.id.desc())
+                                .all())
+
             scans_data = []
             for scan in active_scans:
-                scan_data = {
+                scans_data.append({
                     'id': scan.id,
                     'scan_type': scan.scan_type,
                     'status': scan.status,
@@ -163,14 +169,13 @@ def create_api_blueprint(db):
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'total_hosts': scan.total_hosts,
                     'hosts_up': scan.hosts_up
-                }
-                scans_data.append(scan_data)
-            
-            return jsonify(scans_data)
-            
+                })
+
+            return jsonify({'scans': scans_data, 'count': len(scans_data)})
+
         except Exception as e:
             print(f'[DEBUG] Error getting active scans: {e}')
-            return jsonify([])  # Return empty array on error
+            return jsonify({'scans': [], 'count': 0})
     
     @bp.route('/alerts', methods=['GET'])
     def get_alerts():

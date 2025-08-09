@@ -5,7 +5,7 @@ const UserPreferencesContext = createContext()
 export const useUserPreferences = () => useContext(UserPreferencesContext)
 
 export const UserPreferencesProvider = ({ children }) => {
-  const [preferences, setPreferences] = useState({ use24Hour: false })
+  const [preferences, setPreferences] = useState({ use24Hour: false, theme: 'system' })
 
   useEffect(() => {
     const stored = localStorage.getItem('userPreferences')
@@ -16,6 +16,11 @@ export const UserPreferencesProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('userPreferences', JSON.stringify(preferences))
+    // Theme handling
+    const root = document.documentElement
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const wantDark = preferences.theme === 'dark' || (preferences.theme === 'system' && systemDark)
+    root.classList.toggle('dark', wantDark)
   }, [preferences])
 
   const updatePreference = (key, value) => {

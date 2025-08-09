@@ -4,14 +4,11 @@ This document explains the new modular structure for SentinelZero, designed to i
 
 ## 🏗️ Architecture Overview
 
-The monolithic `app.py` (~2000 lines) has been refactored into a clean modular structure:
+The legacy monolithic `app.py` (~2000 lines) was refactored into this modular structure. Monolithic rollback tooling has now been removed; the modular layout is the single supported architecture:
 
 ```
 backend/
-├── app.py                    # New modular entry point
-├── app_modular.py           # Modular application factory
-├── app_monolithic_backup.py # Original monolithic backup
-├── migrate.py               # Migration helper script
+├── app.py                    # Modular entry point (factory pattern)
 └── src/
     ├── models/
     │   ├── __init__.py
@@ -36,44 +33,9 @@ backend/
         └── scheduler.py     # APScheduler configuration
 ```
 
-## 🔄 Migration Process
+## 🔄 Migration Status
 
-### Quick Migration
-
-```bash
-# Switch to modular structure
-cd backend
-python migrate.py modular
-
-# Test the new structure
-python app.py
-
-# If issues arise, revert
-python migrate.py monolithic
-```
-
-### Manual Migration Steps
-
-1. **Backup Original**
-   ```bash
-   cp app.py app_monolithic_backup.py
-   ```
-
-2. **Switch to Modular**
-   ```bash
-   cp app_modular.py app.py
-   ```
-
-3. **Test Application**
-   ```bash
-   python app.py
-   ```
-
-4. **Verify Functionality**
-   - Test scan triggers
-   - Verify settings save/load
-   - Check WebSocket connections
-   - Validate scheduled scans
+Historic migration utilities (migrate.py, app_modular.py, app_monolithic_backup.py) have been removed. All development and deployment must now target `app.py` and the `src/` package. Any older documentation referencing `python migrate.py ...` can be disregarded.
 
 ## 📋 Key Components
 
@@ -172,36 +134,24 @@ def run_nmap_scan(...):
     # Focused responsibility
 ```
 
-## 📝 Migration Checklist
+## 📝 Verification Checklist (Post-Migration Frozen)
 
-- [ ] Run migration script: `python migrate.py modular`
-- [ ] Test application startup: `python app.py`
-- [ ] Verify scan functionality
-- [ ] Test settings save/load
-- [ ] Check WebSocket connections
-- [ ] Validate scheduled scans
-- [ ] Test alert system
-- [ ] Verify What's Up monitoring
-- [ ] Update deployment scripts if needed
-- [ ] Update documentation
-
-## 🔄 Rollback Plan
-
-If issues arise, rollback is simple:
-
-```bash
-python migrate.py monolithic
-```
-
-This restores the original monolithic structure while preserving the modular files for future use.
+- [ ] Application starts: `uv run python app.py`
+- [ ] Scan functionality works
+- [ ] Settings save/load
+- [ ] WebSocket events (scan_progress, scan_complete)
+- [ ] Scheduled scans operate
+- [ ] Alert system emits notifications
+- [ ] What's Up monitoring active
+- [ ] Documentation current
 
 ## 🎯 Next Steps
 
-1. **Complete Migration**: Use the modular structure as the new default
-2. **Enhanced Testing**: Add unit tests for individual services
-3. **Documentation**: Update API documentation for new structure
-4. **Deployment**: Update Docker and systemd configurations
-5. **Monitoring**: Add health checks for individual services
+1. **Enhanced Testing**: Add more unit & integration tests for services
+2. **Documentation**: Expand API docs / OpenAPI spec
+3. **Deployment**: Confirm Docker & systemd remain aligned with single entrypoint
+4. **Monitoring**: Add health checks for individual services
+5. **Performance**: Optimize large scan parsing & WebSocket load
 
 ## 💡 Tips
 

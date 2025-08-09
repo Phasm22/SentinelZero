@@ -103,7 +103,7 @@ const HostGrid = ({ detailedData, filter }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-white dark:text-white">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-300 dark:text-gray-300">
           Host Details
           <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-400">
             ({hosts.length} {hosts.length === 1 ? 'host' : 'hosts'})
@@ -111,7 +111,7 @@ const HostGrid = ({ detailedData, filter }) => {
         </h2>
         
         {filter !== 'all' && (
-          <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-400 bg-white/10 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-white/20 dark:border-white/20 self-start">
+          <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-400 bg-white/10 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-white/20 dark:border-white/20 self-start capitalize">
             Filtered: {filter}
           </div>
         )}

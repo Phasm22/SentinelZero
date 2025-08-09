@@ -3,5 +3,6 @@
     "max_hosts": 1000,
     "scan_timeout": 300,
     "concurrent_scans": 1,
-    "target_network": "172.16.0.0/22"
+    "target_network": "172.16.0.0/22",
+    "pre_discovery_enabled": false
 }

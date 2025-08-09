@@ -74,7 +74,8 @@ const Settings = () => {
       defaultTargetNetwork: '172.16.0.0/22',
       maxHosts: 1000,
       scanTimeout: 300,
-      concurrentScans: 1
+  concurrentScans: 1,
+  preDiscoveryEnabled: false
     },
     security: {
       vulnScanningEnabled: true,
@@ -106,7 +107,6 @@ const Settings = () => {
         },
         notifications: {
           pushoverEnabled: false,
-          pushoverConfigured: false,
           scanComplete: true,
           vulnerabilityFound: true,
           newHostFound: false,
@@ -117,6 +117,7 @@ const Settings = () => {
           maxHosts: 1000,
           scanTimeout: 300,
           concurrentScans: 1,
+          preDiscoveryEnabled: false,
           ...(data?.networkSettings || {})
         },
         security: {
@@ -129,6 +130,8 @@ const Settings = () => {
       }
       
       setSettings(mergedSettings)
+      // If backend didn't provide pushoverConfigured but we can infer from enabled + absence of error later, set true
+  // Do not auto-set pushoverConfigured; rely on backend derived value
       const settingsStr = JSON.stringify(mergedSettings)
       console.log('Setting originalSettings to:', settingsStr)
       setOriginalSettings(settingsStr)
@@ -161,7 +164,8 @@ const Settings = () => {
           defaultTargetNetwork: '172.16.0.0/22',
           maxHosts: 1000,
           scanTimeout: 300,
-          concurrentScans: 1
+          concurrentScans: 1,
+          preDiscoveryEnabled: false
         },
         security: {
           vulnScanningEnabled: true,
@@ -182,6 +186,8 @@ const Settings = () => {
   useEffect(() => {
     loadSettings()
   }, [])
+
+  // (Removed auto-test of Pushover to avoid unwanted notifications on each visit)
 
   // Check for changes whenever settings change
   useEffect(() => {
@@ -269,44 +275,50 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Action Buttons */}
-      <div className="flex items-center justify-end space-x-3">
-        {/* Debug info */}
-        <div className="text-xs text-gray-400">
-          hasUnsavedChanges: {hasUnsavedChanges.toString()}
-        </div>
-        {/* Test button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleSettingChange('network', 'maxHosts', Math.random() * 1000)}
-        >
-          Test Change
-        </Button>
-        {hasUnsavedChanges && (
-          <div className="flex items-center space-x-2 text-yellow-400">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm">Unsaved changes</span>
+      {/* Action Buttons (responsive) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 w-full">
+          {/* Debug info - hide on very small screens */}
+          <div className="text-[10px] sm:text-xs text-gray-400 hidden xs:block">
+            unsaved: {hasUnsavedChanges ? 'yes' : 'no'}
           </div>
-        )}
-        <Button
-          variant="ghost"
-          size="md"
-          onClick={() => setShowDiscardConfirm(true)}
-          disabled={!hasUnsavedChanges}
-        >
-          Discard
-        </Button>
-        <Button
-          variant="primary"
-          size="md"
-          loading={isSaving}
-          onClick={() => setShowSaveConfirm(true)}
-          disabled={false} // Temporarily always enabled for testing
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? 'Saving...' : 'Save Settings'}
-        </Button>
+          {/* Unsaved badge (compact on mobile) */}
+          {hasUnsavedChanges && (
+            <div className="flex items-center space-x-1 sm:space-x-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-1 rounded-md">
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-[11px] sm:text-sm font-medium">Unsaved</span>
+            </div>
+          )}
+          {/* Test button (wraps) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSettingChange('network', 'maxHosts', Math.random() * 1000)}
+            className="text-[11px] sm:text-xs px-2 py-1"
+          >
+            Test
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDiscardConfirm(true)}
+            disabled={!hasUnsavedChanges}
+            className="text-[11px] sm:text-xs px-2 py-1"
+          >
+            Discard
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            loading={isSaving}
+            onClick={() => setShowSaveConfirm(true)}
+            disabled={false}
+            className="flex items-center text-[11px] sm:text-xs px-2 py-1"
+          >
+            <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            {isSaving ? 'Saving' : 'Save'}
+          </Button>
+        </div>
       </div>
 
       {/* User Preferences */}
@@ -315,15 +327,34 @@ const Settings = () => {
           <SettingsIcon className="h-5 w-5 text-blue-500" />
           <h2 className="text-xl font-title font-bold text-gray-100">User Preferences</h2>
         </div>
-        <div className="flex items-center justify-between w-full">
-          <div className="flex flex-col items-start text-left w-full">
-            <label className="text-sm font-medium text-gray-300 text-left">Use 24-hour time format</label>
-            <p className="text-sm text-gray-400 text-left">Display timestamps in 24-hour format</p>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex flex-col items-start text-left w-full pr-4">
+              <label className="text-sm font-medium text-gray-300 text-left">Use 24-hour time format</label>
+              <p className="text-sm text-gray-400 text-left">Display timestamps in 24-hour format</p>
+            </div>
+            <Toggle
+              checked={preferences.use24Hour}
+              onChange={(checked) => updatePreference('use24Hour', checked)}
+            />
           </div>
-          <Toggle
-            checked={preferences.use24Hour}
-            onChange={(checked) => updatePreference('use24Hour', checked)}
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col text-left w-full sm:pr-4">
+              <label className="text-sm font-medium text-gray-300">Theme</label>
+              <p className="text-sm text-gray-400">Choose light, dark, or follow system preference</p>
+            </div>
+            <div className="w-full sm:w-56">
+              <select
+                value={preferences.theme || 'system'}
+                onChange={(e) => updatePreference('theme', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100 text-sm"
+              >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -414,15 +445,10 @@ const Settings = () => {
               <h2 className="text-xl font-title font-bold text-gray-100">Pushover Notifications</h2>
             </div>
             <div className="flex items-center space-x-2">
-              {settings.notifications?.pushoverConfigured ? (
+              {settings.notifications?.pushoverConfigured && (
                 <div className="flex items-center space-x-1 text-green-400">
                   <CheckCircle className="h-4 w-4" />
                   <span className="text-sm">Configured</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 text-yellow-400">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm">Not Configured</span>
                 </div>
               )}
             </div>

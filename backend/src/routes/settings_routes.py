@@ -59,6 +59,25 @@ def create_settings_blueprint(db):
                     print(f'[DEBUG] Settings file {filename} not found, using defaults')
             except Exception as e:
                 print(f'[DEBUG] Error loading {filename}: {e}')
+
+        # Derive Pushover configuration status from environment variables (runtime truth over file)
+        try:
+            pushover_token = os.environ.get('PUSHOVER_API_TOKEN')
+            pushover_user = os.environ.get('PUSHOVER_USER_KEY')
+            if pushover_token and pushover_user:
+                # Ensure notificationSettings dict exists
+                notif = settings.get('notificationSettings', {})
+                notif['pushoverConfigured'] = True
+                # If not explicitly enabled in file, do not auto-enable; only mark configured state
+                settings['notificationSettings'] = notif
+            else:
+                # If missing credentials and key absent, ensure false so UI reflects reality
+                notif = settings.get('notificationSettings', {})
+                if 'pushoverConfigured' not in notif:
+                    notif['pushoverConfigured'] = False
+                settings['notificationSettings'] = notif
+        except Exception as e:
+            print(f'[DEBUG] Error deriving pushover configuration: {e}')
         
         return jsonify(settings)
     

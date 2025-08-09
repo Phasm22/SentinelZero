@@ -1,6 +1,7 @@
 {
-    "default_target_network": "192.168.68.0/22",
-    "max_hosts": 341.00171113891355,
+    "default_target_network": "172.16.0.0/22",
+    "max_hosts": 945.1356921812454,
     "scan_timeout": 300,
-    "concurrent_scans": 1
+    "concurrent_scans": 1,
+    "pre_discovery_enabled": false
 }

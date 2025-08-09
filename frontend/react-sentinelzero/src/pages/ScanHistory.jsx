@@ -87,12 +87,6 @@ const ScanHistory = () => {
 
   return (
     <div className="space-y-10 w-full">
-      <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-title font-extrabold text-gray-100 tracking-tight drop-shadow-lg">
-          Scan History
-        </h1>
-      </div>
-
       <ScanHistoryTable
         scans={scans}
         preferences={preferences}

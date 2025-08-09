@@ -1,10 +1,10 @@
-import React, { useState, useEffect, memo } from 'react'
-import { useSocket } from '../contexts/SocketContext'
-import { useToast } from '../contexts/ToastContext'
-import { apiService } from '../utils/api'
-import ScanDetailsModal from '../components/ScanDetailsModal'
-import AnimatedValue from '../components/AnimatedValue'
-import StatCard from '../components/StatCard'
+import React, { useState, useEffect, memo, lazy, Suspense } from 'react'
+import { useSocket } from '@/contexts/SocketContext'
+import { useToast } from '@/contexts/ToastContext'
+import { apiService } from '@/utils/api'
+const ScanDetailsModal = lazy(() => import('@/components/ScanDetailsModal'))
+import AnimatedValue from '@/components/AnimatedValue'
+import StatCard from '@/components/StatCard'
 import { 
   Server, 
   Shield, 
@@ -21,13 +21,13 @@ import {
   Info,
   Loader2
 } from 'lucide-react'
-import { useUserPreferences } from '../contexts/UserPreferencesContext'
-import { formatTimestamp } from '../utils/date'
-import ScanningSection from '../components/ScanningSection'
-import RecentScansTable from '../components/RecentScansTable'
-import InsightsCard from '../components/InsightsCard'
-import Modal from '../components/Modal'
-import { buildNmapCommand } from '../components/ScanControls'
+import { useUserPreferences } from '@/contexts/UserPreferencesContext'
+import { formatTimestamp } from '@/utils/date'
+import ScanningSection from '@/components/ScanningSection'
+import RecentScansTable from '@/components/RecentScansTable'
+import InsightsCard from '@/components/InsightsCard'
+import Modal from '@/components/Modal'
+import { buildNmapCommand } from '@/components/ScanControls'
 
 const Dashboard = () => {
   const { preferences } = useUserPreferences()
@@ -439,8 +439,7 @@ const Dashboard = () => {
                     onClick={async () => {
                       setStopAllLoading(true)
                       try {
-                        const resp = await fetch('/api/kill-all-scans', { method: 'POST' })
-                        const data = await resp.json()
+                        await fetch('/api/kill-all-scans', { method: 'POST' })
                         showToast('All scans stopped', 'success')
                       } catch {
                         showToast('Failed to stop scans', 'danger')
@@ -473,13 +472,6 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-            )}
-            {activeTab === 'recent' && (
-              <RecentScansTable
-                recentScans={recentScans}
-                preferences={preferences}
-                handleViewDetails={handleViewDetails}
-              />
             )}
           </div>
         </div>
@@ -541,12 +533,16 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Scan Details Modal */}
-      <ScanDetailsModal
-        scan={selectedScan}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
+      {/* Scan Details Modal (lazy) */}
+      {isModalOpen && (
+        <Suspense fallback={<div className="p-4 text-sm text-gray-400">Loading details...</div>}>
+          <ScanDetailsModal
+            scan={selectedScan}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+          />
+        </Suspense>
+      )}
       {/* Scan Confirmation Modal at root */}
       <Modal
         isOpen={showScanConfirm}
@@ -561,6 +557,9 @@ const Dashboard = () => {
             <div className="mb-4">
               <div className="text-gray-200 mb-2">The following nmap command will be used:</div>
               <div className="text-xs text-gray-400 mb-1">Target Network: {networkSettings.defaultTargetNetwork}</div>
+              {networkSettings?.preDiscoveryEnabled && pendingScanType && pendingScanType !== 'Discovery Scan' && (
+                <div className="text-xs text-amber-300 mb-2">Pre-Discovery enabled: a fast host discovery runs first. Insights only cover hosts found up.</div>
+              )}
               <pre className="bg-gray-900 text-green-400 rounded p-3 text-sm overflow-x-auto whitespace-pre-wrap">
                 {pendingScanType ? buildNmapCommand(pendingScanType, security, networkSettings.defaultTargetNetwork) : 'Loading scan configuration...'}
               </pre>

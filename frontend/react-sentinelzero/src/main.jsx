@@ -7,7 +7,7 @@ import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <UserPreferencesProvider>
-    <App />
+      <App />
     </UserPreferencesProvider>
   </React.StrictMode>,
 ) 

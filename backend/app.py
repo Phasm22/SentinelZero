@@ -27,7 +27,9 @@ from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
 from src.routes.upload_routes import create_upload_blueprint
 from src.routes.whatsup_routes import bp as whatsup_bp
+from src.routes.insights_routes import insights_bp
 from src.services.whats_up import whats_up_monitor
+from src.services.cleanup import scheduled_cleanup_job
 
 # Import models to register them with SQLAlchemy
 from src.models import Scan, Alert
@@ -63,6 +65,11 @@ def create_app():
     db = init_db(app)
     socketio = SocketIO(app, cors_allowed_origins="*")
     scheduler = init_scheduler()
+    try:
+        # Run cleanup daily at 03:15 UTC (no lambda for serializable ref)
+        scheduler.add_job(scheduled_cleanup_job, 'cron', hour=3, minute=15, id='xml_cleanup', replace_existing=True)
+    except Exception as e:
+        print(f'[WARN] Failed to schedule cleanup job: {e}')
     
     # Socket.IO event handlers
     @socketio.on('connect')
@@ -97,6 +104,7 @@ def create_app():
     app.register_blueprint(create_api_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
     app.register_blueprint(whatsup_bp)
+    app.register_blueprint(insights_bp, url_prefix='/')  # insights_bp already has /api in routes
     
     # Legacy routes for compatibility with Vite proxy
     @app.route('/clear-all-data', methods=['POST'])

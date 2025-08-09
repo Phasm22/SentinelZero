@@ -15,5 +15,5 @@ sudo ip addr add 192.168.68.254/32 dev dummy0 2>/dev/null || echo "192.168.68.25
 echo "  LAN Sentinel (172.16.0.254):"
 ping -c 1 -W 1 172.16.0.254 > /dev/null && echo "    ✅ UP" || echo "    ❌ DOWN"
 
-echo "  VPN Sentinel (192.168.68.254):"
+echo "  Home Sentinel (192.168.68.254):"
 ping -c 1 -W 1 192.168.68.254 > /dev/null && echo "    ✅ UP" || echo "    ❌ DOWN"

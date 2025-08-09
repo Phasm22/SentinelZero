@@ -19,6 +19,7 @@ class Scan(db.Model):
     hosts_up = db.Column(db.Integer, default=0)
     total_ports = db.Column(db.Integer, default=0)
     open_ports = db.Column(db.Integer, default=0)
+    insights_json = db.Column(db.Text)  # Store insights as JSON
     
     def as_dict(self):
         """Convert scan instance to dictionary"""
@@ -36,5 +37,6 @@ class Scan(db.Model):
             'total_hosts': self.total_hosts,
             'hosts_up': self.hosts_up,
             'total_ports': self.total_ports,
-            'open_ports': self.open_ports
+            'open_ports': self.open_ports,
+            'insights_json': self.insights_json
         }

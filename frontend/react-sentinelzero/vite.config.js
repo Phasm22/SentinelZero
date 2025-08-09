@@ -1,54 +1,53 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
+
+const backendTarget = process.env.VITE_BACKEND_URL || 'http://127.0.0.1:5000'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   server: {
     port: 3173,
-    host: '0.0.0.0', // Enable network access
+    host: '0.0.0.0',
     allowedHosts: ['sentinelzero.prox', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5000',
+        target: backendTarget,
         changeOrigin: true,
         ws: true,
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying request to: ', proxyReq.path);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('Received response:', proxyRes.statusCode);
-          });
+        configure: (proxy) => {
+          proxy.on('error', (err) => console.log('proxy error', err))
+          proxy.on('proxyReq', (proxyReq) => console.log('Proxying request to:', proxyReq.path))
+          proxy.on('proxyRes', (proxyRes) => console.log('Received response:', proxyRes.statusCode))
         }
-      },
-      '/scan': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/clear-scan': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/clear-all-data': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/delete-all-scans': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/ping': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-    },
+      }
+    }
   },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || 'dev')
+  },
+  build: {
+    sourcemap: process.env.VITE_SOURCEMAP === 'true',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'socket.io-client']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 700
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'socket.io-client']
+  }
 })
