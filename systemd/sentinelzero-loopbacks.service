@@ -1,14 +1,13 @@
 [Unit]
-Description=SentinelZero Loopback Sentinels Setup
+Description=SentinelZero Loopback Interface Prep
 After=network.target
 Before=sentinelzero-backend.service
-PartOf=sentinelzero-backend.service
 
 [Service]
 Type=oneshot
 User=root
 Group=root
-ExecStart=/home/vscode/sentinelZero/setup-loopbacks.sh
+ExecStart=/home/sentinel/SentinelZero/setup-loopbacks.sh
 RemainAfterExit=yes
 
 [Install]

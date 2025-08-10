@@ -1,10 +1,41 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
+import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import SpaceDots from './SpaceDots'
 import ConnectionStatus from './ConnectionStatus'
 import { useLocation, Link } from 'react-router-dom'
 import { navigation } from './navigation'
+import { Sun, Moon, Monitor } from 'lucide-react'
+
+const ThemeControls = () => {
+  const { preferences, updatePreference } = useUserPreferences()
+  const order = ['light', 'dark', 'system']
+  const next = () => {
+    const idx = order.indexOf(preferences.theme || 'system')
+    const nextTheme = order[(idx + 1) % order.length]
+    updatePreference('theme', nextTheme)
+  }
+  const iconMap = {
+    light: <Sun className="h-4 w-4" />,
+    dark: <Moon className="h-4 w-4" />,
+    system: <Monitor className="h-4 w-4" />,
+  }
+  return (
+    <div className="flex items-center flex-shrink-0 gap-2">
+      <button
+        type="button"
+        onClick={next}
+        className="flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        title={`Theme: ${preferences.theme} (click to cycle)`}
+      >
+        {iconMap[preferences.theme]}
+        <span className="capitalize">{preferences.theme}</span>
+      </button>
+      <ConnectionStatus />
+    </div>
+  )
+}
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -48,9 +79,7 @@ const Layout = ({ children }) => {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center flex-shrink-0">
-              <ConnectionStatus />
-            </div>
+            <ThemeControls />
           </header>
           <main className="flex-1 w-full px-2 pb-2">
             {children}

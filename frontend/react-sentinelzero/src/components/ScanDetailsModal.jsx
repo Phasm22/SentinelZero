@@ -20,11 +20,14 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [xmlData, setXmlData] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [scanDetails, setScanDetails] = useState(scan)
+  const [diffData, setDiffData] = useState(null)
+  const [diffLoading, setDiffLoading] = useState(false)
   const { showToast } = useToast()
   const { preferences } = useUserPreferences()
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'diff', name: 'Diff', icon: <Eye className="w-4 h-4" /> },
     { id: 'hosts', name: 'Hosts', icon: <Monitor className="w-4 h-4" /> },
     { id: 'vulns', name: 'Vulnerabilities', icon: <AlertTriangle className="w-4 h-4" /> },
     { id: 'raw', name: 'Raw XML', icon: <FileText className="w-4 h-4" /> }
@@ -35,6 +38,12 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
       loadScanData()
     }
   }, [isOpen, scan])
+
+  useEffect(() => {
+    if (activeTab === 'diff' && diffData == null && scan) {
+      loadDiff()
+    }
+  }, [activeTab, diffData, scan])
 
   const loadScanData = async () => {
     if (!scan) return
@@ -58,6 +67,20 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
       showToast('Failed to load scan details', 'danger')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadDiff = async () => {
+    if (!scan) return
+    setDiffLoading(true)
+    try {
+      const data = await apiService.getScanDiff(scan.id)
+      setDiffData(data)
+    } catch (e) {
+      console.error('Error loading diff:', e)
+      setDiffData({ error: 'Failed to load diff' })
+    } finally {
+      setDiffLoading(false)
     }
   }
 
@@ -386,6 +409,87 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                   </div>
                 )}
 
+                {/* Diff Tab */}
+                {activeTab === 'diff' && (
+                  <div className="space-y-4">
+                    {diffLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                      </div>
+                    ) : diffData && diffData.error ? (
+                      <div className="text-center py-8 text-red-400 text-sm">{diffData.error}</div>
+                    ) : diffData == null ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">Diff not loaded.</div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <StatBox label="New Hosts" value={diffData.summary?.new_hosts} />
+                          <StatBox label="Removed Hosts" value={diffData.summary?.removed_hosts} />
+                          <StatBox label="New Ports" value={diffData.summary?.new_ports} />
+                          <StatBox label="Closed Ports" value={diffData.summary?.closed_ports} />
+                          <StatBox label="New Vulns" value={diffData.summary?.new_vulns} />
+                          <StatBox label="Resolved Vulns" value={diffData.summary?.resolved_vulns} />
+                        </div>
+                        {diffData.baseline && (
+                          <div className="p-3 bg-blue-900/20 border border-blue-700/40 rounded text-xs text-blue-300">
+                            Baseline scan for type – no previous scan to diff against.
+                          </div>
+                        )}
+                        <Section title="New Hosts" items={diffData.hosts?.new} empty="No new hosts" />
+                        <Section title="Removed Hosts" items={diffData.hosts?.removed} empty="No removed hosts" />
+                        {diffData.hosts?.changed?.length > 0 && (
+                          <div>
+                            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-2">Changed Hosts</h4>
+                            <div className="space-y-3">
+                              {diffData.hosts.changed.map(h => (
+                                <div key={h.ip} className="p-3 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-xs">
+                                  <div className="font-mono text-sm mb-1 text-primary-400">{h.ip}</div>
+                                  {h.new_ports.length > 0 && (
+                                    <div className="mb-1"><span className="font-semibold text-green-400">+ Ports:</span> {h.new_ports.map(p => `${p.port}/${p.protocol || ''}${p.service ? ' ('+p.service+')' : ''}`).join(', ')}</div>
+                                  )}
+                                  {h.closed_ports.length > 0 && (
+                                    <div><span className="font-semibold text-red-400">- Ports:</span> {h.closed_ports.join(', ')}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-2">New Vulnerabilities</h4>
+                            {diffData.vulns?.new?.length === 0 ? (
+                              <div className="text-xs text-gray-500">None</div>
+                            ) : (
+                              <ul className="space-y-2 text-xs">
+                                {diffData.vulns.new.map(v => (
+                                  <li key={v.id + v.host} className="p-2 rounded bg-red-900/20 border border-red-700/30">
+                                    <span className="font-mono text-red-300">{v.id}</span> <span className="text-gray-400">@ {v.host}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-2">Resolved Vulnerabilities</h4>
+                            {diffData.vulns?.resolved?.length === 0 ? (
+                              <div className="text-xs text-gray-500">None</div>
+                            ) : (
+                              <ul className="space-y-2 text-xs">
+                                {diffData.vulns.resolved.map(v => (
+                                  <li key={v.id + v.host} className="p-2 rounded bg-green-900/20 border border-green-700/30">
+                                    <span className="font-mono text-green-300">{v.id}</span> <span className="text-gray-400">@ {v.host}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Vulnerabilities Tab */}
                 {activeTab === 'vulns' && (
                   <div className="space-y-4">
@@ -473,3 +577,26 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 }
 
 export default ScanDetailsModal 
+
+// Helper components appended
+const StatBox = ({ label, value }) => (
+  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+    <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">{label}</div>
+    <div className="text-lg font-bold text-gray-900 dark:text-white">{value ?? 0}</div>
+  </div>
+)
+
+const Section = ({ title, items, empty }) => (
+  <div>
+    <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-2">{title}</h4>
+    {(!items || items.length === 0) ? (
+      <div className="text-xs text-gray-500">{empty}</div>
+    ) : (
+      <div className="flex flex-wrap gap-2">
+        {items.map(x => (
+          <span key={x} className="px-2 py-1 text-xs rounded bg-gray-800 text-gray-200 font-mono">{x}</span>
+        ))}
+      </div>
+    )}
+  </div>
+)

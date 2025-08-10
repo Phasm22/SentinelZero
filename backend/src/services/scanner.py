@@ -356,17 +356,81 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             try:
                 tree = ET.parse(xml_path)
                 root = tree.getroot()
+                total_open_ports = 0
                 for host in root.findall('host'):
                     status = host.find('status')
-                    if status is not None and status.attrib.get('state') == 'up':
-                        host_obj = {}
-                        addr = host.find('address[@addrtype="ipv4"]')
-                        if addr is not None:
-                            host_obj['ip'] = addr.attrib.get('addr')
-                        
-                        # Parse ports, OS, services, etc.
-                        # (Detailed parsing logic would go here)
-                        hosts.append(host_obj)
+                    if status is None or status.attrib.get('state') != 'up':
+                        continue
+                    host_obj = {}
+                    addr = host.find('address[@addrtype="ipv4"]')
+                    if addr is not None:
+                        host_obj['ip'] = addr.attrib.get('addr')
+                    # Hostnames
+                    hostnames_el = host.find('hostnames')
+                    if hostnames_el is not None:
+                        host_obj['hostnames'] = [hn.attrib.get('name') for hn in hostnames_el.findall('hostname') if hn.attrib.get('name')]
+                    # MAC / vendor (if layer2 present)
+                    mac_addr = host.find('address[@addrtype="mac"]')
+                    if mac_addr is not None:
+                        host_obj['mac'] = mac_addr.attrib.get('addr')
+                        if mac_addr.attrib.get('vendor'):
+                            host_obj['vendor'] = mac_addr.attrib.get('vendor')
+                    # OS detection (simplified: first osmatch)
+                    os_el = host.find('os')
+                    if os_el is not None:
+                        osmatch = os_el.find('osmatch')
+                        if osmatch is not None:
+                            host_obj['os'] = {
+                                'name': osmatch.attrib.get('name'),
+                                'accuracy': osmatch.attrib.get('accuracy')
+                            }
+                    # Uptime
+                    uptime_el = host.find('uptime')
+                    if uptime_el is not None:
+                        host_obj['uptime'] = {
+                            'seconds': int(uptime_el.attrib.get('seconds', '0') or 0),
+                            'lastboot': uptime_el.attrib.get('lastboot')
+                        }
+                    # Distance
+                    distance_el = host.find('distance')
+                    if distance_el is not None and distance_el.attrib.get('value'):
+                        host_obj['distance'] = int(distance_el.attrib.get('value'))
+                    # Ports
+                    ports_block = host.find('ports')
+                    open_ports = []
+                    if ports_block is not None:
+                        for port_el in ports_block.findall('port'):
+                            state_el = port_el.find('state')
+                            if state_el is None or state_el.attrib.get('state') != 'open':
+                                continue
+                            portid = port_el.attrib.get('portid')
+                            proto = port_el.attrib.get('protocol')
+                            service_el = port_el.find('service')
+                            service_name = service_el.attrib.get('name') if service_el is not None else None
+                            product = service_el.attrib.get('product') if service_el is not None and service_el.attrib.get('product') else None
+                            version = service_el.attrib.get('version') if service_el is not None and service_el.attrib.get('version') else None
+                            try:
+                                p_int = int(portid)
+                            except Exception:
+                                p_int = None
+                            open_ports.append({
+                                'port': p_int or portid,
+                                'protocol': proto,
+                                'service': service_name,
+                                'product': product,
+                                'version': version
+                            })
+                    if open_ports:
+                        open_ports.sort(key=lambda x: (x.get('port') or 0, x.get('protocol') or ''))
+                        total_open_ports += len(open_ports)
+                        host_obj['ports'] = open_ports
+                    hosts.append(host_obj)
+                # Update aggregate port counts on scan
+                try:
+                    scan.total_ports = total_open_ports
+                    scan.open_ports = total_open_ports
+                except Exception:
+                    pass
                 # If discovery scan, filter out network/broadcast addresses that can appear as 'up' when -Pn was previously used
                 if scan_type_normalized == 'discovery scan':
                     try:
@@ -390,7 +454,7 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 # Update host counters (especially important for discovery scan accuracy)
                 try:
                     scan.total_hosts = len(hosts)
-                    scan.hosts_up = len(hosts)  # For discovery we only collect 'up' hosts
+                    scan.hosts_up = len(hosts)
                     db.session.commit()
                 except Exception as _e:
                     print(f'[WARN] Failed updating host counters: {_e}')

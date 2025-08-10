@@ -45,7 +45,7 @@ Discovery Scan: skip OS/service/vuln logic & insights (explicit branch). Filters
 Pre-Discovery: only for heavy scans; generates live host list → enumerated as direct targets (reduces false positives & time, but skips offline hosts for insights).
 
 ### 8. Insights Generation
-Runs post save unless scan is Discovery or explicitly skipped. Stored JSON in `Scan.insights_json`. If you broaden insight logic, keep it fast (runs at ~99% phase) and resilient (wrap in try/except, never fail scan completion).
+Runs post save unless scan is Discovery or explicitly skipped. Stored JSON in `Scan.insights_json`. If you broaden insight logic, keep it fast (runs at ~99% phase) and resilient (wrap in try/except, never fail scan completion). Use the on-demand diff endpoint `/api/scan-diff/<scan_id>` for structured host/port/vuln changes instead of expanding stored insights when only comparative deltas are needed.
 
 ### 9. Cancellation & Concurrency
 Endpoints: `/api/cancel-scan/<id>`, `/api/kill-all-scans`. Scan loop periodically re-queries its Scan record to honor cancellation. When adding new long loops, insert cancellation checks.

@@ -165,4 +165,10 @@ export const apiService = {
     })
     return response.data
   },
+
+  // Smart diff
+  getScanDiff: async (scanId) => {
+    const response = await axios.get(`${API_BASE_URL}/scan-diff/${scanId}`)
+    return response.data
+  },
 } 

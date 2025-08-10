@@ -241,10 +241,10 @@ def create_api_blueprint(db):
                 'raw_xml_path': scan.raw_xml_path
             }
             
-            # Convert timestamp to Denver timezone
+            # Convert timestamp to ISO string in Denver timezone for frontend parsing
             if scan_data['timestamp']:
                 denver = pytz.timezone('America/Denver')
-                scan_data['timestamp'] = scan_data['timestamp'].astimezone(denver)
+                scan_data['timestamp'] = scan_data['timestamp'].astimezone(denver).isoformat()
             
             # Add hosts and vulns count
             try:

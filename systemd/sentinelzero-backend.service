@@ -1,35 +1,15 @@
 [Unit]
-Description=SentinelZero Network Security Scanner - Backend
+Description=SentinelZero Backend
 After=network.target
-Wants=sentinelzero-frontend.service
 
 [Service]
 Type=simple
-User=root
-Group=root
-WorkingDirectory=/root/sentinelZero/backend
-Environment=FLASK_ENV=production
+User=sentinelzero
+Group=sentinelzero
+WorkingDirectory=/home/sentinel/SentinelZero/backend
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 app.py
-Restart=always
-RestartSec=5
-KillMode=mixed
-TimeoutStopSec=30
-
-# Security settings
-NoNewPrivileges=false
-PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/root/sentinelZero/backend/scans /root/sentinelZero/backend/instance
-
-# Resource limits
-MemoryMax=1G
-CPUQuota=50%
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=sentinelzero-backend
+ExecStart=/home/sentinel/SentinelZero/backend/.venv/bin/python app.py
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

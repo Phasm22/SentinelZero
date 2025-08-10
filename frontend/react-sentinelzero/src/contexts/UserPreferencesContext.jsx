@@ -16,11 +16,32 @@ export const UserPreferencesProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('userPreferences', JSON.stringify(preferences))
-    // Theme handling
     const root = document.documentElement
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const wantDark = preferences.theme === 'dark' || (preferences.theme === 'system' && systemDark)
-    root.classList.toggle('dark', wantDark)
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const apply = () => {
+      const systemDark = mq.matches
+      const wantDark = preferences.theme === 'dark' || (preferences.theme === 'system' && systemDark)
+      root.classList.toggle('dark', wantDark)
+    }
+
+    apply()
+
+    // While in 'system' mode keep listening for OS changes; otherwise no listener needed.
+    if (preferences.theme === 'system') {
+      if (mq.addEventListener) {
+        mq.addEventListener('change', apply)
+      } else if (mq.addListener) {
+        mq.addListener(apply)
+      }
+      return () => {
+        if (mq.removeEventListener) {
+          mq.removeEventListener('change', apply)
+        } else if (mq.removeListener) {
+          mq.removeListener(apply)
+        }
+      }
+    }
   }, [preferences])
 
   const updatePreference = (key, value) => {

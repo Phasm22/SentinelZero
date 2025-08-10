@@ -7,6 +7,22 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SentinelZero</title>
+    <script>
+      // Apply theme early to avoid light image flash
+      (function(){
+        try {
+          const stored = localStorage.getItem('userPreferences')
+          let theme = 'system'
+            if (stored) {
+              try { theme = JSON.parse(stored).theme || 'system' } catch(e) {}
+            }
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (theme === 'dark' || (theme === 'system' && systemDark)) {
+            document.documentElement.classList.add('dark')
+          }
+        } catch(e) { /* no-op */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

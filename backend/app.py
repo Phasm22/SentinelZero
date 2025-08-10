@@ -28,6 +28,7 @@ from src.routes.api_routes import create_api_blueprint
 from src.routes.upload_routes import create_upload_blueprint
 from src.routes.whatsup_routes import bp as whatsup_bp
 from src.routes.insights_routes import insights_bp
+from src.routes.diff_routes import diff_bp
 from src.services.whats_up import whats_up_monitor
 from src.services.cleanup import scheduled_cleanup_job
 
@@ -63,7 +64,8 @@ def create_app():
     
     # Initialize extensions
     db = init_db(app)
-    socketio = SocketIO(app, cors_allowed_origins="*")
+    # Force gevent async_mode for better external connection handling
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
     scheduler = init_scheduler()
     try:
         # Run cleanup daily at 03:15 UTC (no lambda for serializable ref)
@@ -89,10 +91,14 @@ def create_app():
     # Create database tables
     try:
         with app.app_context():
-            # For development: Drop and recreate tables to ensure schema updates
-            db.drop_all()
-            db.create_all()
-            print(f'[INFO] Database schema recreated at: {db_path}')
+            if os.environ.get('FLASK_ENV') == 'production':
+                # Only ensure tables exist in production (no destructive drop)
+                db.create_all()
+                print(f'[INFO] Database tables ensured at: {db_path}')
+            else:
+                db.drop_all()
+                db.create_all()
+                print(f'[INFO] Database schema recreated at: {db_path}')
     except Exception as e:
         print(f'[ERROR] Failed to initialize database: {e}')
         raise
@@ -105,6 +111,8 @@ def create_app():
     app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
     app.register_blueprint(whatsup_bp)
     app.register_blueprint(insights_bp, url_prefix='/')  # insights_bp already has /api in routes
+    app.register_blueprint(diff_bp, url_prefix='/')      # /api/scan-diff/<id>
+
     
     # Legacy routes for compatibility with Vite proxy
     @app.route('/clear-all-data', methods=['POST'])
@@ -130,6 +138,8 @@ def create_app():
     @app.route('/<path:path>')
     def catch_all(path):
         """Serve React app for non-API routes"""
+        if path == 'healthz':
+            return {'status': 'ok'}, 200
         if path and (path.startswith('api/') or '.' in path):
             # Let API routes and static assets through
             return app.send_static_file(path) if '.' in path else ('Not Found', 404)
@@ -182,6 +192,9 @@ def main():
         
         # Run with SocketIO - debug=False prevents reloader
         socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+
+# Create app instance for gunicorn
+app = create_app()
 
 if __name__ == '__main__':
     main()

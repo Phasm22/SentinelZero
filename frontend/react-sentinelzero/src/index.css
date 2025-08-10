@@ -1,4 +1,6 @@
-/* No manual dark mode toggling logic here. Tailwind will use 'media' for dark mode. */
+/* Background images now handled exclusively by BackgroundCrossfade component.
+  We keep only background colors here so we don't eagerly request light assets
+  before the dark class (html.dark) is applied. */
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;600&display=swap');
 @import url('/fonts/Sentient_Complete/Sentient_Complete/Fonts/WEB/css/sentient.css');
 
@@ -7,38 +9,13 @@
 @tailwind utilities;
 
 body {
+  background-color: #18181b;
   background-image: url('/backgrounds/blob-desk-light.png');
   background-size: contain;
   background-position: center top;
   background-repeat: no-repeat;
-  background-color: #18181b;
-  transition: background-image 0.3s;
 }
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-image: url('/backgrounds/blob-desk-dark.png');
-    background-color: #0f0f0f;
-  }
-}
-
-@media (max-width: 768px) {
-  body {
-    background-image: url('/backgrounds/blob-mobile-light.png');
-    background-size: contain;
-    background-position: center top;
-    background-color: #18181b;
-  }
-}
-
-@media (max-width: 768px) and (prefers-color-scheme: dark) {
-  body {
-    background-image: url('/backgrounds/blob-mobile-dark.png');
-    background-size: contain;
-    background-position: center top;
-    background-color: #0f0f0f;
-  }
-}
+html.dark body { background-color: #0f0f0f; }
 
 /* Set up base font families */
 @layer base {
