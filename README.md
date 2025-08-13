@@ -111,20 +111,20 @@ All settings can be modified through the web interface or by editing files direc
 ## Screenshots
 
 ### Dashboard Overview
-![Dashboard](docs/screenshots/dashboard.png)
-*Main dashboard showing scan controls, recent scans, and system statistics*
+<img src="docs/screenshots/dashboard.png" alt="Dashboard" width="600"/>
+<sub><i>Main dashboard showing scan controls, recent scans, and system statistics</i></sub>
 
 ### Scan Results
-![Scan Results](docs/screenshots/scan-results.png)
-*Detailed scan results with host discovery, open ports, and vulnerability findings*
+<img src="docs/screenshots/scan-results.png" alt="Scan Results" width="600"/>
+<sub><i>Detailed scan results with host discovery, open ports, and vulnerability findings</i></sub>
 
 ### Real-time Progress
-![Scan Progress](docs/screenshots/scan-progress.png)
-*Live scan progress with WebSocket updates and status tracking*
+<img src="docs/screenshots/scan-progress.png" alt="Scan Progress" width="600"/>
+<sub><i>Live scan progress with WebSocket updates and status tracking</i></sub>
 
 ### Settings Configuration
-![Settings](docs/screenshots/settings.png)
-*Network configuration, scan parameters, and notification settings*
+<img src="docs/screenshots/settings.png" alt="Settings" width="600"/>
+<sub><i>Network configuration, scan parameters, and notification settings</i></sub>
 
 ### Mobile View
 
