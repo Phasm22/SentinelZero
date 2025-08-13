@@ -126,9 +126,11 @@ All settings can be modified through the web interface or by editing files direc
 ![Settings](docs/screenshots/settings.png)
 *Network configuration, scan parameters, and notification settings*
 
-### Mobile Interface
-![Mobile View](docs/screenshots/mobile-view.png)
-*Responsive design optimized for mobile and tablet devices*
+### Mobile View
+
+<img src="docs/screenshots/mobile-view.png" alt="Mobile View" width="300"/>
+
+<sub><i>Responsive design for mobile and tablet</i></sub>
 
 ---
 
