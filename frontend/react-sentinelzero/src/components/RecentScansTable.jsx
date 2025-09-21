@@ -1,6 +1,7 @@
 import React from 'react'
 import { Info, Eye } from 'lucide-react'
 import { formatTimestamp } from '../utils/date'
+import Button from './Button'
 
 const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
   <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-6">
@@ -30,9 +31,15 @@ const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
               <td>{scan.hosts_count || 0}</td>
               <td>{scan.vulns_count || 0}</td>
               <td>
-                <button className="btn btn-outline btn-sm group-hover:shadow-blue-400/40 group-hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)} data-testid={`recent-scan-view-btn-${scan.id}`}>
-                  <Eye className="w-3 h-3" /> View
-                </button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  icon={<Eye className="w-3 h-3" />}
+                  onClick={() => handleViewDetails(scan)} 
+                  data-testid={`recent-scan-view-btn-${scan.id}`}
+                >
+                  View
+                </Button>
               </td>
             </tr>
           ))}
@@ -71,9 +78,16 @@ const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
             </div>
           </div>
           <div className="pt-2">
-            <button className="btn btn-outline btn-sm w-full hover:shadow-blue-400/40 hover:shadow-lg transition-all" onClick={() => handleViewDetails(scan)} data-testid={`recent-scan-view-btn-mobile-${scan.id}`}>
-              <Eye className="w-3 h-3" /> View
-            </button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              icon={<Eye className="w-3 h-3" />}
+              className="w-full"
+              onClick={() => handleViewDetails(scan)} 
+              data-testid={`recent-scan-view-btn-mobile-${scan.id}`}
+            >
+              View
+            </Button>
           </div>
         </div>
       ))}

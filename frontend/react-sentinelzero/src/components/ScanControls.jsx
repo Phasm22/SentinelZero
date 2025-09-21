@@ -1,5 +1,6 @@
 import React from 'react'
 import { Rocket, Cpu, Bug, Loader2 } from 'lucide-react'
+import Button from './Button'
 
 const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') => {
   // Handle null or undefined scanType
@@ -60,51 +61,54 @@ const ScanControls = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-4">
-        <button
+        <Button
           data-testid="scan-discovery-btn"
           onClick={() => onRequestScan('Discovery Scan')}
-          // Allow Discovery Scan even if a heavy scan is running; only disable if another Discovery Scan is in progress
           disabled={isScanning && scanningType === 'Discovery Scan'}
+          loading={isScanning && scanningType === 'Discovery Scan'}
+          variant="discovery-scan"
+          size="lg"
+          icon={<Rocket className="w-5 h-5 rotate-180" />}
           title="Lightweight host discovery only (no ports)."
-          className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-green-700 hover:bg-green-800 focus:ring-2 focus:ring-green-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
-          <Rocket className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform rotate-180" />
-          <span>Discovery Scan</span>
-          {isScanning && scanningType === 'Discovery Scan' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-        </button>
-        <button
+          Discovery Scan
+        </Button>
+        <Button
           data-testid="scan-full-tcp-btn"
           onClick={() => onRequestScan('Full TCP')}
           disabled={isScanning}
+          loading={isScanning && scanningType === 'Full TCP'}
+          variant="full-tcp"
+          size="lg"
+          icon={<Rocket className="w-5 h-5" />}
           title="Full TCP SYN scan of all ports. If Pre-Discovery is enabled only live hosts are scanned."
-          className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
-          <Rocket className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-          <span>Full TCP Scan</span>
-          {isScanning && scanningType === 'Full TCP' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-        </button>
-        <button
+          Full TCP Scan
+        </Button>
+        <Button
           data-testid="scan-iot-btn"
           onClick={() => onRequestScan('IoT Scan')}
           disabled={isScanning}
+          loading={isScanning && scanningType === 'IoT Scan'}
+          variant="iot-scan"
+          size="lg"
+          icon={<Cpu className="w-5 h-5" />}
           title="Common IoT UDP/TCP service ports. Pre-Discovery narrows hosts first if enabled."
-          className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-800 hover:bg-purple-700 focus:ring-2 focus:ring-purple-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
-          <Cpu className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-          <span>IoT Scan</span>
-          {isScanning && scanningType === 'IoT Scan' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-        </button>
-        <button
+          IoT Scan
+        </Button>
+        <Button
           data-testid="scan-vuln-btn"
           onClick={() => onRequestScan('Vuln Scripts')}
           disabled={isScanning}
+          loading={isScanning && scanningType === 'Vuln Scripts'}
+          variant="vuln-scan"
+          size="lg"
+          icon={<Bug className="w-5 h-5" />}
           title="Full TCP plus vulnerability scripts. Pre-Discovery reduces host set first if enabled."
-          className="btn flex items-center space-x-2 px-6 py-3 text-lg font-bold bg-gray-700 hover:bg-red-700 focus:ring-2 focus:ring-red-400 shadow-lg transition-all duration-200 rounded-xl text-white relative group"
         >
-          <Bug className="w-8 h-8 mr-2 text-red-400 group-hover:scale-125 transition-transform" />
-          <span>Vuln Scripts</span>
-          {isScanning && scanningType === 'Vuln Scripts' && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-        </button>
+          Vuln Scripts
+        </Button>
       </div>
 
       {/* Connection Status */}

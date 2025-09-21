@@ -1,0 +1,25 @@
+[Unit]
+Description=SentinelZero Network Security Scanner
+After=network.target
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+WorkingDirectory=/home/sentinel/SentinelZero
+Environment=PATH=/home/sentinel/SentinelZero/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/sentinel/SentinelZero/backend/.venv/bin/python /home/sentinel/SentinelZero/backend/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/sentinel/SentinelZero
+
+[Install]
+WantedBy=multi-user.target

@@ -7,6 +7,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ScanHistory = lazy(() => import('./pages/ScanHistory'))
 const LabStatus = lazy(() => import('./pages/LabStatus'))
 const Settings = lazy(() => import('./pages/Settings'))
+const ThemeTest = lazy(() => import('./pages/ThemeTest'))
 import Layout from './components/Layout'
 import BackgroundCrossfade from './components/BackgroundCrossfade'
 import './App.css'
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/scan-history" element={<ScanHistory />} />
                 <Route path="/lab-status" element={<LabStatus />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/theme-test" element={<ThemeTest />} />
                 <Route path="*" element={<div className="p-8 text-center text-red-600">404: Page Not Found</div>} />
               </Routes>
             </Suspense>

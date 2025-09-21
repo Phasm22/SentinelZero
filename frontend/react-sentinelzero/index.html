@@ -13,14 +13,49 @@
         try {
           const stored = localStorage.getItem('userPreferences')
           let theme = 'system'
-            if (stored) {
-              try { theme = JSON.parse(stored).theme || 'system' } catch(e) {}
+          if (stored) {
+            try { 
+              const parsed = JSON.parse(stored)
+              theme = parsed.theme || 'system' 
+            } catch(e) {
+              console.warn('Error parsing stored preferences:', e)
             }
-          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-          if (theme === 'dark' || (theme === 'system' && systemDark)) {
-            document.documentElement.classList.add('dark')
           }
-        } catch(e) { /* no-op */ }
+          
+          const mq = window.matchMedia('(prefers-color-scheme: dark)')
+          const systemDark = mq.matches
+          const shouldBeDark = theme === 'dark' || (theme === 'system' && systemDark)
+          
+          console.log('Initial theme detection:', { theme, systemDark, shouldBeDark })
+          
+          if (shouldBeDark) {
+            document.documentElement.classList.add('dark')
+          } else {
+            document.documentElement.classList.remove('dark')
+          }
+          
+          // Listen for system theme changes when in system mode
+          if (theme === 'system') {
+            const handleSystemChange = (e) => {
+              console.log('HTML script: System theme changed:', e.matches)
+              if (e.matches) {
+                document.documentElement.classList.add('dark')
+                console.log('HTML script: Added dark class')
+              } else {
+                document.documentElement.classList.remove('dark')
+                console.log('HTML script: Removed dark class')
+              }
+            }
+            
+            if (mq.addEventListener) {
+              mq.addEventListener('change', handleSystemChange)
+            } else if (mq.addListener) {
+              mq.addListener(handleSystemChange)
+            }
+          }
+        } catch(e) { 
+          console.error('Error in theme detection script:', e)
+        }
       })();
     </script>
   </head>

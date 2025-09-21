@@ -10,7 +10,13 @@ export const UserPreferencesProvider = ({ children }) => {
   useEffect(() => {
     const stored = localStorage.getItem('userPreferences')
     if (stored) {
-      setPreferences(JSON.parse(stored))
+      try {
+        const parsed = JSON.parse(stored)
+        setPreferences(parsed)
+        console.log('Loaded preferences from localStorage:', parsed)
+      } catch (error) {
+        console.error('Error parsing stored preferences:', error)
+      }
     }
   }, [])
 
@@ -22,25 +28,45 @@ export const UserPreferencesProvider = ({ children }) => {
     const apply = () => {
       const systemDark = mq.matches
       const wantDark = preferences.theme === 'dark' || (preferences.theme === 'system' && systemDark)
-      root.classList.toggle('dark', wantDark)
+      console.log('Applying theme:', { 
+        theme: preferences.theme, 
+        systemDark, 
+        wantDark,
+        currentClasses: root.className,
+        timestamp: new Date().toISOString()
+      })
+      
+      if (wantDark) {
+        root.classList.add('dark')
+        console.log('Added dark class')
+      } else {
+        root.classList.remove('dark')
+        console.log('Removed dark class')
+      }
+      
+      // Force a re-render by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('themeChanged', { 
+        detail: { theme: preferences.theme, systemDark, wantDark } 
+      }))
     }
 
     apply()
 
-    // While in 'system' mode keep listening for OS changes; otherwise no listener needed.
-    if (preferences.theme === 'system') {
-      if (mq.addEventListener) {
-        mq.addEventListener('change', apply)
-      } else if (mq.addListener) {
-        mq.addListener(apply)
+    // Always listen for system changes, but only apply if theme is 'system'
+    const handleSystemThemeChange = (e) => {
+      console.log('System theme change detected:', e.matches)
+      if (preferences.theme === 'system') {
+        console.log('Applying system theme change')
+        apply()
       }
-      return () => {
-        if (mq.removeEventListener) {
-          mq.removeEventListener('change', apply)
-        } else if (mq.removeListener) {
-          mq.removeListener(apply)
-        }
-      }
+    }
+
+    if (mq.addEventListener) {
+      mq.addEventListener('change', handleSystemThemeChange)
+      return () => mq.removeEventListener('change', handleSystemThemeChange)
+    } else if (mq.addListener) {
+      mq.addListener(handleSystemThemeChange)
+      return () => mq.removeListener(handleSystemThemeChange)
     }
   }, [preferences])
 

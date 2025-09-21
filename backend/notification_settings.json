@@ -3,5 +3,5 @@
     "scan_complete": true,
     "vulnerability_found": true,
     "new_host_found": true,
-    "pushover_configured": false
+    "pushover_configured": true
 }

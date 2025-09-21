@@ -48,7 +48,40 @@ cd SentinelZero
 ./deploy.sh
 ```
 
-Access the application at **http://localhost:5001**
+### Option 2: Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/SentinelZero.git
+cd SentinelZero
+
+# Start development environment
+./start-dev.sh
+
+# Check status
+./status.sh
+
+# Stop when done
+./stop-dev.sh
+```
+
+### Option 3: Production Deployment
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/SentinelZero.git
+cd SentinelZero
+
+# Start production environment
+./start-prod.sh
+
+# Check status
+./status.sh
+```
+
+> **📋 For detailed startup instructions, see [STARTUP.md](STARTUP.md)**
+
+Access the application at **http://localhost:5000** (production) or **http://localhost:3173** (development)
 
 ### Option 2: Local Development
 

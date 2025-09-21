@@ -12,6 +12,7 @@ import {
   Eye
 } from 'lucide-react'
 import { formatTimestamp } from '../utils/date'
+import Button from './Button'
 
 const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview')
@@ -25,13 +26,35 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const { showToast } = useToast()
   const { preferences } = useUserPreferences()
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'diff', name: 'Diff', icon: <Eye className="w-4 h-4" /> },
-    { id: 'hosts', name: 'Hosts', icon: <Monitor className="w-4 h-4" /> },
-    { id: 'vulns', name: 'Vulnerabilities', icon: <AlertTriangle className="w-4 h-4" /> },
-    { id: 'raw', name: 'Raw XML', icon: <FileText className="w-4 h-4" /> }
-  ]
+  // Determine which tabs to show based on scan type
+  const getAvailableTabs = () => {
+    const scanType = scanDetails?.scan_type?.toLowerCase() || ''
+    const baseTabs = [
+      { id: 'overview', name: 'Overview', icon: <BarChart3 className="w-4 h-4" /> }
+    ]
+    
+    // Always show hosts tab if there are hosts
+    if (hosts.length > 0) {
+      baseTabs.push({ id: 'hosts', name: 'Hosts', icon: <Monitor className="w-4 h-4" /> })
+    }
+    
+    // Only show vulnerabilities tab if there are vulnerabilities or it's a vuln scan
+    if (vulns.length > 0 || scanType.includes('vuln')) {
+      baseTabs.push({ id: 'vulns', name: 'Vulnerabilities', icon: <AlertTriangle className="w-4 h-4" /> })
+    }
+    
+    // Only show diff tab if there are previous scans to compare
+    if (scanDetails?.id > 1) {
+      baseTabs.push({ id: 'diff', name: 'Diff', icon: <Eye className="w-4 h-4" /> })
+    }
+    
+    // Always show raw XML tab
+    baseTabs.push({ id: 'raw', name: 'Raw XML', icon: <FileText className="w-4 h-4" /> })
+    
+    return baseTabs
+  }
+
+  const tabs = getAvailableTabs()
 
   useEffect(() => {
     if (isOpen && scan) {
@@ -119,17 +142,18 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <button
+                <Button
                   onClick={handleDownloadXml}
-                  className="btn btn-outline btn-sm flex items-center space-x-1"
+                  variant="outline"
+                  size="sm"
+                  icon={<Download className="w-4 h-4" />}
                   data-testid="download-xml-btn"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Download XML</span>
-                </button>
+                  Download XML
+                </Button>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   data-testid="close-modal-btn"
                 >
                   <X className="w-6 h-6" />
@@ -170,6 +194,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                 {/* Overview Tab */}
                 {activeTab === 'overview' && (
                   <div className="space-y-6">
+                    {/* Basic Scan Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan Type</div>
@@ -179,83 +204,95 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts Found</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">{hosts.length}</div>
                       </div>
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Vulnerabilities</div>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{vulns.length}</div>
-                      </div>
+                      {vulns.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Vulnerabilities</div>
+                          <div className="text-lg font-semibold text-gray-900 dark:text-white">{vulns.length}</div>
+                        </div>
+                      )}
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan ID</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">#{scanDetails.id}</div>
                       </div>
                     </div>
 
-                    {/* Network Statistics */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Network Statistics</h3>
-                      </div>
-                      <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Open Ports</div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {hosts.reduce((total, host) => {
-                                return total + (host.ports ? host.ports.length : 0)
-                              }, 0)}
+                    {/* Network Statistics - Only show for scans with port information */}
+                    {(() => {
+                      const totalOpenPorts = hosts.reduce((total, host) => total + (host.ports ? host.ports.length : 0), 0)
+                      const hostsWithServices = hosts.filter(host => host.ports && host.ports.length > 0).length
+                      
+                      // Only show network statistics if there are ports or it's not a discovery scan
+                      const scanType = scanDetails?.scan_type?.toLowerCase() || ''
+                      const isDiscoveryScan = scanType.includes('discovery')
+                      
+                      if (totalOpenPorts > 0 || !isDiscoveryScan) {
+                        return (
+                          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Network Statistics</h3>
                             </div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts with Services</div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {hosts.filter(host => host.ports && host.ports.length > 0).length}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Ports/Host</div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {hosts.length > 0 
-                                ? (hosts.reduce((total, host) => total + (host.ports ? host.ports.length : 0), 0) / hosts.length).toFixed(1)
-                                : '0.0'
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Service Distribution */}
-                    {hosts.length > 0 && (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Service Distribution</h3>
-                        </div>
-                        <div className="p-6">
-                          <div className="space-y-2">
-                            {(() => {
-                              const serviceCounts = {}
-                              hosts.forEach(host => {
-                                if (host.ports) {
-                                  host.ports.forEach(port => {
-                                    const service = port.service || 'unknown'
-                                    serviceCounts[service] = (serviceCounts[service] || 0) + 1
-                                  })
-                                }
-                              })
-                              
-                              return Object.entries(serviceCounts)
-                                .sort(([,a], [,b]) => b - a)
-                                .slice(0, 10)
-                                .map(([service, count]) => (
-                                  <div key={service} className="flex justify-between items-center">
-                                    <span className="text-sm text-gray-900 dark:text-white capitalize">{service}</span>
-                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{count}</span>
+                            <div className="p-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Open Ports</div>
+                                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalOpenPorts}</div>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts with Services</div>
+                                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{hostsWithServices}</div>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Ports/Host</div>
+                                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {hosts.length > 0 ? (totalOpenPorts / hosts.length).toFixed(1) : '0.0'}
                                   </div>
-                                ))
-                            })()}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    )}
+                        )
+                      }
+                      return null
+                    })()}
+
+                    {/* Service Distribution - Only show if there are services */}
+                    {(() => {
+                      const serviceCounts = {}
+                      hosts.forEach(host => {
+                        if (host.ports) {
+                          host.ports.forEach(port => {
+                            const service = port.service || 'unknown'
+                            serviceCounts[service] = (serviceCounts[service] || 0) + 1
+                          })
+                        }
+                      })
+                      
+                      const hasServices = Object.keys(serviceCounts).length > 0
+                      
+                      if (hasServices) {
+                        return (
+                          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Service Distribution</h3>
+                            </div>
+                            <div className="p-6">
+                              <div className="space-y-2">
+                                {Object.entries(serviceCounts)
+                                  .sort(([,a], [,b]) => b - a)
+                                  .slice(0, 10)
+                                  .map(([service, count]) => (
+                                    <div key={service} className="flex justify-between items-center">
+                                      <span className="text-sm text-gray-900 dark:text-white capitalize">{service}</span>
+                                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{count}</span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
 
                     {/* Scan Information */}
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -297,113 +334,125 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       </div>
                     ) : (
                       <div className="space-y-6">
-                        {hosts.map((host, index) => (
-                          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                            {/* Host Header */}
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
-                                    {host.ip || 'Unknown IP'}
-                                  </h4>
-                                  {host.mac && (
-                                    <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                                      {host.mac}
-                                    </span>
+                        {hosts.map((host, index) => {
+                          const scanType = scanDetails?.scan_type?.toLowerCase() || ''
+                          const isDiscoveryScan = scanType.includes('discovery')
+                          const hasPorts = host.ports && host.ports.length > 0
+                          const hasOS = host.os
+                          const hasHostnames = host.hostnames && host.hostnames.length > 0
+                          
+                          return (
+                            <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                              {/* Host Header */}
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
+                                      {host.ip || 'Unknown IP'}
+                                    </h4>
+                                    {host.mac && (
+                                      <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                                        {host.mac}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {hasHostnames && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                                      <span className="font-medium">Hostnames:</span> {host.hostnames.join(', ')}
+                                    </div>
+                                  )}
+                                  {host.vendor && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                                      <span className="font-medium">Vendor:</span> {host.vendor}
+                                    </div>
                                   )}
                                 </div>
-                                {host.hostnames && host.hostnames.length > 0 && (
-                                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                                    <span className="font-medium">Hostnames:</span> {host.hostnames.join(', ')}
-                                  </div>
-                                )}
-                                {host.vendor && (
-                                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                                    <span className="font-medium">Vendor:</span> {host.vendor}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                {host.distance && (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                                    Distance: {host.distance} hops
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* OS Information */}
-                            {host.os && (
-                              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">OS Detection:</span>
-                                    <div className="text-sm text-blue-700 dark:text-blue-300">
-                                      {host.os.name} (Accuracy: {host.os.accuracy}%)
-                                    </div>
-                                  </div>
-                                  {host.uptime && (
-                                    <div className="text-right text-xs text-blue-600 dark:text-blue-400">
-                                      <div>Uptime: {Math.floor(host.uptime.seconds / 86400)} days</div>
-                                      <div>Last boot: {host.uptime.lastboot}</div>
+                                <div className="text-right">
+                                  {host.distance && (
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      Distance: {host.distance} hops
                                     </div>
                                   )}
                                 </div>
                               </div>
-                            )}
 
-                            {/* Ports and Services */}
-                            {host.ports && host.ports.length > 0 ? (
-                              <div>
-                                <h5 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                                  Open Ports ({host.ports.length})
-                                </h5>
-                                <div className="overflow-x-auto">
-                                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-700">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                          Port
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                          Service
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                          Product
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                          Version
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                      {host.ports.map((port, portIndex) => (
-                                        <tr key={portIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                          <td className="px-3 py-2 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-white">
-                                            {port.port}/{port.protocol}
-                                          </td>
-                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                            {port.service || 'unknown'}
-                                          </td>
-                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                            {port.product || '-'}
-                                          </td>
-                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                            {port.version || '-'}
-                                          </td>
+                              {/* OS Information - Only show if available */}
+                              {hasOS && (
+                                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">OS Detection:</span>
+                                      <div className="text-sm text-blue-700 dark:text-blue-300">
+                                        {host.os.name} (Accuracy: {host.os.accuracy}%)
+                                      </div>
+                                    </div>
+                                    {host.uptime && (
+                                      <div className="text-right text-xs text-blue-600 dark:text-blue-400">
+                                        <div>Uptime: {Math.floor(host.uptime.seconds / 86400)} days</div>
+                                        <div>Last boot: {host.uptime.lastboot}</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Ports and Services - Only show if available and not a discovery scan */}
+                              {hasPorts ? (
+                                <div>
+                                  <h5 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
+                                    Open Ports ({host.ports.length})
+                                  </h5>
+                                  <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                      <thead className="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Port
+                                          </th>
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Service
+                                          </th>
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Product
+                                          </th>
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Version
+                                          </th>
                                         </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                      </thead>
+                                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        {host.ports.map((port, portIndex) => (
+                                          <tr key={portIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="px-3 py-2 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-white">
+                                              {port.port}/{port.protocol}
+                                            </td>
+                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                              {port.service || 'unknown'}
+                                            </td>
+                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                              {port.product || '-'}
+                                            </td>
+                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                              {port.version || '-'}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                                <p>No open ports detected</p>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              ) : isDiscoveryScan ? (
+                                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                                  <p>Discovery scan - no port information available</p>
+                                </div>
+                              ) : (
+                                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                                  <p>No open ports detected</p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

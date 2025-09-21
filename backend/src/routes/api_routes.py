@@ -250,14 +250,18 @@ def create_api_blueprint(db):
             try:
                 hosts = json.loads(scan.hosts_json) if scan.hosts_json else []
                 scan_data['hosts_count'] = len(hosts)
+                scan_data['hosts'] = hosts  # Include the actual hosts data
             except Exception:
                 scan_data['hosts_count'] = 0
+                scan_data['hosts'] = []
             
             try:
                 vulns = json.loads(scan.vulns_json) if scan.vulns_json else []
                 scan_data['vulns_count'] = len(vulns)
+                scan_data['vulns'] = vulns  # Include the actual vulns data
             except Exception:
                 scan_data['vulns_count'] = 0
+                scan_data['vulns'] = []
                 
             return jsonify(scan_data)
             

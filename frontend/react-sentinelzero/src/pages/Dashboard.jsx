@@ -27,6 +27,7 @@ import ScanningSection from '@/components/ScanningSection'
 import RecentScansTable from '@/components/RecentScansTable'
 import InsightsCard from '@/components/InsightsCard'
 import Modal from '@/components/Modal'
+import Button from '@/components/Button'
 import { buildNmapCommand } from '@/components/ScanControls'
 
 const Dashboard = () => {
@@ -433,9 +434,11 @@ const Dashboard = () => {
             {activeTab === 'active' && (
               <div className="space-y-4">
                 <div className="flex justify-end mb-2">
-                  <button
-                    className="btn btn-danger btn-sm"
+                  <Button
+                    variant="danger"
+                    size="sm"
                     disabled={stopAllLoading || activeScans.length === 0}
+                    loading={stopAllLoading}
                     onClick={async () => {
                       setStopAllLoading(true)
                       try {
@@ -448,7 +451,7 @@ const Dashboard = () => {
                     }}
                   >
                     {stopAllLoading ? 'Stopping...' : 'Stop All Scans'}
-                  </button>
+                  </Button>
                 </div>
                 {activeScansLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -519,13 +522,14 @@ const Dashboard = () => {
                       <div className="text-xs text-gray-400">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
                     </div>
                   </div>
-                  <button 
+                  <Button 
                     onClick={() => handleViewDetails(scan)}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
+                    variant="outline"
+                    size="sm"
                     data-testid={`recent-scan-view-btn-${scan.id}`}
                   >
                     View
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -565,18 +569,18 @@ const Dashboard = () => {
               </pre>
             </div>
             <div className="flex justify-end space-x-3">
-              <button
-                className="btn btn-ghost"
+              <Button
+                variant="ghost"
                 onClick={handleCancelScan}
               >
                 Cancel
-              </button>
-              <button
-                className="btn btn-primary"
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleConfirmScan}
               >
                 Start Scan
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -601,12 +605,14 @@ const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, forma
           style={{ width: `${scan.percent || 0}%`, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
         ></div>
       </div>
-      <button
-        className="btn btn-outline btn-sm mt-2 w-full"
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-2 w-full"
         onClick={() => onViewDetails(scan)}
       >
         View Details
-      </button>
+      </Button>
     </div>
   )
 })

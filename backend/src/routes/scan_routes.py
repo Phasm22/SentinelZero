@@ -223,7 +223,31 @@ def create_scan_blueprint(db, socketio):
             if not scan:
                 return jsonify({'error': 'Scan not found'}), 404
             
-            return jsonify(scan.as_dict())
+            # Convert scan to dictionary with processed hosts and vulns
+            scan_data = scan.as_dict()
+            
+            # Ensure timestamp is properly set for frontend
+            if not scan_data.get('timestamp') and scan_data.get('created_at'):
+                scan_data['timestamp'] = scan_data['created_at']
+            
+            # Parse hosts and vulns JSON
+            try:
+                hosts = _json.loads(scan.hosts_json) if scan.hosts_json else []
+                scan_data['hosts'] = hosts
+                scan_data['hosts_count'] = len(hosts)
+            except Exception:
+                scan_data['hosts'] = []
+                scan_data['hosts_count'] = 0
+            
+            try:
+                vulns = _json.loads(scan.vulns_json) if scan.vulns_json else []
+                scan_data['vulns'] = vulns
+                scan_data['vulns_count'] = len(vulns)
+            except Exception:
+                scan_data['vulns'] = []
+                scan_data['vulns_count'] = 0
+            
+            return jsonify(scan_data)
         except Exception as e:
             print(f'[DEBUG] Error getting scan {scan_id}: {e}')
             return jsonify({'error': 'Failed to get scan'}), 500

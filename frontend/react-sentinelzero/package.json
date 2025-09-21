@@ -4,12 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3173 --host 0.0.0.0",
     "dev:all": "concurrently \"cd ../../backend && uv run python app.py\" \"npm run dev\"",
+    "start": "./start-dev.sh",
+    "stop": "./stop-dev.sh",
     "build": "vite build",
     "build:analyze": "vite build && npx rollup-plugin-visualizer dist/stats.html --open",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -21,18 +27,25 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.5.1",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "^0.34.6",
+    "@vitest/ui": "^0.34.6",
     "autoprefixer": "^10.4.14",
     "concurrently": "^9.2.0",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "jsdom": "^23.0.1",
     "postcss": "^8.4.24",
-  "tailwindcss": "^3.3.2",
-  "vite": "^4.4.5",
-  "rollup-plugin-visualizer": "^5.14.0"
+    "tailwindcss": "^3.3.2",
+    "vite": "^4.4.5",
+    "vitest": "^0.34.6",
+    "rollup-plugin-visualizer": "^5.14.0"
   }
 }
