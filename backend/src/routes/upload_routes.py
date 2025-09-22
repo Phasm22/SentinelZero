@@ -206,9 +206,17 @@ def parse_nmap_xml(xml_content, scan_id):
                             }
                             service = port.find('service')
                             if service is not None:
-                                port_obj['service'] = service.attrib.get('name')
+                                detected_service = service.attrib.get('name')
                                 port_obj['product'] = service.attrib.get('product') if 'product' in service.attrib else None
                                 port_obj['version'] = service.attrib.get('version') if 'version' in service.attrib else None
+                                
+                                # Use common port mapping for better service identification
+                                from ..utils.port_mapping import get_service_name
+                                port_obj['service'] = get_service_name(port_obj['port'], detected_service)
+                            else:
+                                # Use common port mapping even when no service detected
+                                from ..utils.port_mapping import get_service_name
+                                port_obj['service'] = get_service_name(port_obj['port'], None)
                             ports.append(port_obj)
                             
                             # Check for vulnerability scripts on this port

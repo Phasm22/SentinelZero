@@ -84,7 +84,7 @@ const ScanUploader = ({ onUploadComplete, onError }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="scan-uploader">
       {/* Upload Area */}
       <div
         className={`
@@ -101,6 +101,7 @@ const ScanUploader = ({ onUploadComplete, onError }) => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !uploading && document.getElementById('file-input').click()}
+        data-testid="upload-dropzone"
       >
         <input
           id="file-input"
@@ -109,24 +110,25 @@ const ScanUploader = ({ onUploadComplete, onError }) => {
           onChange={handleFileSelect}
           className="hidden"
           disabled={uploading}
+          data-testid="file-input"
         />
 
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center" data-testid="upload-content">
           {uploading ? (
             <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-300">Uploading and parsing scan results...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" data-testid="upload-spinner"></div>
+              <p className="text-gray-300" data-testid="uploading-text">Uploading and parsing scan results...</p>
             </>
           ) : (
             <>
-              <Upload className="h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-100 mb-2">
+              <Upload className="h-12 w-12 text-gray-400 mb-4" data-testid="upload-icon" />
+              <p className="text-lg font-medium text-gray-100 mb-2" data-testid="upload-title">
                 Drop your nmap XML file here
               </p>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-gray-400 mb-4" data-testid="upload-subtitle">
                 or click to browse files
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500" data-testid="upload-limit">
                 Supports XML files up to 50MB
               </p>
             </>
@@ -141,46 +143,46 @@ const ScanUploader = ({ onUploadComplete, onError }) => {
             ? 'bg-green-900/20 border border-green-700/30' 
             : 'bg-red-900/20 border border-red-700/30'
           }
-        `}>
+        `} data-testid="upload-status">
           {uploadStatus.type === 'success' ? (
-            <CheckCircle className="h-5 w-5 text-green-400 mr-3 flex-shrink-0" />
+            <CheckCircle className="h-5 w-5 text-green-400 mr-3 flex-shrink-0" data-testid="success-icon" />
           ) : (
-            <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0" data-testid="error-icon" />
           )}
           <p className={`text-sm ${
             uploadStatus.type === 'success' ? 'text-green-300' : 'text-red-300'
-          }`}>
+          }`} data-testid="status-message">
             {uploadStatus.message}
           </p>
         </div>
       )}
 
-      <div className="mt-6 bg-gray-800/40 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-200 mb-2">Example nmap commands:</h4>
-        <div className="space-y-2 text-sm text-gray-400 font-mono">
-          <div className="bg-gray-900/60 rounded px-3 py-2">
+      <div className="mt-6 bg-gray-800/40 rounded-lg p-4" data-testid="example-commands">
+        <h4 className="text-sm font-medium text-gray-200 mb-2" data-testid="commands-title">Example nmap commands:</h4>
+        <div className="space-y-2 text-sm text-gray-400 font-mono" data-testid="commands-list">
+          <div className="bg-gray-900/60 rounded px-3 py-2" data-testid="basic-command">
             <div className="flex items-center mb-1">
               <FileText className="h-4 w-4 mr-2 text-blue-400" />
               <span className="font-semibold text-gray-300">Basic scan:</span>
             </div>
-            <code className="text-green-400">nmap -v -T4 -sS -p- --open 192.168.1.0/24 -oX scan_output.xml</code>
+            <code className="text-green-400">nmap -v -T4 -sS --top-ports 100 --open --max-retries 1 --max-scan-delay 500ms --min-rate 50 --max-rate 200 --scan-delay 100ms 192.168.1.0/24 -oX scan_output.xml</code>
           </div>
-          <div className="bg-gray-900/60 rounded px-3 py-2">
+          <div className="bg-gray-900/60 rounded px-3 py-2" data-testid="os-detection-command">
             <div className="flex items-center mb-1">
               <FileText className="h-4 w-4 mr-2 text-blue-400" />
               <span className="font-semibold text-gray-300">With OS detection:</span>
             </div>
-            <code className="text-green-400">nmap -v -T4 -sS -p- --open -O -sV 192.168.1.0/24 -oX scan_output.xml</code>
+            <code className="text-green-400">nmap -v -T4 -sS --top-ports 100 --open --max-retries 1 --max-scan-delay 500ms --min-rate 50 --max-rate 200 --scan-delay 100ms -O -sV 192.168.1.0/24 -oX scan_output.xml</code>
           </div>
-          <div className="bg-gray-900/60 rounded px-3 py-2">
+          <div className="bg-gray-900/60 rounded px-3 py-2" data-testid="vuln-command">
             <div className="flex items-center mb-1">
               <FileText className="h-4 w-4 mr-2 text-blue-400" />
               <span className="font-semibold text-gray-300">Vulnerability scan:</span>
             </div>
-            <code className="text-green-400">nmap -v -T4 -sS -p- --open --script=vuln 192.168.1.0/24 -oX scan_output.xml</code>
+            <code className="text-green-400">nmap -v -T4 -sS --top-ports 100 --open --max-retries 1 --max-scan-delay 500ms --min-rate 50 --max-rate 200 --scan-delay 100ms --script=vuln 192.168.1.0/24 -oX scan_output.xml</code>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="text-xs text-gray-500 mt-3" data-testid="upload-tip">
           <strong>Tip:</strong> Always use <code className="text-blue-400">-oX filename.xml</code> to generate XML output that can be uploaded here.
         </p>
       </div>

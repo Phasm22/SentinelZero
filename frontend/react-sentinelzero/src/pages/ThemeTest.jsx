@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
+import Button from '../components/Button'
 
 const ThemeTest = () => {
   const { preferences, updatePreference } = useUserPreferences()
@@ -67,24 +68,27 @@ const ThemeTest = () => {
               </div>
               
               <div className="space-y-2">
-                <button
+                <Button
                   onClick={() => updatePreference('theme', 'light')}
-                  className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  variant="primary"
+                  fullWidth
                 >
                   Force Light
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => updatePreference('theme', 'dark')}
-                  className="w-full p-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition-colors"
+                  variant="secondary"
+                  fullWidth
                 >
                   Force Dark
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => updatePreference('theme', 'system')}
-                  className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                  variant="success"
+                  fullWidth
                 >
                   Use System
-                </button>
+                </Button>
               </div>
             </div>
           </div>

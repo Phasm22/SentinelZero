@@ -16,7 +16,8 @@ const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') =
   // (scanTypeNormalized already defined above)
   
   if (scanTypeNormalized === 'full tcp') {
-    cmd.push('-sS', '-p-', '--open')
+    // Use very conservative parameters to prevent firewall state table overflow
+    cmd.push('-sS', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms')
   } else if (scanTypeNormalized === 'iot scan') {
     cmd.push('-sU', '-p', '53,67,68,80,443,1900,5353,554,8080')
   } else if (scanTypeNormalized === 'discovery scan') {
@@ -113,31 +114,32 @@ const ScanControls = ({
 
       {/* Connection Status */}
       {!isConnected && (
-        <div className="flex items-center space-x-2 text-red-400 bg-red-900/20 border border-red-700/30 rounded-lg p-3">
+        <div className="flex items-center space-x-2 text-red-400 bg-red-900/20 border border-red-700/30 rounded-lg p-3" data-testid="connection-status">
           <DisconnectedDot />
-          <span className="text-sm font-medium">Scanner Disconnected</span>
-          <span className="text-xs text-red-300">- Try uploading manual scan results instead</span>
+          <span className="text-sm font-medium" data-testid="disconnected-text">Scanner Disconnected</span>
+          <span className="text-xs text-red-300" data-testid="disconnected-hint">- Try uploading manual scan results instead</span>
         </div>
       )}
 
       {/* Progress Bar */}
       {isScanning && (
-        <div className="mt-4">
+        <div className="mt-4" data-testid="scan-progress-section">
           {scanMessage && (
-            <div className="mb-2 text-sm font-medium text-blue-200">{scanMessage}</div>
+            <div className="mb-2 text-sm font-medium text-blue-200" data-testid="scan-message">{scanMessage}</div>
           )}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-300">
+          <div className="flex items-center justify-between mb-2" data-testid="progress-header">
+            <span className="text-sm font-medium text-gray-300" data-testid="progress-label">
               Scan in Progress...
             </span>
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-gray-400" data-testid="progress-percentage">
               {scanProgress ? `${Math.round(scanProgress)}%` : '0%'}
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden" data-testid="progress-bar-container">
             <div
               className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
               style={{ width: `${scanProgress || 0}%` }}
+              data-testid="progress-bar-fill"
             ></div>
           </div>
         </div>

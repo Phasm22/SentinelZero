@@ -39,24 +39,26 @@ const Modal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="modal-container">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
         onClick={closeOnOverlayClick ? onClose : undefined}
+        data-testid="modal-backdrop"
       />
       
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative w-full ${sizes[size]} transform rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl transition-all`}>
+      <div className="flex min-h-full items-center justify-center p-4" data-testid="modal-wrapper">
+        <div className={`relative w-full ${sizes[size]} transform rounded-lg bg-gray-800 border border-gray-700 shadow-2xl transition-all`} data-testid="modal-content">
           {/* Header */}
           {title && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-100">{title}</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700" data-testid="modal-header">
+              <h3 className="text-lg font-semibold text-gray-100" data-testid="modal-title">{title}</h3>
               {showCloseButton && (
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-300 transition-colors"
+                  data-testid="modal-close-btn"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -65,7 +67,7 @@ const Modal = ({
           )}
           
           {/* Content */}
-          <div className="px-6 py-4">
+          <div className="px-6 py-4" data-testid="modal-body">
             {children}
           </div>
         </div>

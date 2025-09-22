@@ -177,6 +177,23 @@ def create_api_blueprint(db):
             print(f'[DEBUG] Error getting active scans: {e}')
             return jsonify({'scans': [], 'count': 0})
     
+    @bp.route('/sync-scans', methods=['POST'])
+    def sync_scans():
+        """Sync scans between filesystem and database"""
+        try:
+            from ..services.sync import sync_scans_from_filesystem
+            
+            result = sync_scans_from_filesystem()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Scans synced successfully',
+                'sync_result': result
+            })
+        except Exception as e:
+            print(f'[DEBUG] Error syncing scans: {e}')
+            return jsonify({'status': 'error', 'message': f'Failed to sync scans: {str(e)}'}), 500
+
     @bp.route('/alerts', methods=['GET'])
     def get_alerts():
         """Get all alerts"""
@@ -408,8 +425,43 @@ def create_api_blueprint(db):
             
             interfaces.sort(key=interface_priority)
             
+            # Add common networks
+            common_networks = [
+                {
+                    'cidr': '192.168.1.0/24',
+                    'display': '192.168.1.0/24 (254 hosts) - Common home network',
+                    'hosts': 254
+                },
+                {
+                    'cidr': '192.168.0.0/24',
+                    'display': '192.168.0.0/24 (254 hosts) - Common home network',
+                    'hosts': 254
+                },
+                {
+                    'cidr': '10.0.0.0/24',
+                    'display': '10.0.0.0/24 (254 hosts) - Common corporate network',
+                    'hosts': 254
+                },
+                {
+                    'cidr': '172.16.0.0/24',
+                    'display': '172.16.0.0/24 (254 hosts) - Common corporate network',
+                    'hosts': 254
+                },
+                {
+                    'cidr': '192.168.1.0/22',
+                    'display': '192.168.1.0/22 (1022 hosts) - Extended home network',
+                    'hosts': 1022
+                },
+                {
+                    'cidr': '10.0.0.0/16',
+                    'display': '10.0.0.0/16 (65534 hosts) - Large corporate network',
+                    'hosts': 65534
+                }
+            ]
+            
             return jsonify({
                 'interfaces': interfaces,
+                'common_networks': common_networks,
                 'count': len(interfaces)
             })
             
@@ -431,12 +483,46 @@ def create_api_blueprint(db):
                         'isUp': True
                     }
                 ],
+                'common_networks': [
+                    {
+                        'cidr': '192.168.1.0/24',
+                        'display': '192.168.1.0/24 (254 hosts) - Common home network',
+                        'hosts': 254
+                    },
+                    {
+                        'cidr': '192.168.0.0/24',
+                        'display': '192.168.0.0/24 (254 hosts) - Common home network',
+                        'hosts': 254
+                    },
+                    {
+                        'cidr': '10.0.0.0/24',
+                        'display': '10.0.0.0/24 (254 hosts) - Common corporate network',
+                        'hosts': 254
+                    }
+                ],
                 'count': 1
             })
         except Exception as e:
             print(f'[DEBUG] Error getting network interfaces: {e}')
             return jsonify({
                 'interfaces': [],
+                'common_networks': [
+                    {
+                        'cidr': '192.168.1.0/24',
+                        'display': '192.168.1.0/24 (254 hosts) - Common home network',
+                        'hosts': 254
+                    },
+                    {
+                        'cidr': '192.168.0.0/24',
+                        'display': '192.168.0.0/24 (254 hosts) - Common home network',
+                        'hosts': 254
+                    },
+                    {
+                        'cidr': '10.0.0.0/24',
+                        'display': '10.0.0.0/24 (254 hosts) - Common corporate network',
+                        'hosts': 254
+                    }
+                ],
                 'count': 0
             })
 
@@ -449,6 +535,47 @@ def create_api_blueprint(db):
             'version': '1.0.0'
         })
     
+    @bp.route('/sync-scans', methods=['POST'])
+    def sync_scans():
+        """Synchronize database with filesystem XML files"""
+        try:
+            from ..services.sync import sync_scans_from_filesystem
+            
+            result = sync_scans_from_filesystem()
+            
+            if 'error' in result:
+                return jsonify({'status': 'error', 'message': result['error']}), 400
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Sync completed: {result["synced_count"]} synced, {result["skipped_count"]} skipped, {result["error_count"]} errors',
+                'details': result
+            })
+            
+        except Exception as e:
+            print(f'[DEBUG] Error syncing scans: {e}')
+            return jsonify({'status': 'error', 'message': f'Error syncing scans: {str(e)}'}), 500
+
+    @bp.route('/sync-status', methods=['GET'])
+    def sync_status():
+        """Get synchronization status between database and filesystem"""
+        try:
+            from ..services.sync import get_sync_status
+            
+            status = get_sync_status()
+            
+            if 'error' in status:
+                return jsonify({'status': 'error', 'message': status['error']}), 400
+            
+            return jsonify({
+                'status': 'success',
+                'sync_status': status
+            })
+            
+        except Exception as e:
+            print(f'[DEBUG] Error getting sync status: {e}')
+            return jsonify({'status': 'error', 'message': f'Error getting sync status: {str(e)}'}), 500
+
     @bp.route('/test-pushover', methods=['POST', 'GET', 'OPTIONS'])
     def test_pushover():
         """Test Pushover notification system"""

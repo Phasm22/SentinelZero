@@ -20,6 +20,7 @@ class Scan(db.Model):
     total_ports = db.Column(db.Integer, default=0)
     open_ports = db.Column(db.Integer, default=0)
     insights_json = db.Column(db.Text)  # Store insights as JSON
+    process_id = db.Column(db.Integer, nullable=True)  # Store the nmap process ID for killing
     
     def as_dict(self):
         """Convert scan instance to dictionary"""

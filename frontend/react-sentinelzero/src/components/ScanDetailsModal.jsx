@@ -126,10 +126,16 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="scan-details-modal">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} data-testid="modal-overlay"></div>
-
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" data-testid="modal-content">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-gray-500 bg-opacity-75 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        data-testid="modal-overlay"
+      />
+      
+      {/* Modal */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative w-full max-w-4xl transform rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl transition-all" data-testid="modal-content">
           {/* Header */}
           <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
@@ -153,7 +159,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                 </Button>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   data-testid="close-modal-btn"
                 >
                   <X className="w-6 h-6" />
@@ -261,7 +267,9 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       hosts.forEach(host => {
                         if (host.ports) {
                           host.ports.forEach(port => {
-                            const service = port.service || 'unknown'
+                            const service = typeof port.service === 'object' && port.service?.name 
+                              ? port.service.name 
+                              : (port.service || 'unknown')
                             serviceCounts[service] = (serviceCounts[service] || 0) + 1
                           })
                         }
@@ -418,6 +426,9 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Version
                                           </th>
+                                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Extra Info
+                                          </th>
                                         </tr>
                                       </thead>
                                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -427,13 +438,24 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                                               {port.port}/{port.protocol}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                              {port.service || 'unknown'}
+                                              {typeof port.service === 'object' && port.service?.name 
+                                                ? port.service.name 
+                                                : (port.service || 'unknown')}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                              {port.product || '-'}
+                                              {typeof port.service === 'object' && port.service?.product 
+                                                ? port.service.product 
+                                                : (port.product || '-')}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                              {port.version || '-'}
+                                              {typeof port.service === 'object' && port.service?.version 
+                                                ? port.service.version 
+                                                : (port.version || '-')}
+                                            </td>
+                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                              {typeof port.service === 'object' && port.service?.extrainfo 
+                                                ? port.service.extrainfo 
+                                                : '-'}
                                             </td>
                                           </tr>
                                         ))}

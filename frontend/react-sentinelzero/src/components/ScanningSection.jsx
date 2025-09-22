@@ -32,9 +32,9 @@ const ScanningSection = ({
   ]
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-2xl">
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-2xl" data-testid="scanning-section">
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-700">
+      <div className="flex border-b border-gray-700" data-testid="scanning-tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -44,6 +44,7 @@ const ScanningSection = ({
                 ? 'bg-blue-600/20 text-blue-300 border-b-2 border-blue-400'
                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
             }`}
+            data-testid={`scanning-tab-${tab.id}`}
           >
             {tab.icon}
             <span className="font-semibold">{tab.name}</span>
@@ -52,12 +53,12 @@ const ScanningSection = ({
       </div>
 
       {/* Tab Content */}
-      <div className="p-6">
+      <div className="p-6" data-testid="scanning-content">
         {activeTab === 'automated' && (
-          <div>
+          <div data-testid="automated-scan-tab">
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">Network Scanning</h3>
-              <p className="text-gray-400 text-sm">
+              <h3 className="text-xl font-bold text-gray-100 mb-2" data-testid="automated-scan-title">Network Scanning</h3>
+              <p className="text-gray-400 text-sm" data-testid="automated-scan-description">
                 {isConnected 
                   ? 'Choose a scan type to begin automated network discovery' 
                   : 'Scanner disconnected - try uploading manual scan results instead'
@@ -77,10 +78,10 @@ const ScanningSection = ({
         )}
 
         {activeTab === 'upload' && (
-          <div>
+          <div data-testid="upload-scan-tab">
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">Manual Scan Upload</h3>
-              <p className="text-gray-400 text-sm">
+              <h3 className="text-xl font-bold text-gray-100 mb-2" data-testid="upload-scan-title">Manual Scan Upload</h3>
+              <p className="text-gray-400 text-sm" data-testid="upload-scan-description">
                 Upload XML results from terminal scans - ideal for macOS WiFi or privileged scanning
               </p>
             </div>
@@ -94,10 +95,10 @@ const ScanningSection = ({
 
       {/* Quick Action Hint */}
       {!isScanning && (
-        <div className="px-6 pb-4">
-          <div className="flex items-center space-x-2 text-xs text-gray-500">
+        <div className="px-6 pb-4" data-testid="scanning-hint">
+          <div className="flex items-center space-x-2 text-xs text-gray-500" data-testid="hint-content">
             <Settings className="w-3 h-3" />
-            <span>
+            <span data-testid="hint-text">
               {activeTab === 'automated' 
                 ? 'Automated scans will show real-time progress and results' 
                 : 'Uploaded scans are processed immediately and appear in scan history'

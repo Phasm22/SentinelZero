@@ -115,25 +115,56 @@ def create_scan_blueprint(db, socketio):
 
     @bp.route('/kill-all-scans', methods=['POST'])
     def kill_all_scans():
-        """Mark all active scans as cancelled so worker threads terminate."""
+        """Mark all active scans as cancelled and kill their processes."""
         try:
             active_scans = Scan.query.filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing'])).all()
             count = 0
+            killed_processes = 0
+            
             for s in active_scans:
                 if s.status != 'cancelled':
                     s.status = 'cancelled'
                     count += 1
+                    
+                    # Kill the process if we have a PID
+                    if s.process_id:
+                        try:
+                            import psutil
+                            process = psutil.Process(s.process_id)
+                            if process.is_running():
+                                # Kill the process and its children
+                                children = process.children(recursive=True)
+                                for child in children:
+                                    child.terminate()
+                                process.terminate()
+                                
+                                # Wait for processes to terminate gracefully
+                                psutil.wait_procs(children + [process], timeout=5)
+                                
+                                # Force kill any remaining processes
+                                for child in children:
+                                    if child.is_running():
+                                        child.kill()
+                                if process.is_running():
+                                    process.kill()
+                                
+                                killed_processes += 1
+                                print(f'[DEBUG] Killed process {s.process_id} for scan {s.id}')
+                        except (psutil.NoSuchProcess, psutil.AccessDenied, Exception) as e:
+                            print(f'[WARN] Could not kill process {s.process_id}: {e}')
+            
             if count:
                 from ..config.database import db as _db
                 _db.session.commit()
-            msg = f'Cancelled {count} active scans'
+            
+            msg = f'Cancelled {count} active scans, killed {killed_processes} processes'
             print(f'[DEBUG] {msg}')
             if socketio:
                 try:
                     socketio.emit('scan_log', {'msg': msg})
                 except Exception:
                     pass
-            return jsonify({'status': 'success', 'message': msg, 'cancelled': count})
+            return jsonify({'status': 'success', 'message': msg, 'cancelled': count, 'killed_processes': killed_processes})
         except Exception as e:
             from ..config.database import db as _db
             _db.session.rollback()
@@ -141,24 +172,55 @@ def create_scan_blueprint(db, socketio):
 
     @bp.route('/cancel-scan/<int:scan_id>', methods=['POST'])
     def cancel_scan(scan_id):
-        """Cancel a single running scan."""
+        """Cancel a single running scan and kill its process."""
         try:
             scan = Scan.query.get(scan_id)
             if not scan:
                 return jsonify({'status': 'error', 'message': 'Scan not found'}), 404
             if scan.status in ['complete', 'error', 'cancelled']:
                 return jsonify({'status': 'success', 'message': f'Scan already {scan.status}', 'scan_id': scan_id})
+            
             scan.status = 'cancelled'
+            killed_process = False
+            
+            # Kill the process if we have a PID
+            if scan.process_id:
+                try:
+                    import psutil
+                    process = psutil.Process(scan.process_id)
+                    if process.is_running():
+                        # Kill the process and its children
+                        children = process.children(recursive=True)
+                        for child in children:
+                            child.terminate()
+                        process.terminate()
+                        
+                        # Wait for processes to terminate gracefully
+                        psutil.wait_procs(children + [process], timeout=5)
+                        
+                        # Force kill any remaining processes
+                        for child in children:
+                            if child.is_running():
+                                child.kill()
+                        if process.is_running():
+                            process.kill()
+                        
+                        killed_process = True
+                        print(f'[DEBUG] Killed process {scan.process_id} for scan {scan_id}')
+                except (psutil.NoSuchProcess, psutil.AccessDenied, Exception) as e:
+                    print(f'[WARN] Could not kill process {scan.process_id}: {e}')
+            
             from ..config.database import db as _db
             _db.session.commit()
-            msg = f'Scan {scan_id} marked cancelled'
+            
+            msg = f'Scan {scan_id} cancelled' + (f' and process killed' if killed_process else '')
             print(f'[DEBUG] {msg}')
             if socketio:
                 try:
                     socketio.emit('scan_log', {'msg': msg})
                 except Exception:
                     pass
-            return jsonify({'status': 'success', 'message': msg, 'scan_id': scan_id})
+            return jsonify({'status': 'success', 'message': msg, 'scan_id': scan_id, 'killed_process': killed_process})
         except Exception as e:
             from ..config.database import db as _db
             _db.session.rollback()

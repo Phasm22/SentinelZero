@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
+import Button from './Button'
 
 const ScanUpload = ({ onUploadSuccess }) => {
   const [isDragging, setIsDragging] = useState(false)
@@ -67,14 +68,14 @@ const ScanUpload = ({ onUploadSuccess }) => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-2xl p-8">
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-2xl p-8">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-title font-bold text-gray-100">Upload Scan Results</h2>
         <FileText className="w-8 h-8 text-blue-400" />
       </div>
 
       {/* Command Example */}
-      <div className="mb-6 p-4 bg-gray-900 rounded-lg">
+      <div className="mb-6 p-4 bg-gray-900 rounded-md">
         <h3 className="text-sm font-semibold text-gray-300 mb-2">Run this in your terminal:</h3>
         <pre className="text-xs text-green-400 overflow-x-auto">
           nmap -v -T4 -sS -p- --open -O -sV -Pn \<br />
@@ -88,7 +89,7 @@ const ScanUpload = ({ onUploadSuccess }) => {
 
       {/* Upload Area */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
+        className={`border-2 border-dashed rounded-md p-8 text-center transition-all duration-200 ${
           isDragging 
             ? 'border-blue-400 bg-blue-400/10' 
             : 'border-gray-600 hover:border-gray-500'
@@ -108,15 +109,16 @@ const ScanUpload = ({ onUploadSuccess }) => {
           <div className="flex flex-col items-center space-y-4">
             <CheckCircle className="w-12 h-12 text-green-400" />
             <p className="text-gray-300">✅ {uploadedFile.name} uploaded successfully</p>
-            <button
+            <Button
               onClick={() => {
                 setUploadedFile(null)
                 document.getElementById('file-input').value = ''
               }}
-              className="btn btn-outline btn-sm"
+              variant="outline"
+              size="sm"
             >
               Upload Another
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-4">
@@ -136,18 +138,18 @@ const ScanUpload = ({ onUploadSuccess }) => {
               onChange={handleFileSelect}
               className="hidden"
             />
-            <button
+            <Button
               onClick={() => document.getElementById('file-input').click()}
-              className="btn btn-primary"
+              variant="primary"
             >
               Choose File
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+      <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700/30 rounded-md">
         <div className="flex items-start space-x-3">
           <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm">

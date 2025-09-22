@@ -5,6 +5,7 @@ import { apiService } from '@/utils/api'
 const ScanDetailsModal = lazy(() => import('@/components/ScanDetailsModal'))
 import AnimatedValue from '@/components/AnimatedValue'
 import StatCard from '@/components/StatCard'
+import Button from '@/components/Button'
 import { 
   Server, 
   Shield, 
@@ -27,7 +28,6 @@ import ScanningSection from '@/components/ScanningSection'
 import RecentScansTable from '@/components/RecentScansTable'
 import InsightsCard from '@/components/InsightsCard'
 import Modal from '@/components/Modal'
-import Button from '@/components/Button'
 import { buildNmapCommand } from '@/components/ScanControls'
 
 const Dashboard = () => {
@@ -336,69 +336,77 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
+      <div className="flex items-center justify-center min-h-screen" data-testid="dashboard-loading">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500" data-testid="loading-spinner"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Error</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{error}</p>
+      <div className="text-center py-12" data-testid="dashboard-error">
+        <AlertTriangle className="mx-auto h-12 w-12 text-red-500" data-testid="error-icon" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white" data-testid="error-title">Error</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400" data-testid="error-message">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full" data-testid="dashboard-main">
       {/* Header with shimmer/progress bar */}
-      <div className="relative">
+      <div className="relative" data-testid="dashboard-header">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-      <button
+          <div className="flex items-center space-x-4" data-testid="dashboard-actions">
+      <Button
         onClick={clearAllData}
-        className="btn btn-error btn-sm flex items-center space-x-2 hover:bg-red-700 hover:text-white transition-colors relative group"
+        variant="error"
+        size="sm"
+        icon={<Trash2 className="w-4 h-4" />}
         title="This will wipe all scan history. Are you sure?"
+        data-testid="clear-all-data-btn"
       >
-              <Trash2 className="w-6 h-6 text-red-500 group-hover:text-white transition-colors" />
-              <span>Clear All Data</span>
-            </button>
-            <button
-              onClick={deleteAllScans}
-              className="btn btn-danger btn-sm flex items-center space-x-2 hover:bg-red-800 hover:text-white transition-colors relative group ml-2"
-              title="Delete all scans from the database. This cannot be undone."
-            >
-              <Trash2 className="w-6 h-6 text-red-700 group-hover:text-white transition-colors" />
-              <span>Delete All Scans</span>
-            </button>
-            <button
-              onClick={testConnection}
-              className="btn btn-info btn-sm flex items-center space-x-2 hover:bg-blue-700 hover:text-white transition-colors relative group ml-2"
-              title="Test API and Socket.IO connection"
-            >
-              <span>Test Connection</span>
-            </button>
+        Clear All Data
+      </Button>
+      <Button
+        onClick={deleteAllScans}
+        variant="danger"
+        size="sm"
+        icon={<Trash2 className="w-4 h-4" />}
+        title="Delete all scans from the database. This cannot be undone."
+        className="ml-2"
+        data-testid="delete-all-scans-btn"
+      >
+        Delete All Scans
+      </Button>
+      <Button
+        onClick={testConnection}
+        variant="info"
+        size="sm"
+        title="Test API and Socket.IO connection"
+        className="ml-2"
+        data-testid="test-connection-btn"
+      >
+        Test Connection
+      </Button>
           </div>
         </div>
         {/* Shimmer/progress bar under header during scan */}
         {isScanning && (
-          <div className="absolute left-0 right-0 top-full mt-2 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded-full shadow-lg" />
+          <div className="absolute left-0 right-0 top-full mt-2 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded-full shadow-lg" data-testid="scan-progress-bar" />
         )}
         {isScanning && (
-          <div className="flex items-center mt-2">
-            <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-400" />
-            <span className="text-blue-300 animate-pulse font-semibold">Scanning…</span>
+          <div className="flex items-center mt-2" data-testid="scan-status-indicator">
+            <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-400" data-testid="scan-loading-icon" />
+            <span className="text-blue-300 animate-pulse font-semibold" data-testid="scan-status-text">Scanning…</span>
           </div>
         )}
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="dashboard-content-grid">
         {/* Left Column - Insights and Controls */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4" data-testid="dashboard-left-column">
           {/* Insights Card */}
           <InsightsCard />
           
@@ -416,23 +424,25 @@ const Dashboard = () => {
           />
           
           {/* Tabs for Active/Recent Scans */}
-          <div className="mt-6">
-            <div className="flex space-x-4 border-b border-gray-700 mb-4">
+          <div className="mt-6" data-testid="scans-tabs-section">
+            <div className="flex space-x-4 border-b border-gray-700 mb-4" data-testid="scans-tab-navigation">
               <button
                 className={`px-4 py-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'active' ? 'border-primary-500 text-primary-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
                 onClick={() => setActiveTab('active')}
+                data-testid="active-scans-tab"
               >
                 Active Scans
               </button>
               <button
                 className={`px-4 py-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'recent' ? 'border-primary-500 text-primary-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
                 onClick={() => setActiveTab('recent')}
+                data-testid="recent-scans-tab"
               >
                 Recent Scans
               </button>
             </div>
             {activeTab === 'active' && (
-              <div className="space-y-4">
+              <div className="space-y-4" data-testid="active-scans-content">
                 <div className="flex justify-end mb-2">
                   <Button
                     variant="danger"
@@ -449,20 +459,21 @@ const Dashboard = () => {
                       }
                       setStopAllLoading(false)
                     }}
+                    data-testid="stop-all-scans-btn"
                   >
                     {stopAllLoading ? 'Stopping...' : 'Stop All Scans'}
                   </Button>
                 </div>
                 {activeScansLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  <div className="flex items-center justify-center py-8" data-testid="active-scans-loading">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" data-testid="active-scans-spinner"></div>
                   </div>
                 ) : activeScans.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400" data-testid="no-active-scans">
                     <p>No active scans at the moment.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="active-scans-grid">
                     {activeScans.map(scan => (
                       <ActiveScanCard
                         key={scan.id}
@@ -480,46 +491,50 @@ const Dashboard = () => {
         </div>
 
         {/* Right Column - Stats and Recent Scans */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-testid="dashboard-right-column">
           {/* System Info Cards Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3" data-testid="stats-cards-grid">
             <StatCard
               icon={<Server className="w-6 h-6 text-blue-400 mb-1" />}
               label="Total Scans"
               value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-2xl font-extrabold text-gray-100" />}
               hoverRing="hover:ring-blue-400/40"
+              data-testid="total-scans-stat"
             />
             <StatCard
               icon={<Shield className="w-6 h-6 text-green-400 mb-1" />}
               label="Hosts Found"
               value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-2xl font-extrabold text-gray-100" />}
               hoverRing="hover:ring-green-400/40"
+              data-testid="hosts-found-stat"
             />
             <StatCard
               icon={VulnIcon({ count: systemInfo.vulns_count })}
               label="Vulnerabilities"
               value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-2xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
               hoverRing="hover:ring-red-400/40"
+              data-testid="vulnerabilities-stat"
             />
             <StatCard
               icon={<Clock className="w-6 h-6 text-yellow-300 mb-1" />}
               label="Last Scan"
               value={<div className="text-lg font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
               hoverRing="hover:ring-yellow-300/40"
+              data-testid="last-scan-stat"
             />
           </div>
 
           {/* Recent Scans - Compact Version */}
-          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-4">
-            <h2 className="text-xl font-title font-bold text-gray-100 mb-4">Recent Scans</h2>
-            <div className="space-y-3">
+          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4" data-testid="recent-scans-card">
+            <h2 className="text-xl font-title font-bold text-gray-100 mb-4" data-testid="recent-scans-title">Recent Scans</h2>
+            <div className="space-y-3" data-testid="recent-scans-list">
               {recentScans.slice(0, 3).map((scan) => (
-                <div key={scan.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                <div key={scan.id} className="flex items-center justify-between p-3 bg-white/5 rounded-md" data-testid={`recent-scan-item-${scan.id}`}>
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full" data-testid="scan-status-indicator"></div>
                     <div>
-                      <div className="text-sm font-medium text-gray-200">{scan.scan_type}</div>
-                      <div className="text-xs text-gray-400">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
+                      <div className="text-sm font-medium text-gray-200" data-testid="scan-type">{scan.scan_type}</div>
+                      <div className="text-xs text-gray-400" data-testid="scan-timestamp">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
                     </div>
                   </div>
                   <Button 
@@ -539,7 +554,7 @@ const Dashboard = () => {
 
       {/* Scan Details Modal (lazy) */}
       {isModalOpen && (
-        <Suspense fallback={<div className="p-4 text-sm text-gray-400">Loading details...</div>}>
+        <Suspense fallback={<div className="p-4 text-sm text-gray-400" data-testid="modal-loading">Loading details...</div>}>
           <ScanDetailsModal
             scan={selectedScan}
             isOpen={isModalOpen}
@@ -553,31 +568,34 @@ const Dashboard = () => {
         onClose={handleCancelScan}
         title={pendingScanType ? `Confirm ${pendingScanType}` : 'Confirm Scan'}
         size="md"
+        data-testid="scan-confirmation-modal"
       >
         {loadingSettings ? (
-          <div className="text-gray-300">Loading scan settings...</div>
+          <div className="text-gray-300" data-testid="scan-settings-loading">Loading scan settings...</div>
         ) : (
           <>
-            <div className="mb-4">
-              <div className="text-gray-200 mb-2">The following nmap command will be used:</div>
-              <div className="text-xs text-gray-400 mb-1">Target Network: {networkSettings.defaultTargetNetwork}</div>
+            <div className="mb-4" data-testid="scan-command-section">
+              <div className="text-gray-200 mb-2" data-testid="command-description">The following nmap command will be used:</div>
+              <div className="text-xs text-gray-400 mb-1" data-testid="target-network">Target Network: {networkSettings.defaultTargetNetwork}</div>
               {networkSettings?.preDiscoveryEnabled && pendingScanType && pendingScanType !== 'Discovery Scan' && (
-                <div className="text-xs text-amber-300 mb-2">Pre-Discovery enabled: a fast host discovery runs first. Insights only cover hosts found up.</div>
+                <div className="text-xs text-amber-300 mb-2" data-testid="pre-discovery-notice">Pre-Discovery enabled: a fast host discovery runs first. Insights only cover hosts found up.</div>
               )}
-              <pre className="bg-gray-900 text-green-400 rounded p-3 text-sm overflow-x-auto whitespace-pre-wrap">
+              <pre className="bg-gray-900 text-green-400 rounded p-3 text-sm overflow-x-auto whitespace-pre-wrap" data-testid="nmap-command">
                 {pendingScanType ? buildNmapCommand(pendingScanType, security, networkSettings.defaultTargetNetwork) : 'Loading scan configuration...'}
               </pre>
             </div>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3" data-testid="modal-actions">
               <Button
                 variant="ghost"
                 onClick={handleCancelScan}
+                data-testid="cancel-scan-btn"
               >
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 onClick={handleConfirmScan}
+                data-testid="confirm-scan-btn"
               >
                 Start Scan
               </Button>
@@ -591,18 +609,19 @@ const Dashboard = () => {
 
 const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, formatTimestamp, preferences }) {
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-6 flex flex-col justify-between">
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-6 flex flex-col justify-between" data-testid={`active-scan-card-${scan.id}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-lg font-title font-bold text-gray-100">{scan.scan_type}</div>
-        <div className="text-xs text-gray-400">ID: {scan.id}</div>
+        <div className="text-lg font-title font-bold text-gray-100" data-testid="scan-type">{scan.scan_type}</div>
+        <div className="text-xs text-gray-400" data-testid="scan-id">ID: {scan.id}</div>
       </div>
-      <div className="mb-2 text-sm text-gray-300">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
-      <div className="mb-2 text-sm text-gray-300">Status: <span className="font-semibold text-primary-400">{scan.status}</span></div>
-      <div className="mb-2 text-sm text-gray-300">Progress: <span className="font-semibold">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
-      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-2">
+      <div className="mb-2 text-sm text-gray-300" data-testid="scan-started">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
+      <div className="mb-2 text-sm text-gray-300">Status: <span className="font-semibold text-primary-400" data-testid="scan-status">{scan.status}</span></div>
+      <div className="mb-2 text-sm text-gray-300">Progress: <span className="font-semibold" data-testid="scan-progress">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
+      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-2" data-testid="progress-bar-container">
         <div
           className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
           style={{ width: `${scan.percent || 0}%`, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
+          data-testid="progress-bar-fill"
         ></div>
       </div>
       <Button
@@ -610,6 +629,7 @@ const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, forma
         size="sm"
         className="mt-2 w-full"
         onClick={() => onViewDetails(scan)}
+        data-testid={`view-details-btn-${scan.id}`}
       >
         View Details
       </Button>

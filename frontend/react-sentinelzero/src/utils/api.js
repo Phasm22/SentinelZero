@@ -171,4 +171,15 @@ export const apiService = {
     const response = await axios.get(`${API_BASE_URL}/scan-diff/${scanId}`)
     return response.data
   },
+
+  // Scan synchronization
+  syncScans: async () => {
+    const response = await axios.post(`${API_BASE_URL}/sync-scans`)
+    return response.data
+  },
+
+  getSyncStatus: async () => {
+    const response = await axios.get(`${API_BASE_URL}/sync-status`)
+    return response.data
+  },
 } 

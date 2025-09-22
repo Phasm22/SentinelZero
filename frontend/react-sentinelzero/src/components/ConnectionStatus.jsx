@@ -35,30 +35,30 @@ const ConnectionStatus = () => {
   const FrontendStatus = () => {
     if (!isInitialized) {
       return (
-        <div className={`${baseClasses} gap-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30`}>
-          <div className="animate-spin rounded-full h-3 w-3 border-2 border-yellow-400 border-t-transparent" />
-          <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="hidden xs:inline">Frontend Connecting</span>
+        <div className={`${baseClasses} gap-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30`} data-testid="frontend-status-connecting">
+          <div className="animate-spin rounded-full h-3 w-3 border-2 border-yellow-400 border-t-transparent" data-testid="frontend-spinner" />
+          <Monitor className="h-3 w-3 sm:h-4 sm:w-4" data-testid="frontend-icon" />
+          <span className="hidden xs:inline" data-testid="frontend-text">Frontend Connecting</span>
         </div>
       )
     }
 
     if (isConnected) {
       return (
-        <div className={`${baseClasses} gap-1 bg-green-500/10 text-green-400 border border-green-500/30`}>
-          <Wifi className="h-3 w-3 sm:h-4 sm:w-4" />
-          <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="hidden xs:inline">Frontend Online</span>
+        <div className={`${baseClasses} gap-1 bg-green-500/10 text-green-400 border border-green-500/30`} data-testid="frontend-status-online">
+          <Wifi className="h-3 w-3 sm:h-4 sm:w-4" data-testid="wifi-icon" />
+          <Monitor className="h-3 w-3 sm:h-4 sm:w-4" data-testid="frontend-icon" />
+          <span className="hidden xs:inline" data-testid="frontend-text">Frontend Online</span>
         </div>
       )
     }
 
     return (
-      <div className={`${baseClasses} gap-1 bg-red-500/10 text-red-400 border border-red-500/30`}>
-        <WifiOff className="h-3 w-3 sm:h-4 sm:w-4" />
-        <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />
-        <span className="hidden xs:inline">Frontend Offline</span>
-        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+      <div className={`${baseClasses} gap-1 bg-red-500/10 text-red-400 border border-red-500/30`} data-testid="frontend-status-offline">
+        <WifiOff className="h-3 w-3 sm:h-4 sm:w-4" data-testid="wifi-off-icon" />
+        <Monitor className="h-3 w-3 sm:h-4 sm:w-4" data-testid="frontend-icon" />
+        <span className="hidden xs:inline" data-testid="frontend-text">Frontend Offline</span>
+        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" data-testid="alert-icon" />
       </div>
     )
   }
@@ -67,35 +67,35 @@ const ConnectionStatus = () => {
   const BackendStatus = () => {
     if (!backendInitialized) {
       return (
-        <div className={`${baseClasses} gap-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30`}>
-          <div className="animate-spin rounded-full h-3 w-3 border-2 border-yellow-400 border-t-transparent" />
-          <Server className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="hidden xs:inline">Backend Connecting</span>
+        <div className={`${baseClasses} gap-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30`} data-testid="backend-status-connecting">
+          <div className="animate-spin rounded-full h-3 w-3 border-2 border-yellow-400 border-t-transparent" data-testid="backend-spinner" />
+          <Server className="h-3 w-3 sm:h-4 sm:w-4" data-testid="server-icon" />
+          <span className="hidden xs:inline" data-testid="backend-text">Backend Connecting</span>
         </div>
       )
     }
 
     if (backendConnected) {
       return (
-        <div className={`${baseClasses} gap-1 bg-green-500/10 text-green-400 border border-green-500/30`}>
-          <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-          <Server className="h-3 w-3 sm:h-4 sm:w-4" />
-          <span className="hidden xs:inline">Backend Online</span>
+        <div className={`${baseClasses} gap-1 bg-green-500/10 text-green-400 border border-green-500/30`} data-testid="backend-status-online">
+          <Database className="h-3 w-3 sm:h-4 sm:w-4" data-testid="database-icon" />
+          <Server className="h-3 w-3 sm:h-4 sm:w-4" data-testid="server-icon" />
+          <span className="hidden xs:inline" data-testid="backend-text">Backend Online</span>
         </div>
       )
     }
 
     return (
-      <div className={`${baseClasses} gap-1 bg-red-500/10 text-red-400 border border-red-500/30`}>
-        <Server className="h-3 w-3 sm:h-4 sm:w-4" />
-        <span className="hidden xs:inline">Backend Offline</span>
-        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+      <div className={`${baseClasses} gap-1 bg-red-500/10 text-red-400 border border-red-500/30`} data-testid="backend-status-offline">
+        <Server className="h-3 w-3 sm:h-4 sm:w-4" data-testid="server-icon" />
+        <span className="hidden xs:inline" data-testid="backend-text">Backend Offline</span>
+        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" data-testid="alert-icon" />
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" data-testid="connection-status">
       <FrontendStatus />
       <BackendStatus />
     </div>

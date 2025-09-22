@@ -50,7 +50,7 @@ const HealthOverview = ({ healthData }) => {
   const overallStatus = getOverallStatus()
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-4 sm:p-6 transition-all duration-200 hover:shadow-2xl">
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4 sm:p-6 transition-all duration-200 hover:shadow-2xl">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">

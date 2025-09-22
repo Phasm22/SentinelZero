@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
 import ScanDetailsModal from '../components/ScanDetailsModal'
-import { Info, Eye, History } from 'lucide-react'
+import { Info, Eye, History, RefreshCw, AlertCircle } from 'lucide-react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { formatTimestamp } from '../utils/date'
 import ScanHistoryTable from '../components/ScanHistoryTable'
+import Button from '../components/Button'
 
 const ScanHistory = () => {
   const { preferences } = useUserPreferences()
@@ -14,8 +15,8 @@ const ScanHistory = () => {
   const [error, setError] = useState(null)
   const [selectedScan, setSelectedScan] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [filterType, setFilterType] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(null)
   const { showToast } = useToast()
 
   const loadScanHistory = async () => {
@@ -32,7 +33,17 @@ const ScanHistory = () => {
 
   useEffect(() => {
     loadScanHistory()
+    loadSyncStatus()
   }, [])
+
+  const loadSyncStatus = async () => {
+    try {
+      const data = await apiService.getSyncStatus()
+      setSyncStatus(data.sync_status)
+    } catch (error) {
+      console.error('Error loading sync status:', error)
+    }
+  }
 
   const handleViewDetails = (scan) => {
     setSelectedScan(scan)
@@ -57,15 +68,21 @@ const ScanHistory = () => {
     }
   }
 
-  const filteredScans = scans.filter(scan => {
-    const matchesType = filterType === 'all' || scan.scan_type === filterType
-    const matchesSearch = searchTerm === '' || 
-      scan.scan_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scan.id.toString().includes(searchTerm)
-    return matchesType && matchesSearch
-  })
+  const handleSyncScans = async () => {
+    setIsSyncing(true)
+    try {
+      const result = await apiService.syncScans()
+      showToast(result.message, 'success')
+      loadScanHistory()
+      loadSyncStatus()
+    } catch (error) {
+      console.error('Error syncing scans:', error)
+      showToast('Failed to sync scans', 'danger')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
-  const scanTypes = [...new Set(scans.map(scan => scan.scan_type))]
 
   if (isLoading) {
     return (
@@ -87,6 +104,44 @@ const ScanHistory = () => {
 
   return (
     <div className="space-y-10 w-full">
+      {/* Sync Status and Controls */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <History className="h-6 w-6 text-primary-500" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Scan History</h2>
+          </div>
+          <div className="flex items-center space-x-3">
+            {syncStatus && !syncStatus.in_sync && (
+              <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">
+                  {syncStatus.missing_in_database} scans not synced
+                </span>
+              </div>
+            )}
+            <Button
+              onClick={handleSyncScans}
+              disabled={isSyncing}
+              variant="primary"
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Syncing...' : 'Sync Scans'}</span>
+            </Button>
+          </div>
+        </div>
+        
+        {syncStatus && (
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Database: {syncStatus.database_scans} scans | 
+            Filesystem: {syncStatus.filesystem_files} files | 
+            Status: {syncStatus.in_sync ? 'In sync' : 'Out of sync'}
+          </div>
+        )}
+      </div>
+
       <ScanHistoryTable
         scans={scans}
         preferences={preferences}

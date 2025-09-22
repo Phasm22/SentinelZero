@@ -178,7 +178,8 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             else:
                 cmd = ['nmap', '-v', '-T4', '-Pn']  # retain -Pn for other scan types to skip unreliable ping on some Wi-Fi setups
             if scan_type_normalized == 'full tcp':
-                cmd += ['-sS', '-p-', '--open']
+                # Use very conservative parameters to prevent firewall state table overflow
+                cmd += ['-sS', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
             elif scan_type_normalized == 'iot scan':
                 if _priv_fallback:
                     # Fallback removes UDP requirement (switch to TCP SYN limited ports)
@@ -263,13 +264,40 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             
             # Execute nmap
             proc = subprocess.Popen(exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
-            msg = 'Nmap process started...'
+            
+            # Store process ID for proper termination
+            scan.process_id = proc.pid
+            db.session.commit()
+            
+            msg = f'Nmap process started (PID: {proc.pid})...'
             if socketio:
                 try:
                     socketio.emit('scan_log', {'msg': msg})
                 except Exception as e:
                     print(f'[DEBUG] Could not emit to socketio: {e}')
             print(msg)
+            
+            # Cleanup function for interrupted scans
+            def cleanup_interrupted_scan():
+                try:
+                    # Mark scan as cancelled if it's still running
+                    if scan.status in ['running', 'parsing', 'saving', 'postprocessing']:
+                        scan.status = 'cancelled'
+                        scan.percent = 0.0
+                        db.session.commit()
+                        print(f'[DEBUG] Marked interrupted scan {scan_id} as cancelled')
+                    
+                    # Remove the XML file if it exists and is small (incomplete)
+                    if os.path.exists(xml_path):
+                        try:
+                            file_size = os.path.getsize(xml_path)
+                            if file_size < 1000:  # Less than 1KB indicates incomplete scan
+                                os.remove(xml_path)
+                                print(f'[DEBUG] Removed incomplete XML file: {xml_path}')
+                        except Exception as e:
+                            print(f'[WARN] Could not remove incomplete XML file: {e}')
+                except Exception as e:
+                    print(f'[WARN] Error during scan cleanup: {e}')
             
             percent = 0
             recent_lines = deque(maxlen=40)
@@ -278,9 +306,29 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 scan_check = Scan.query.get(scan_id)
                 if scan_check and scan_check.status == 'cancelled':
                     try:
-                        proc.kill()
-                    except Exception:
-                        pass
+                        # Kill the process and its children
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=5)  # Give it 5 seconds to terminate gracefully
+                        except subprocess.TimeoutExpired:
+                            proc.kill()  # Force kill if it doesn't terminate
+                        # Also try to kill any child processes
+                        try:
+                            import psutil
+                            parent = psutil.Process(proc.pid)
+                            children = parent.children(recursive=True)
+                            for child in children:
+                                child.terminate()
+                            # Wait for children to terminate
+                            psutil.wait_procs(children, timeout=5)
+                            # Force kill any remaining children
+                            for child in children:
+                                if child.is_running():
+                                    child.kill()
+                        except Exception as e:
+                            print(f'[WARN] Could not kill child processes: {e}')
+                    except Exception as e:
+                        print(f'[WARN] Could not kill process: {e}')
                     emit_progress('cancelled', percent, 'Scan cancelled by user')
                     msg = 'Scan cancelled by user.'
                     if socketio:
@@ -289,6 +337,11 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                         except Exception as e:
                             print(f'[DEBUG] Could not emit to socketio: {e}')
                     print(msg)
+                    # Clean up incomplete scan files
+                    try:
+                        cleanup_interrupted_scan()
+                    except Exception:
+                        pass
                     return
                 
                 if socketio:
@@ -413,10 +466,15 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                                 p_int = int(portid)
                             except Exception:
                                 p_int = None
+                            
+                            # Use common port mapping for better service identification
+                            from ..utils.port_mapping import get_service_name
+                            final_service_name = get_service_name(p_int or int(portid) if portid.isdigit() else 0, service_name)
+                            
                             open_ports.append({
                                 'port': p_int or portid,
                                 'protocol': proto,
-                                'service': service_name,
+                                'service': final_service_name,
                                 'product': product,
                                 'version': version
                             })
@@ -487,11 +545,6 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 emit_progress('postprocessing', 99, 'Generating insights...')
                 try:
                     insights = generate_and_store_insights(scan_id)
-                    if insights is not None:
-                        try:
-                            scan.insights_json = json.dumps(insights)
-                        except Exception:
-                            pass
                     print(f'Generated {len(insights) if insights else 0} insights for scan {scan_id}')
                 except Exception as e:
                     print(f'Error generating insights: {str(e)}')
@@ -502,6 +555,7 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             scan.completed_at = _dt.utcnow()
             db.session.commit()
             emit_progress('complete', 100, 'Scan complete!')
+            # Also emit scan_complete event for backward compatibility
             if socketio:
                 socketio.emit('scan_complete', {'msg': f'Scan complete: {scan_type}', 'scan_id': scan_id})
             
@@ -516,5 +570,10 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 from datetime import datetime as _dt
                 scan.completed_at = _dt.utcnow()
                 db.session.commit()
+            except Exception:
+                pass
+            # Clean up incomplete scan files
+            try:
+                cleanup_interrupted_scan()
             except Exception:
                 pass

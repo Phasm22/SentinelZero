@@ -52,6 +52,8 @@ const Settings = () => {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const [networkInterfaces, setNetworkInterfaces] = useState({ interfaces: [] })
   const [originalSettings, setOriginalSettings] = useState(null)
+  const [showCustomNetworkInput, setShowCustomNetworkInput] = useState(false)
+  const [customNetworkValue, setCustomNetworkValue] = useState('')
   const { showToast } = useToast()
   
   // Settings state
@@ -206,7 +208,46 @@ const Settings = () => {
     }
   }, [JSON.stringify(settings), originalSettings])
 
+  const validateCIDR = (cidr) => {
+    const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/
+    if (!cidrRegex.test(cidr)) return false
+    
+    const [ip, prefix] = cidr.split('/')
+    const prefixNum = parseInt(prefix)
+    if (prefixNum < 0 || prefixNum > 32) return false
+    
+    const ipParts = ip.split('.')
+    return ipParts.every(part => {
+      const num = parseInt(part)
+      return num >= 0 && num <= 255
+    })
+  }
+
   const handleSettingChange = (section, key, value) => {
+    // Handle custom network selection
+    if (section === 'network' && key === 'defaultTargetNetwork' && value === 'custom') {
+      setShowCustomNetworkInput(true)
+      setCustomNetworkValue(settings.network.defaultTargetNetwork)
+      return
+    }
+    
+    // Handle custom network input
+    if (section === 'network' && key === 'customNetwork') {
+      setCustomNetworkValue(value)
+      
+      // Only update settings if it's a valid CIDR
+      if (value === '' || validateCIDR(value)) {
+        setSettings(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            defaultTargetNetwork: value
+          }
+        }))
+      }
+      return
+    }
+    
     setSettings(prev => ({
       ...prev,
       [section]: {
@@ -284,20 +325,11 @@ const Settings = () => {
           </div>
           {/* Unsaved badge (compact on mobile) */}
           {hasUnsavedChanges && (
-            <div className="flex items-center space-x-1 sm:space-x-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-1 rounded-md">
+            <div className="flex items-center space-x-1 sm:space-x-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-1 rounded-sm">
               <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-[11px] sm:text-sm font-medium">Unsaved</span>
             </div>
           )}
-          {/* Test button (wraps) */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleSettingChange('network', 'maxHosts', Math.random() * 1000)}
-            className="text-[11px] sm:text-xs px-2 py-1"
-          >
-            Test
-          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -322,7 +354,7 @@ const Settings = () => {
       </div>
 
       {/* User Preferences */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl p-6">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl p-6">
         <div className="flex items-center space-x-2 mb-4">
           <SettingsIcon className="h-5 w-5 text-blue-500" />
           <h2 className="text-xl font-title font-bold text-gray-100">User Preferences</h2>
@@ -347,7 +379,7 @@ const Settings = () => {
               <select
                 value={preferences.theme || 'system'}
                 onChange={(e) => updatePreference('theme', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100 text-sm"
+                className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100 text-sm"
               >
                 <option value="system">System</option>
                 <option value="light">Light</option>
@@ -359,7 +391,7 @@ const Settings = () => {
       </div>
 
       {/* Scheduled Scans */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             <Clock className="h-5 w-5 text-green-500" />
@@ -386,7 +418,7 @@ const Settings = () => {
                   <select
                     value={settings.scheduledScans?.frequency || 'daily'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'frequency', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                   >
                     <option value="hourly">Hourly</option>
                     <option value="daily">Daily</option>
@@ -401,7 +433,7 @@ const Settings = () => {
                     type="time"
                     value={settings.scheduledScans?.time || '02:00'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'time', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                   />
                 </div>
               </div>
@@ -412,7 +444,7 @@ const Settings = () => {
                   <select
                     value={settings.scheduledScans?.scanType || 'Full TCP'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'scanType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                   >
                     <option value="Full TCP">Full TCP</option>
                     <option value="IoT Scan">IoT Scan</option>
@@ -426,7 +458,7 @@ const Settings = () => {
                     type="text"
                     value={settings.scheduledScans?.targetNetwork || '172.16.0.0/22'}
                     onChange={(e) => handleSettingChange('scheduledScans', 'targetNetwork', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                     placeholder="172.16.0.0/22"
                   />
                 </div>
@@ -437,7 +469,7 @@ const Settings = () => {
       </div>
 
       {/* Pushover Notifications */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -530,7 +562,7 @@ const Settings = () => {
       </div>
 
       {/* Network Settings */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             <Network className="h-5 w-5 text-blue-500" />
@@ -541,29 +573,68 @@ const Settings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Default Target Network</label>
-              <select
-                value={settings.network.defaultTargetNetwork}
-                onChange={(e) => handleSettingChange('network', 'defaultTargetNetwork', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
-              >
-                <optgroup label="Network Interfaces">
-                  {(networkInterfaces?.interfaces || []).map((iface, index) => (
-                    <option key={`interface-${index}`} value={iface.cidr}>
-                      {iface.display}
-                    </option>
-                  ))}
-                </optgroup>
-                {networkInterfaces.common_networks && networkInterfaces.common_networks.length > 0 && (
-                  <optgroup label="Common Networks">
-                    {networkInterfaces.common_networks.map((network, index) => (
-                      <option key={`common-${index}`} value={network.cidr}>
-                        {network.display}
+              {!showCustomNetworkInput ? (
+                <select
+                  value={settings.network.defaultTargetNetwork}
+                  onChange={(e) => handleSettingChange('network', 'defaultTargetNetwork', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
+                >
+                  <optgroup label="Network Interfaces">
+                    {(networkInterfaces?.interfaces || []).map((iface, index) => (
+                      <option key={`interface-${index}`} value={iface.cidr}>
+                        {iface.display}
                       </option>
                     ))}
                   </optgroup>
-                )}
-                <option value="custom">Custom Network...</option>
-              </select>
+                  {networkInterfaces.common_networks && networkInterfaces.common_networks.length > 0 && (
+                    <optgroup label="Common Networks">
+                      {networkInterfaces.common_networks.map((network, index) => (
+                        <option key={`common-${index}`} value={network.cidr}>
+                          {network.display}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="custom">Custom Network...</option>
+                </select>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={customNetworkValue}
+                      onChange={(e) => handleSettingChange('network', 'customNetwork', e.target.value)}
+                      placeholder="Enter CIDR notation (e.g., 192.168.1.0/24)"
+                      className={`flex-1 px-3 py-2 border rounded-sm bg-gray-700 text-gray-100 placeholder-gray-400 ${
+                        customNetworkValue && !validateCIDR(customNetworkValue)
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-gray-600 focus:ring-blue-500'
+                      }`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCustomNetworkInput(false)
+                        setCustomNetworkValue('')
+                      }}
+                      className="px-3 py-2"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  <p className={`text-xs ${
+                    customNetworkValue && !validateCIDR(customNetworkValue)
+                      ? 'text-red-400'
+                      : 'text-gray-400'
+                  }`}>
+                    {customNetworkValue && !validateCIDR(customNetworkValue)
+                      ? 'Invalid CIDR notation. Use format: 192.168.1.0/24'
+                      : 'Enter network in CIDR notation (e.g., 192.168.1.0/24, 10.0.0.0/8)'
+                    }
+                  </p>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Scan Timeout (seconds)</label>
@@ -571,7 +642,7 @@ const Settings = () => {
                 type="number"
                 value={settings.network.scanTimeout}
                 onChange={(e) => handleSettingChange('network', 'scanTimeout', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100"
+                className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                 min="60"
                 max="3600"
               />
@@ -581,7 +652,7 @@ const Settings = () => {
       </div>
 
       {/* Security Settings */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             <Shield className="h-5 w-5 text-green-500" />
@@ -633,7 +704,7 @@ const Settings = () => {
       </div>
 
       {/* System Information */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             <RefreshCw className="h-5 w-5 text-purple-500" />

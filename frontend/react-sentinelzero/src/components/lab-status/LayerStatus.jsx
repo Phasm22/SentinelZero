@@ -72,7 +72,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
         </div>
         <button
           onClick={() => setFilter(filter === 'all' ? 'loopbacks' : 'all')}
-          className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 self-start ${
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 self-start ${
             filter === 'all' 
               ? 'bg-white/20 dark:bg-white/20 text-white dark:text-white border border-white/30 dark:border-white/30' 
               : 'bg-blue-500/20 dark:bg-blue-500/20 text-blue-300 dark:text-blue-300 border border-blue-400/40 dark:border-blue-400/40'
@@ -103,7 +103,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
             <button
               key={layer.key}
               onClick={() => setFilter(filter === layer.key ? 'all' : layer.key)}
-              className={`group p-4 rounded-xl border backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer ${
+              className={`group p-4 rounded-lg border backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer ${
                 colorClasses.bg
               } ${colorClasses.border} shadow-lg ${colorClasses.glow} ${
                 isActive ? 'ring-1 ring-white/30 dark:ring-white/30 shadow-xl' : ''

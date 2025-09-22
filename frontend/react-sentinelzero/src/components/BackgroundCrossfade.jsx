@@ -3,12 +3,12 @@ import { useUserPreferences } from '../contexts/UserPreferencesContext'
 
 const backgrounds = {
   light: {
-    desktop: '/backgrounds/blob-desk-light.png',
-    mobile: '/backgrounds/blob-mobile-light.png',
+    desktop: '/backgrounds/blob-light.svg',
+    mobile: '/backgrounds/blob-mobile.svg',
   },
   dark: {
-    desktop: '/backgrounds/blob-desk-dark.png',
-    mobile: '/backgrounds/blob-mobile-dark.png',
+    desktop: '/backgrounds/blob-dark.svg',
+    mobile: '/backgrounds/blob-mobile.svg',
   },
 }
 
@@ -100,6 +100,8 @@ const BackgroundCrossfade = () => {
           inset: 0,
           zIndex: -3,
           pointerEvents: 'none',
+          minHeight: '100vh',
+          minWidth: '100vw',
         }}
         aria-hidden="true"
       />
@@ -118,6 +120,8 @@ const BackgroundCrossfade = () => {
             inset: 0,
             zIndex: -2,
             pointerEvents: 'none',
+            minHeight: '100vh',
+            minWidth: '100vw',
           }}
           aria-hidden="true"
         />
