@@ -14,10 +14,10 @@ const Sidebar = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`group flex items-center px-3 py-3 text-lg font-semibold rounded-lg transition-colors ${
+                className={`group flex items-center px-3 py-3 text-lg font-semibold rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100 shadow'
-                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
+                    ? 'bg-blue-500/20 text-blue-100 dark:bg-blue-500/20 dark:text-blue-100 shadow-lg shadow-blue-500/20 border border-blue-400/30'
+                    : 'text-gray-300 hover:bg-gray-700/50 hover:text-white dark:text-gray-300 dark:hover:bg-gray-700/50 dark:hover:text-white border border-transparent hover:border-gray-600/30'
                 }`}
                 data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
               >
