@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSocket } from '../contexts/SocketContext'
 import HealthOverview from '../components/lab-status/HealthOverview'
+import LabOverview from '../components/lab-status/LabOverview'
 import LayerStatus from '../components/lab-status/LayerStatus'
 import HostGrid from '../components/lab-status/HostGrid'
 
@@ -176,6 +177,9 @@ const LabStatus = () => {
       
       {/* Health Overview */}
       <HealthOverview healthData={healthData} />
+      
+      {/* Lab Network Overview */}
+      <LabOverview healthData={healthData} detailedData={detailedData} />
       
       {/* Layer Status Pills */}
       <LayerStatus 

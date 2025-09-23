@@ -1,5 +1,6 @@
 import React from 'react'
 import HostCard from './HostCard'
+import NetworkScanners from './NetworkScanners'
 
 const HostGrid = ({ detailedData, filter }) => {
   if (!detailedData) return null
@@ -45,8 +46,27 @@ const HostGrid = ({ detailedData, filter }) => {
     )
   }
 
-  // Group hosts by proper network categories and layer purpose
-  const groupedHosts = hosts.reduce((groups, host) => {
+  // Separate network scanners from other hosts
+  const networkScanners = hosts.filter(host => {
+    const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
+    const name = host.name || 'Unknown'
+    return ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/) || 
+           name.includes('Cloudflare') || 
+           name.includes('Google DNS') || 
+           name.includes('Internet Test')
+  })
+
+  const otherHosts = hosts.filter(host => {
+    const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
+    const name = host.name || 'Unknown'
+    return !ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/) && 
+           !name.includes('Cloudflare') && 
+           !name.includes('Google DNS') && 
+           !name.includes('Internet Test')
+  })
+
+  // Group remaining hosts by proper network categories and layer purpose
+  const groupedHosts = otherHosts.reduce((groups, host) => {
     const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
     const name = host.name || 'Unknown'
     let segment = 'Other'
@@ -72,8 +92,6 @@ const HostGrid = ({ detailedData, filter }) => {
     } else if (ip.startsWith('10.16.')) {
       // VPN network
       segment = 'VPN (10.16.x.x)'
-    } else if (ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/)) {
-      segment = 'External DNS'
     } else {
       // Check by host function/name for special cases
       if (name.toLowerCase().includes('dns') || host.type === 'dns') {
@@ -99,7 +117,6 @@ const HostGrid = ({ detailedData, filter }) => {
     'Localhost',                  // Local system
     'DNS Services',               // DNS-specific services
     'VPN Services',               // VPN-specific services  
-    'External DNS',               // External DNS servers
     'Other'                       // Everything else
   ]
 
@@ -124,6 +141,11 @@ const HostGrid = ({ detailedData, filter }) => {
           </div>
         )}
       </div>
+
+      {/* Network Scanners - Consolidated View */}
+      {networkScanners.length > 0 && (
+        <NetworkScanners hosts={networkScanners} />
+      )}
 
       {sortedGroups.map(([segment, segmentHosts]) => (
         <div key={segment} className="space-y-3 sm:space-y-4">

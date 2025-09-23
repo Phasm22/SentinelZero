@@ -16,8 +16,8 @@ const Sidebar = () => {
                 to={item.href}
                 className={`group flex items-center px-3 py-3 text-lg font-semibold rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-blue-500/20 text-blue-100 dark:bg-blue-500/20 dark:text-blue-100 shadow-lg shadow-blue-500/20 border border-blue-400/30'
-                    : 'text-gray-300 hover:bg-gray-700/50 hover:text-white dark:text-gray-300 dark:hover:bg-gray-700/50 dark:hover:text-white border border-transparent hover:border-gray-600/30'
+                    ? 'bg-blue-600/80 text-white dark:bg-blue-500/20 dark:text-blue-100 shadow-lg shadow-blue-500/30 border border-blue-500/50 dark:border-blue-400/30'
+                    : 'text-gray-700 hover:bg-gray-200/80 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/50 dark:hover:text-white border border-transparent hover:border-gray-400/40 dark:hover:border-gray-600/30'
                 }`}
                 data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
               >

@@ -35,9 +35,21 @@ INFRASTRUCTURE = [
     {"name": "Cloudflare DNS", "ip": "1.1.1.1", "port": 53, "type": "dns", "query": "google.com"},
     {"name": "Google DNS", "ip": "8.8.8.8", "port": 53, "type": "dns", "query": "google.com"},
     {"name": "Internet Connectivity", "ip": "8.8.8.8", "type": "ping"},
+    # Lab Infrastructure
+    {"name": "Proxmox Node (proxBig.prox)", "ip": "172.16.0.10", "type": "ping"},
+    {"name": "Proxmox Cluster (yin.prox)", "ip": "172.16.0.11", "type": "ping"},
+    {"name": "Proxmox Cluster (yang.prox)", "ip": "172.16.0.12", "type": "ping"},
+    {"name": "Homebridge", "ip": "192.168.68.79", "type": "ping"},
+    {"name": "Ubuntu Server", "ip": "192.168.68.71", "type": "ping"},
+    {"name": "Ubuntu Server (30)", "ip": "192.168.68.71.30", "type": "ping"},
+    {"name": "Home Net DNS", "ip": "192.168.71.25", "type": "ping"},
+    {"name": "Backup Home DNS", "ip": "192.168.71.30", "type": "ping"},
+    {"name": "Code Server (code-server.prox)", "ip": "172.16.0.106", "type": "ping"},
+    {"name": "VPN to Home Network", "ip": "192.168.71.40", "type": "ping"},
+    {"name": "Main Lab Windows VM (winvm.prox)", "ip": "172.16.0.100", "type": "ping"},
 ]
 
-def ping_ip(ip, timeout=1, retries=2, log_results=True):
+def ping_ip(ip, timeout=0.5, retries=1, log_results=True):
     """Smart connectivity check with retries, detailed logging, and parallel execution support"""
     from datetime import datetime
     
@@ -339,124 +351,158 @@ def whats_up_monitor(socketio, app):
 
 def get_loopbacks_data():
     """Core logic for checking loopbacks - returns raw data"""
-    results = []
-    for loopback in LOOPBACKS:
-        result = ping_ip(loopback["ip"], timeout=2, retries=1)
-        results.append({
-            "name": loopback["name"],
-            "ip": loopback["ip"],
-            "description": loopback.get("description", ""),
-            "interface": loopback.get("interface", "unknown"),
-            "status": "up" if result["success"] else "down",
-            "response_time": result.get("response_time"),
-            "method": result.get("method", "unknown"),
-            "error": result.get("error") if not result["success"] else None,
-            "checked_at": datetime.now().isoformat()
-        })
-    return results
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Loopbacks check timed out")
+    
+    # Set a 5-second timeout for the entire function
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(5)
+    
+    try:
+        results = []
+        for loopback in LOOPBACKS:
+            result = ping_ip(loopback["ip"], timeout=2, retries=1)
+            results.append({
+                "name": loopback["name"],
+                "ip": loopback["ip"],
+                "description": loopback.get("description", ""),
+                "interface": loopback.get("interface", "unknown"),
+                "status": "up" if result["success"] else "down",
+                "response_time": result.get("response_time"),
+                "method": result.get("method", "unknown"),
+                "error": result.get("error") if not result["success"] else None,
+                "checked_at": datetime.now().isoformat()
+            })
+        return results
+    finally:
+        signal.alarm(0)  # Cancel the alarm
 
 def get_services_data():
     """Core logic for checking services - returns raw data with fast hping3-based testing"""
-    results = []
-    for service in SERVICES:
-        result = {
-            "name": service["name"],
-            "domain": service.get("domain"),
-            "ip": service.get("ip"),
-            "port": service.get("port"),
-            "type": service.get("type", "ping"),
-            "path": service.get("path", "/"),
-            "checked_at": datetime.now().isoformat()
-        }
-        
-        # Determine target host and resolve if needed
-        if 'domain' in service:
-            target_host = service['domain']
-            target_ip = resolve_domain(target_host)
-        else:
-            target_host = service['ip']
-            target_ip = service['ip']
-        
-        # Step 1: DNS Resolution (if domain-based)
-        if 'domain' in service:
-            if target_ip:
-                result["dns"] = {"success": True, "ip": target_ip, "error": None}
-            else:
-                result["dns"] = {"success": False, "ip": None, "error": "DNS resolution failed"}
-        else:
-            result["dns"] = {"success": True, "ip": target_ip, "error": None}  # Skip DNS for IP-based
-        
-        if target_ip:
-            # Step 2: Basic ICMP connectivity check (short timeout)
-            try:
-                start_time = time.time()
-                icmp_result = subprocess.run(["ping", "-c1", "-W1", target_ip], 
-                                           capture_output=True, text=True, timeout=2)
-                icmp_time = (time.time() - start_time) * 1000
-                icmp_success = icmp_result.returncode == 0
-            except:
-                icmp_success = False
-                icmp_time = None
-            
-            result["ping"] = {
-                "success": icmp_success, 
-                "ip": target_ip,
-                "method": "icmp",
-                "response_time_ms": icmp_time if icmp_success else None,
-                "attempts": 1,
-                "error": "ICMP timeout/failed" if not icmp_success else None
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Services check timed out")
+    
+    # Set a 8-second timeout for the entire function
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(8)
+    
+    try:
+        results = []
+        for service in SERVICES:
+            result = {
+                "name": service["name"],
+                "domain": service.get("domain"),
+                "ip": service.get("ip"),
+                "port": service.get("port"),
+                "type": service.get("type", "ping"),
+                "path": service.get("path", "/"),
+                "checked_at": datetime.now().isoformat()
             }
             
-            # Step 3: Service-Specific Port Check (the critical part)
-            if service["type"] in ["http", "https"]:
-                use_https = service["type"] == "https"
-                service_result = check_http_service(
-                    target_host, 
-                    service["port"], 
-                    service.get("path", "/"),
-                    use_https,
-                    timeout=3  # Short timeout for HTTP
-                )
-                result["service"] = service_result
-                dns_ok = result["dns"]["success"]
-                result["overall_status"] = "up" if (dns_ok and service_result["success"]) else "down"
+            # Determine target host and resolve if needed
+            if 'domain' in service:
+                target_host = service['domain']
+                target_ip = resolve_domain(target_host)
             else:
-                # Use socket check for other services
-                port_result = {"success": check_port(target_ip, service["port"], timeout=2)}
-                result["service"] = {
-                    "success": port_result["success"],
-                    "response_time": None,
-                    "error": None if port_result["success"] else f"Port {service['port']} not accessible",
-                    "method": "socket"
-                }
-                dns_ok = result["dns"]["success"]
-                # Service is up only if DNS works AND the specific port is accessible
-                result["overall_status"] = "up" if (dns_ok and port_result["success"]) else "down"
-        else:
-            result["ping"] = {"success": False, "ip": None}
-            result["service"] = {"success": False, "error": "DNS resolution failed"}
-            result["overall_status"] = "down"
+                target_host = service['ip']
+                target_ip = service['ip']
             
-        results.append(result)
-    
-    return results
+            # Step 1: DNS Resolution (if domain-based)
+            if 'domain' in service:
+                if target_ip:
+                    result["dns"] = {"success": True, "ip": target_ip, "error": None}
+                else:
+                    result["dns"] = {"success": False, "ip": None, "error": "DNS resolution failed"}
+            else:
+                result["dns"] = {"success": True, "ip": target_ip, "error": None}  # Skip DNS for IP-based
+        
+            if target_ip:
+                # Step 2: Basic ICMP connectivity check (short timeout)
+                try:
+                    start_time = time.time()
+                    icmp_result = subprocess.run(["ping", "-c1", "-W1", target_ip], 
+                                               capture_output=True, text=True, timeout=2)
+                    icmp_time = (time.time() - start_time) * 1000
+                    icmp_success = icmp_result.returncode == 0
+                except:
+                    icmp_success = False
+                    icmp_time = None
+                
+                result["ping"] = {
+                    "success": icmp_success, 
+                    "ip": target_ip,
+                    "method": "icmp",
+                    "response_time_ms": icmp_time if icmp_success else None,
+                    "attempts": 1,
+                    "error": "ICMP timeout/failed" if not icmp_success else None
+                }
+            
+                # Step 3: Service-Specific Port Check (the critical part)
+                if service["type"] in ["http", "https"]:
+                    use_https = service["type"] == "https"
+                    service_result = check_http_service(
+                        target_host, 
+                        service["port"], 
+                        service.get("path", "/"),
+                        use_https,
+                        timeout=3  # Short timeout for HTTP
+                    )
+                    result["service"] = service_result
+                    dns_ok = result["dns"]["success"]
+                    result["overall_status"] = "up" if (dns_ok and service_result["success"]) else "down"
+                else:
+                    # Use socket check for other services
+                    port_result = {"success": check_port(target_ip, service["port"], timeout=2)}
+                    result["service"] = {
+                        "success": port_result["success"],
+                        "response_time": None,
+                        "error": None if port_result["success"] else f"Port {service['port']} not accessible",
+                        "method": "socket"
+                    }
+                    dns_ok = result["dns"]["success"]
+                    # Service is up only if DNS works AND the specific port is accessible
+                    result["overall_status"] = "up" if (dns_ok and port_result["success"]) else "down"
+            else:
+                result["ping"] = {"success": False, "ip": None}
+                result["service"] = {"success": False, "error": "DNS resolution failed"}
+                result["overall_status"] = "down"
+            
+            results.append(result)
+        
+        return results
+    finally:
+        signal.alarm(0)  # Cancel the alarm
 
 def get_infrastructure_data():
     """Core logic for checking infrastructure - returns raw data"""
-    results = []
-    for infra in INFRASTRUCTURE:
-        result = {
-            "name": infra["name"],
-            "ip": infra["ip"],
-            "port": infra.get("port"),
-            "type": infra.get("type", "ping"),
-            "checked_at": datetime.now().isoformat()
-        }
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Infrastructure check timed out")
+    
+    # Set a 10-second timeout for the entire function
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(10)
+    
+    try:
+        results = []
+        for infra in INFRASTRUCTURE:
+            result = {
+                "name": infra["name"],
+                "ip": infra["ip"],
+                "port": infra.get("port"),
+                "type": infra.get("type", "ping"),
+                "checked_at": datetime.now().isoformat()
+            }
         
         # Check based on type
         if infra["type"] == "dns":
             query_domain = infra.get("query", "google.com")
-            dns_result = check_dns_query(infra["ip"], query_domain, timeout=3)
+            dns_result = check_dns_query(infra["ip"], query_domain, timeout=1)
             result["status"] = "up" if dns_result["success"] else "down"
             result["error"] = dns_result.get("error") if not dns_result["success"] else None
             result["response"] = dns_result.get("result")
@@ -467,7 +513,7 @@ def get_infrastructure_data():
                 infra["port"], 
                 path, 
                 infra["type"] == "https",
-                timeout=5
+                timeout=2
             )
             result["status"] = "up" if http_result["success"] else "down"
             result["error"] = http_result.get("error") if not http_result["success"] else None
@@ -475,12 +521,14 @@ def get_infrastructure_data():
             result["response_time"] = http_result.get("response_time")
         else:
             # Basic ping
-            ping_result = ping_ip(infra["ip"], timeout=3, retries=1)
+            ping_result = ping_ip(infra["ip"], timeout=0.5, retries=1)
             result["status"] = "up" if ping_result["success"] else "down"
             result["error"] = ping_result.get("error") if not ping_result["success"] else None
             result["response_time"] = ping_result.get("response_time")
             result["method"] = ping_result.get("method")
         
-        results.append(result)
-    
-    return results
+            results.append(result)
+        
+        return results
+    finally:
+        signal.alarm(0)  # Cancel the alarm

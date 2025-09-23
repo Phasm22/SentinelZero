@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# SentinelZero Development Startup Script
+# SentinelZero Development Startup Script - Fixed Version
 # Ensures clean startup on correct ports: 5000 (backend), 3173 (frontend)
-
-set -e
 
 # Colors for output
 RED='\033[0;31m'
@@ -60,10 +58,23 @@ cleanup_processes() {
     # Kill any existing Vite processes
     pkill -f "vite" 2>/dev/null || true
     pkill -f "node.*vite" 2>/dev/null || true
+    pkill -f "npm.*dev" 2>/dev/null || true
     
     # Kill any processes on our target ports
     kill_port $BACKEND_PORT
     kill_port $FRONTEND_PORT
+    
+    # Wait for processes to actually terminate
+    sleep 3
+    
+    # Double-check and force kill if needed
+    pkill -9 -f "python.*app.py" 2>/dev/null || true
+    pkill -9 -f "vite" 2>/dev/null || true
+    pkill -9 -f "node.*vite" 2>/dev/null || true
+    pkill -9 -f "npm.*dev" 2>/dev/null || true
+    
+    # Wait a bit more
+    sleep 2
     
     echo -e "${GREEN}✅ Process cleanup complete${NC}"
 }
@@ -175,14 +186,19 @@ show_status() {
 # Function to handle cleanup on exit
 cleanup_on_exit() {
     echo -e "\n${YELLOW}🛑 Shutting down SentinelZero...${NC}"
+    
+    # Kill backend
     if [ -f /tmp/sentinelzero-backend.pid ]; then
         kill $(cat /tmp/sentinelzero-backend.pid) 2>/dev/null || true
         rm -f /tmp/sentinelzero-backend.pid
     fi
+    
+    # Kill frontend
     if [ -f /tmp/sentinelzero-frontend.pid ]; then
         kill $(cat /tmp/sentinelzero-frontend.pid) 2>/dev/null || true
         rm -f /tmp/sentinelzero-frontend.pid
     fi
+    
     echo -e "${GREEN}✅ Shutdown complete${NC}"
 }
 
@@ -190,26 +206,25 @@ cleanup_on_exit() {
 trap cleanup_on_exit EXIT INT TERM
 
 # Main execution
-main() {
-    cleanup_processes
-    start_backend
-    start_frontend
-    
-    if test_connectivity; then
-        show_status
-        
-        # Keep script running and show logs
-        echo -e "${YELLOW}📋 Press Ctrl+C to stop all services${NC}"
-        echo -e "${YELLOW}📋 Monitoring logs...${NC}"
-        
-        # Follow both log files
-        tail -f /tmp/sentinelzero-backend.log /tmp/sentinelzero-frontend.log &
-        wait
-    else
-        echo -e "${RED}❌ Connectivity test failed${NC}"
-        exit 1
-    fi
-}
+echo -e "${YELLOW}🧹 Running cleanup...${NC}"
+cleanup_processes
 
-# Run main function
-main "$@"
+echo -e "${YELLOW}🚀 Starting services...${NC}"
+start_backend
+start_frontend
+
+if test_connectivity; then
+    show_status
+    
+    # Keep script running and show logs
+    echo -e "${YELLOW}📋 Press Ctrl+C to stop all services${NC}"
+    echo -e "${YELLOW}📋 Monitoring logs...${NC}"
+    
+    # Follow both log files
+    tail -f /tmp/sentinelzero-backend.log /tmp/sentinelzero-frontend.log &
+    TAIL_PID=$!
+    wait $TAIL_PID
+else
+    echo -e "${RED}❌ Connectivity test failed${NC}"
+    exit 1
+fi

@@ -535,26 +535,6 @@ def create_api_blueprint(db):
             'version': '1.0.0'
         })
     
-    @bp.route('/sync-scans', methods=['POST'])
-    def sync_scans():
-        """Synchronize database with filesystem XML files"""
-        try:
-            from ..services.sync import sync_scans_from_filesystem
-            
-            result = sync_scans_from_filesystem()
-            
-            if 'error' in result:
-                return jsonify({'status': 'error', 'message': result['error']}), 400
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Sync completed: {result["synced_count"]} synced, {result["skipped_count"]} skipped, {result["error_count"]} errors',
-                'details': result
-            })
-            
-        except Exception as e:
-            print(f'[DEBUG] Error syncing scans: {e}')
-            return jsonify({'status': 'error', 'message': f'Error syncing scans: {str(e)}'}), 500
 
     @bp.route('/sync-status', methods=['GET'])
     def sync_status():
