@@ -92,8 +92,15 @@ def ping_ip(ip, timeout=0.5, retries=1, log_results=True):
                 result = subprocess.run(["ping", "-c1", "-W", str(int(timeout * 1000)), ip], 
                                       capture_output=True, text=True, timeout=timeout+2)
             else:  # Linux/other - may require sudo in some environments
-                result = subprocess.run(["sudo", "ping", "-c1", f"-W{timeout}", ip], 
-                                      capture_output=True, text=True, timeout=timeout+2)
+                # For external IPs, use default routing; for internal IPs, try specific interface
+                if ip.startswith(('1.1.1.', '8.8.8.', '208.67.')) or ip in ['1.1.1.1', '8.8.8.8', '208.67.222.222']:
+                    # External services - use default routing
+                    result = subprocess.run(["ping", "-c1", f"-W{timeout}", ip], 
+                                          capture_output=True, text=True, timeout=timeout+2)
+                else:
+                    # Internal services - try with sudo
+                    result = subprocess.run(["sudo", "ping", "-c1", f"-W{timeout}", ip], 
+                                          capture_output=True, text=True, timeout=timeout+2)
             
             response_time = (time.time() - start_time) * 1000
             
@@ -154,6 +161,22 @@ def ping_ip(ip, timeout=0.5, retries=1, log_results=True):
                 result["attempts"] = attempt + 1
                 log_ping_result(ip, result)
                 return result
+        
+        # For external services, try alternative methods
+        if ip.startswith(('1.1.1.', '8.8.8.', '208.67.')) or ip in ['1.1.1.1', '8.8.8.8', '208.67.222.222']:
+            # Try with curl as fallback for external services
+            try:
+                import requests
+                start_time = time.time()
+                response = requests.get(f"http://{ip}", timeout=timeout)
+                response_time = (time.time() - start_time) * 1000
+                if response.status_code < 500:  # Any response is good
+                    result = {"success": True, "method": "http", "response_time": response_time, "error": None}
+                    result["attempts"] = attempt + 1
+                    log_ping_result(ip, result)
+                    return result
+            except Exception:
+                pass
     
     # All methods failed after retries
     final_result = {"success": False, "method": "all_failed", "response_time": None, 
