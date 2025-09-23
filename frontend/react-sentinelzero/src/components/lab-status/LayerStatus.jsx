@@ -66,7 +66,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
     <div className="space-y-4">
       {/* Filter selector */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2 text-gray-400 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filter:</span>
         </div>
@@ -74,8 +74,8 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
           onClick={() => setFilter(filter === 'all' ? 'loopbacks' : 'all')}
           className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 self-start ${
             filter === 'all' 
-              ? 'bg-white/20 dark:bg-white/20 text-white dark:text-white border border-white/30 dark:border-white/30' 
-              : 'bg-blue-500/20 dark:bg-blue-500/20 text-blue-300 dark:text-blue-300 border border-blue-400/40 dark:border-blue-400/40'
+              ? 'bg-gray-800/80 dark:bg-white/20 text-gray-100 dark:text-white border border-gray-600/50 dark:border-white/30 shadow-lg' 
+              : 'bg-blue-600/60 dark:bg-blue-500/20 text-blue-100 dark:text-blue-300 border border-blue-500/60 dark:border-blue-400/40 shadow-lg shadow-blue-500/20'
           }`}
           title="Click to toggle all layers or choose a specific layer below"
         >
