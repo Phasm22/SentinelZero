@@ -55,11 +55,17 @@ const HostGrid = ({ detailedData, filter }) => {
     if (ip === '127.0.0.1') {
       segment = 'Localhost'
     } else if (ip.startsWith('172.16.')) {
-      // Lab network (172.16.0.0/22)
-      segment = 'Lab (172.16.x.x)'
+      // Lab network (172.16.0.0/22) - categorize by function
+      if (name.toLowerCase().includes('proxmox')) {
+        segment = 'Proxmox Infrastructure'
+      } else if (name.toLowerCase().includes('code-server') || name.toLowerCase().includes('winvm')) {
+        segment = 'Lab VMs & Services'
+      } else {
+        segment = 'Lab Network (172.16.x.x)'
+      }
     } else if (ip.startsWith('192.168.68.')) {
       // Home network (192.168.68.0/22)  
-      segment = 'Home (192.168.68.x)'
+      segment = 'Home Network (192.168.68.x)'
     } else if (ip.startsWith('192.168.71.')) {
       // Additional lab services (192.168.71.x)
       segment = 'Lab Services (192.168.71.x)'
@@ -84,9 +90,11 @@ const HostGrid = ({ detailedData, filter }) => {
 
   // Define the display order for network segments
   const segmentOrder = [
-    'Lab (172.16.x.x)',           // Lab network - primary infrastructure  
+    'Proxmox Infrastructure',     // Proxmox cluster nodes
+    'Lab VMs & Services',         // Lab VMs and services
+    'Lab Network (172.16.x.x)',  // Other lab network devices
     'Lab Services (192.168.71.x)', // Additional lab services
-    'Home (192.168.68.x)',        // Home network
+    'Home Network (192.168.68.x)', // Home network
     'VPN (10.16.x.x)',            // VPN endpoints
     'Localhost',                  // Local system
     'DNS Services',               // DNS-specific services

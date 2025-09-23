@@ -146,6 +146,16 @@ const HostCard = ({ host }) => {
   }
 
   const getLayerColor = () => {
+    // Special handling for network scanners (External DNS services)
+    if (host.name === 'Cloudflare DNS' || host.name === 'Google DNS' || host.name === 'Internet Test') {
+      return 'network'
+    }
+    
+    // Special handling for Proxmox infrastructure
+    if (host.name.toLowerCase().includes('proxmox')) {
+      return 'proxmox'
+    }
+    
     switch (host.layer) {
       case 'loopbacks': return 'blue'
       case 'services': return 'purple'
@@ -159,6 +169,8 @@ const HostCard = ({ host }) => {
       blue: 'border-blue-500/30 dark:border-blue-500/30 hover:border-blue-500/50 dark:hover:border-blue-500/50',
       purple: 'border-purple-500/30 dark:border-purple-500/30 hover:border-purple-500/50 dark:hover:border-purple-500/50',
       cyan: 'border-cyan-500/30 dark:border-cyan-500/30 hover:border-cyan-500/50 dark:hover:border-cyan-500/50',
+      network: 'border-slate-400/40 dark:border-slate-400/40 hover:border-slate-300/60 dark:hover:border-slate-300/60',
+      proxmox: 'border-orange-500/40 dark:border-orange-500/40 hover:border-orange-400/60 dark:hover:border-orange-400/60',
       gray: 'border-gray-500/30 dark:border-gray-500/30 hover:border-gray-500/50 dark:hover:border-gray-500/50'
     }
     return colors[color]
@@ -181,6 +193,8 @@ const HostCard = ({ host }) => {
                 layerColor === 'blue' ? 'text-blue-400 dark:text-blue-400' :
                 layerColor === 'purple' ? 'text-purple-400 dark:text-purple-400' :
                 layerColor === 'cyan' ? 'text-cyan-400 dark:text-cyan-400' :
+                layerColor === 'network' ? 'text-slate-300 dark:text-slate-300' :
+                layerColor === 'proxmox' ? 'text-orange-400 dark:text-orange-400' :
                 'text-gray-400 dark:text-gray-400'
               }`} />
             </div>
@@ -207,6 +221,8 @@ const HostCard = ({ host }) => {
                   layerColor === 'blue' ? 'bg-blue-500/20 dark:bg-blue-500/20 text-blue-300 dark:text-blue-300' :
                   layerColor === 'purple' ? 'bg-purple-500/20 dark:bg-purple-500/20 text-purple-300 dark:text-purple-300' :
                   layerColor === 'cyan' ? 'bg-cyan-500/20 dark:bg-cyan-500/20 text-cyan-300 dark:text-cyan-300' :
+                  layerColor === 'network' ? 'bg-slate-500/20 dark:bg-slate-500/20 text-slate-200 dark:text-slate-200' :
+                  layerColor === 'proxmox' ? 'bg-orange-500/20 dark:bg-orange-500/20 text-orange-200 dark:text-orange-200' :
                   'bg-gray-500/20 dark:bg-gray-500/20 text-gray-300 dark:text-gray-300'
                 }`}>
                   {connectionDetails[0] || 'ICMP'}
