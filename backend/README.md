@@ -1,32 +1,26 @@
 # SentinelZero Backend
 
-A lightweight, local network scan dashboard for cybersecurity homelabs - Backend API.
+Flask API server for network scanning with real-time updates.
 
 ## Features
 
-- **Network Scanning**: Orchestrates nmap scans with real-time progress tracking
-- **Flask API**: RESTful API with WebSocket support for real-time updates
-- **Modular Architecture**: Clean separation of concerns with services, routes, and models
-- **Scheduled Scanning**: APScheduler integration for automated scans
-- **Health Monitoring**: What's Up system for network infrastructure monitoring
-- **Settings Management**: JSON-based configuration with automatic field normalization
+- **Network Scanning** - nmap orchestration with real-time progress
+- **WebSocket Updates** - Live scan progress and notifications
+- **Modular Architecture** - Clean separation with services, routes, models
+- **Scheduled Scans** - APScheduler integration
+- **Health Monitoring** - Network infrastructure monitoring
+- **Settings Management** - JSON-based configuration
 
-## Architecture
-
-- **Framework**: Flask with SQLAlchemy ORM
-- **Database**: SQLite with scan results and alert models
-- **Real-time**: Flask-SocketIO for progress updates and notifications
-- **Background Jobs**: APScheduler for automated scanning
-- **Testing**: pytest with coverage reporting
-
-## Installation
+## Quick Start
 
 ```bash
-# Install dependencies with uv
+# Install dependencies
 uv sync
 
-# Run the application
+# Run application
 uv run python app.py
+
+# Access: http://localhost:5000
 ```
 
 ## Development
@@ -42,12 +36,22 @@ uv run black .
 uv run flake8 .
 ```
 
+## Architecture
+
+```
+backend/
+├── app.py                    # Main Flask application
+└── src/
+    ├── models/              # Database models
+    ├── routes/               # API endpoints
+    ├── services/             # Business logic
+    └── config/               # Configuration
+```
+
 ## API Endpoints
 
 - `GET /api/dashboard-stats` - Dashboard statistics
 - `POST /api/scan` - Trigger network scan
-- `GET /api/scans` - Get scan history
+- `GET /api/scans` - Scan history
 - `GET /api/settings/<section>` - Get settings
 - `POST /api/settings/<section>` - Update settings
-
-See the main project README for complete documentation.

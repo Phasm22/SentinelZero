@@ -118,14 +118,28 @@ test_connectivity() {
     fi
 }
 
+# Function to get network IP
+get_network_ip() {
+    # Get the primary network interface IP
+    ip route get 8.8.8.8 | awk '{print $7}' | head -1
+}
+
 # Function to show status
 show_status() {
+    local network_ip=$(get_network_ip)
+    
     echo -e "${BLUE}====================================${NC}"
     echo -e "${GREEN}🎉 SentinelZero is running in production!${NC}"
     echo -e "${BLUE}====================================${NC}"
-    echo -e "${GREEN}🌐 Application: http://localhost:$BACKEND_PORT${NC}"
-    echo -e "${GREEN}📊 Dashboard: http://localhost:$BACKEND_PORT/dashboard${NC}"
-    echo -e "${GREEN}⚙️  Settings: http://localhost:$BACKEND_PORT/settings${NC}"
+    echo -e "${GREEN}🌐 Local Access:${NC}"
+    echo -e "${GREEN}   Application: http://localhost:$BACKEND_PORT${NC}"
+    echo -e "${GREEN}   Dashboard: http://localhost:$BACKEND_PORT/dashboard${NC}"
+    echo -e "${GREEN}   Settings: http://localhost:$BACKEND_PORT/settings${NC}"
+    echo -e "${BLUE}====================================${NC}"
+    echo -e "${GREEN}🌍 Network Access (from other clients):${NC}"
+    echo -e "${GREEN}   Application: http://$network_ip:$BACKEND_PORT${NC}"
+    echo -e "${GREEN}   Dashboard: http://$network_ip:$BACKEND_PORT/dashboard${NC}"
+    echo -e "${GREEN}   Settings: http://$network_ip:$BACKEND_PORT/settings${NC}"
     echo -e "${BLUE}====================================${NC}"
     echo -e "${YELLOW}📋 Service management:${NC}"
     echo -e "${YELLOW}   Status:  sudo systemctl status $SERVICE_NAME${NC}"
