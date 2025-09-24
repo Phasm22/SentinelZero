@@ -40,8 +40,7 @@ INFRASTRUCTURE = [
     {"name": "Proxmox Cluster (yin.prox)", "ip": "172.16.0.11", "type": "ping"},
     {"name": "Proxmox Cluster (yang.prox)", "ip": "172.16.0.12", "type": "ping"},
     {"name": "Homebridge", "ip": "192.168.68.79", "type": "ping"},
-    {"name": "Ubuntu Server", "ip": "192.168.68.71", "type": "ping"},
-    {"name": "Ubuntu Server (30)", "ip": "192.168.68.71.30", "type": "ping"},
+    {"name": "Ubuntu Server", "ip": "192.168.71.30", "type": "ping"},
     {"name": "Home Net DNS", "ip": "192.168.71.25", "type": "ping"},
     {"name": "Backup Home DNS", "ip": "192.168.71.30", "type": "ping"},
     {"name": "Code Server (code-server.prox)", "ip": "172.16.0.106", "type": "ping"},
@@ -501,19 +500,18 @@ def get_services_data():
         signal.alarm(0)  # Cancel the alarm
 
 def get_infrastructure_data():
-    """Core logic for checking infrastructure - returns raw data"""
+    """Core logic for checking infrastructure - returns raw data with parallel processing"""
     import signal
+    import time
+    import concurrent.futures
+    import threading
     
     def timeout_handler(signum, frame):
         raise TimeoutError("Infrastructure check timed out")
     
-    # Set a 10-second timeout for the entire function
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(10)
-    
-    try:
-        results = []
-        for infra in INFRASTRUCTURE:
+    def check_single_infra(infra):
+        """Check a single infrastructure item"""
+        try:
             result = {
                 "name": infra["name"],
                 "ip": infra["ip"],
@@ -521,37 +519,82 @@ def get_infrastructure_data():
                 "type": infra.get("type", "ping"),
                 "checked_at": datetime.now().isoformat()
             }
+            
+            # Check based on type
+            if infra["type"] == "dns":
+                query_domain = infra.get("query", "google.com")
+                dns_result = check_dns_query(infra["ip"], query_domain, timeout=0.5)
+                result["status"] = "up" if dns_result["success"] else "down"
+                result["error"] = dns_result.get("error") if not dns_result["success"] else None
+                result["response"] = dns_result.get("result")
+            elif infra["type"] in ["http", "https"]:
+                path = infra.get("path", "/")
+                http_result = check_http_service(
+                    infra["ip"], 
+                    infra["port"], 
+                    path, 
+                    infra["type"] == "https",
+                    timeout=1
+                )
+                result["status"] = "up" if http_result["success"] else "down"
+                result["error"] = http_result.get("error") if not http_result["success"] else None
+                result["status_code"] = http_result.get("status_code")
+                result["response_time"] = http_result.get("response_time")
+            else:
+                # Basic ping with shorter timeout
+                ping_result = ping_ip(infra["ip"], timeout=0.2, retries=1)
+                result["status"] = "up" if ping_result["success"] else "down"
+                result["error"] = ping_result.get("error") if not ping_result["success"] else None
+                result["response_time"] = ping_result.get("response_time")
+                result["method"] = ping_result.get("method")
+            
+            return result
+        except Exception as e:
+            return {
+                "name": infra["name"],
+                "ip": infra["ip"],
+                "port": infra.get("port"),
+                "type": infra.get("type", "ping"),
+                "status": "down",
+                "error": str(e),
+                "checked_at": datetime.now().isoformat()
+            }
+    
+    # Set a 10-second timeout for the entire function
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(10)
+    
+    try:
+        print(f"[DEBUG] Starting parallel infrastructure check for {len(INFRASTRUCTURE)} items")
+        start_time = time.time()
         
-        # Check based on type
-        if infra["type"] == "dns":
-            query_domain = infra.get("query", "google.com")
-            dns_result = check_dns_query(infra["ip"], query_domain, timeout=1)
-            result["status"] = "up" if dns_result["success"] else "down"
-            result["error"] = dns_result.get("error") if not dns_result["success"] else None
-            result["response"] = dns_result.get("result")
-        elif infra["type"] in ["http", "https"]:
-            path = infra.get("path", "/")
-            http_result = check_http_service(
-                infra["ip"], 
-                infra["port"], 
-                path, 
-                infra["type"] == "https",
-                timeout=2
-            )
-            result["status"] = "up" if http_result["success"] else "down"
-            result["error"] = http_result.get("error") if not http_result["success"] else None
-            result["status_code"] = http_result.get("status_code")
-            result["response_time"] = http_result.get("response_time")
-        else:
-            # Basic ping
-            ping_result = ping_ip(infra["ip"], timeout=0.5, retries=1)
-            result["status"] = "up" if ping_result["success"] else "down"
-            result["error"] = ping_result.get("error") if not ping_result["success"] else None
-            result["response_time"] = ping_result.get("response_time")
-            result["method"] = ping_result.get("method")
+        # Use ThreadPoolExecutor for parallel processing
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            # Submit all tasks
+            future_to_infra = {executor.submit(check_single_infra, infra): infra for infra in INFRASTRUCTURE}
+            
+            # Collect results as they complete
+            results = []
+            for future in concurrent.futures.as_completed(future_to_infra, timeout=8):
+                try:
+                    result = future.result()
+                    results.append(result)
+                    print(f"[DEBUG] Completed {result['name']}: {result['status']}")
+                except Exception as e:
+                    infra = future_to_infra[future]
+                    print(f"[DEBUG] Failed {infra['name']}: {e}")
+                    results.append({
+                        "name": infra["name"],
+                        "ip": infra["ip"],
+                        "port": infra.get("port"),
+                        "type": infra.get("type", "ping"),
+                        "status": "down",
+                        "error": str(e),
+                        "checked_at": datetime.now().isoformat()
+                    })
         
-            results.append(result)
-        
+        elapsed = time.time() - start_time
+        print(f"[DEBUG] Infrastructure check completed in {elapsed:.2f}s. Found {len(results)} results")
         return results
     finally:
         signal.alarm(0)  # Cancel the alarm

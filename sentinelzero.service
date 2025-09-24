@@ -6,9 +6,11 @@ After=network.target
 Type=simple
 User=sentinel
 Group=sentinel
-WorkingDirectory=/home/sentinel/SentinelZero
-Environment=PATH=/home/sentinel/SentinelZero/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/home/sentinel/SentinelZero/backend/.venv/bin/python /home/sentinel/SentinelZero/backend/app.py
+WorkingDirectory=/home/sentinel/SentinelZero/backend
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=FLASK_ENV=production
+ExecStart=/home/sentinel/SentinelZero/backend/run-app.sh
+ExecStop=/bin/bash -c "pkill -f nmap; pkill -f 'python.*app.py'"
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -18,7 +20,7 @@ StandardError=journal
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=false
 ReadWritePaths=/home/sentinel/SentinelZero
 
 [Install]

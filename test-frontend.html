@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Frontend Socket Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+
+    <script>
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+        
+        // Connect to the same origin
+        const socket = io(window.location.origin, {
+            path: '/socket.io',
+            transports: ['polling', 'websocket'],
+            autoConnect: true,
+            timeout: 20000,
+            reconnection: true,
+            reconnectionAttempts: 10
+        });
+
+        socket.on('connect', () => {
+            status.textContent = '✅ Connected to ' + window.location.origin;
+            status.style.color = 'green';
+            addMessage('Connected to server');
+            
+            // Send a ping
+            socket.emit('ping', { message: 'Test ping from browser' });
+        });
+
+        socket.on('disconnect', (reason) => {
+            status.textContent = '❌ Disconnected: ' + reason;
+            status.style.color = 'red';
+            addMessage('Disconnected: ' + reason);
+        });
+
+        socket.on('connect_error', (error) => {
+            status.textContent = '❌ Connection Error: ' + (error.message || error);
+            status.style.color = 'red';
+            addMessage('Connection Error: ' + (error.message || error));
+        });
+
+        socket.on('pong', (data) => {
+            addMessage('Received pong: ' + JSON.stringify(data));
+        });
+
+        socket.on('scan_log', (data) => {
+            addMessage('Scan log: ' + JSON.stringify(data));
+        });
+
+        function addMessage(message) {
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            messages.appendChild(div);
+        }
+    </script>
+</body>
+</html>

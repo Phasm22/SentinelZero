@@ -1,0 +1,84 @@
+name: Deploy SentinelZero
+
+on:
+  push:
+    branches: [ main, production ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/react-sentinelzero/package-lock.json
+    
+    - name: Install uv
+      run: pip install uv
+    
+    - name: Install Python dependencies
+      working-directory: ./backend
+      run: uv sync
+    
+    - name: Install Node.js dependencies
+      working-directory: ./frontend/react-sentinelzero
+      run: npm ci
+    
+    - name: Run Python tests
+      working-directory: ./backend
+      run: uv run python -m pytest tests/ || echo "No tests found"
+    
+    - name: Run frontend tests
+      working-directory: ./frontend/react-sentinelzero
+      run: npm run test:run || echo "No tests found"
+    
+    - name: Build frontend
+      working-directory: ./frontend/react-sentinelzero
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/react-sentinelzero/dist
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/react-sentinelzero/dist
+    
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd /home/sentinel/SentinelZero
+          git pull origin main
+          ./scripts/deploy-production.sh

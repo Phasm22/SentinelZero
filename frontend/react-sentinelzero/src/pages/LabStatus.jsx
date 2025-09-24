@@ -26,12 +26,11 @@ const LabStatus = () => {
   // Fetch health summary with timeout
   const fetchHealthData = async () => {
     try {
-      // Use current hostname for API calls when accessed via domain
+      // In development, use the same origin (Vite proxy handles the backend)
+      // In production, connect directly to the backend
       const baseUrl = import.meta.env.DEV 
-        ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-           ? 'http://localhost:5000' 
-           : `http://${window.location.hostname}:5000`)
-        : '';
+        ? window.location.origin
+        : `http://${window.location.hostname}:5000`;
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout for proxy latency
       
@@ -78,14 +77,13 @@ const LabStatus = () => {
   // Fetch detailed host information with timeout
   const fetchDetailedData = async () => {
     try {
-      // Use current hostname for API calls when accessed via domain
+      // In development, use the same origin (Vite proxy handles the backend)
+      // In production, connect directly to the backend
       const baseUrl = import.meta.env.DEV 
-        ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-           ? 'http://localhost:5000' 
-           : `http://${window.location.hostname}:5000`)
-        : '';
+        ? window.location.origin
+        : `http://${window.location.hostname}:5000`;
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 second timeout for proxy latency
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout for proxy latency
       
       const requests = [
         fetch(`${baseUrl}/api/whatsup/loopbacks`, { signal: controller.signal }),

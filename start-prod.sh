@@ -90,7 +90,7 @@ start_service() {
         if [ $i -eq 30 ]; then
             echo -e "${RED}❌ Service failed to start within 30 seconds${NC}"
             echo -e "${YELLOW}📋 Service status:${NC}"
-            sudo systemctl status $SERVICE_NAME
+            sudo systemctl status $SERVICE_NAME | cat
             exit 1
         fi
         sleep 1
@@ -135,9 +135,18 @@ show_status() {
     echo -e "${BLUE}====================================${NC}"
 }
 
+# Backend prep with uv
+prepare_backend() {
+    echo -e "${YELLOW}📦 Syncing Python deps with uv...${NC}"
+    cd "$BACKEND_DIR"
+    uv sync --frozen || uv sync
+    echo -e "${YELLOW}🧪 Skipping tests for production deployment...${NC}"
+}
+
 # Main execution
 main() {
     build_frontend
+    prepare_backend
     install_service
     start_service
     

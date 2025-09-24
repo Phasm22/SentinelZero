@@ -20,13 +20,31 @@ export const SocketProvider = ({ children }) => {
     console.log('Initializing Socket.IO client...');
     
     // In development mode (Vite), use the current origin which will be proxied
-    // In production, connect directly to the backend
-    const isDevelopment = window.location.port === '3173' || window.location.port === '3174';
-    const backendUrl = isDevelopment 
-      ? window.location.origin  // Use current origin, Vite will proxy /socket.io
-      : `http://${window.location.hostname}:5000`;  // Direct connection in production
+    // In production (static served), connect directly to the backend
+    const isDevelopment = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
+    const configuredUrl = import.meta.env?.VITE_BACKEND_URL;
     
-    console.log('🔌 Connecting to backend at:', backendUrl, '(development mode:', isDevelopment, ')');
+    let backendUrl;
+    if (configuredUrl) {
+      if (configuredUrl === '/') {
+        // Use same origin when configured as '/'
+        backendUrl = window.location.origin;
+      } else {
+        backendUrl = configuredUrl;
+      }
+    } else {
+      // For server deployment, always use the same origin (frontend server proxies to backend)
+      // This ensures we connect to sentinelzero.prox:3173, not localhost:5000
+      backendUrl = window.location.origin;
+      console.log('🔌 Using same origin (proxy) URL:', backendUrl);
+    }
+    
+    console.log('🔌 Socket.IO Debug Info:');
+    console.log('  - isDevelopment:', isDevelopment);
+    console.log('  - configuredUrl:', configuredUrl);
+    console.log('  - window.location.origin:', window.location.origin);
+    console.log('  - window.location.hostname:', window.location.hostname);
+    console.log('  - backendUrl:', backendUrl);
     
     const newSocket = io(backendUrl, {
       path: '/socket.io',
@@ -39,6 +57,11 @@ export const SocketProvider = ({ children }) => {
       reconnectionDelayMax: 5000, // Reduce max delay
       reconnectionAttempts: 10, // Increase attempts
       maxHttpBufferSize: 1e8, // 100MB buffer for large scan results
+      // Force the client to use the proxy in development
+      withCredentials: true,
+      // Ensure we're using the correct URL
+      upgrade: true,
+      rememberUpgrade: false
     });
 
     newSocket.on('connect', () => {

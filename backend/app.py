@@ -64,8 +64,8 @@ def create_app():
     
     # Initialize extensions
     db = init_db(app)
-    # Force gevent async_mode for better external connection handling
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+    # Use eventlet async_mode (matches dependencies)
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', logger=True, engineio_logger=True)
     scheduler = init_scheduler()
     try:
         # Run cleanup daily at 03:15 UTC (no lambda for serializable ref)
@@ -141,8 +141,11 @@ def create_app():
         if path == 'healthz':
             return {'status': 'ok'}, 200
         if path and (path.startswith('api/') or '.' in path):
-            # Let API routes and static assets through
-            return app.send_static_file(path) if '.' in path else ('Not Found', 404)
+            # Serve static assets from dist directory
+            try:
+                return send_from_directory('../frontend/react-sentinelzero/dist', path)
+            except:
+                return ('Not Found', 404)
         
         # Check if running in development (React dev server handles routing)
         if os.environ.get('FLASK_ENV') == 'development':
@@ -154,6 +157,41 @@ def create_app():
         except:
             return ('Frontend not built. Run: cd frontend/react-sentinelzero && npm run build', 500)
     
+    # Startup cleanup function
+    def startup_cleanup():
+        """Clean up any orphaned scans and processes on startup"""
+        with app.app_context():
+            print('[INFO] Performing startup cleanup...')
+            
+            # Cancel any scans that were marked as running when app was shut down
+            running_scans = Scan.query.filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing'])).all()
+            if running_scans:
+                print(f'[CLEANUP] Found {len(running_scans)} orphaned scans, marking as cancelled')
+                for scan in running_scans:
+                    scan.status = 'cancelled'
+                    scan.percent = 0.0
+                db.session.commit()
+                print('[CLEANUP] Orphaned scans marked as cancelled')
+            
+            # Kill any orphaned nmap processes
+            import subprocess
+            try:
+                # Find and kill any nmap processes that might be orphaned
+                result = subprocess.run(['pgrep', '-f', 'nmap'], capture_output=True, text=True)
+                if result.stdout.strip():
+                    nmap_pids = result.stdout.strip().split('\n')
+                    print(f'[CLEANUP] Found {len(nmap_pids)} nmap processes, killing orphaned ones')
+                    for pid in nmap_pids:
+                        try:
+                            subprocess.run(['kill', '-9', pid], check=False)
+                        except:
+                            pass
+                    print('[CLEANUP] Orphaned nmap processes killed')
+            except Exception as e:
+                print(f'[WARN] Could not clean up nmap processes: {e}')
+            
+            print('[INFO] Startup cleanup completed')
+    
     # Start background services
     def start_background_services():
         """Start background monitoring services"""
@@ -162,6 +200,7 @@ def create_app():
             threading.Thread(target=whats_up_monitor, args=(socketio, app), daemon=True).start()
     
     # Initialize background services after app is ready
+    threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
     threading.Timer(2.0, start_background_services).start()
     
     return app
