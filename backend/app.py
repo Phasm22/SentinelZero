@@ -163,15 +163,18 @@ def create_app():
         with app.app_context():
             print('[INFO] Performing startup cleanup...')
             
-            # Cancel any scans that were marked as running when app was shut down
-            running_scans = Scan.query.filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing'])).all()
-            if running_scans:
-                print(f'[CLEANUP] Found {len(running_scans)} orphaned scans, marking as cancelled')
-                for scan in running_scans:
-                    scan.status = 'cancelled'
-                    scan.percent = 0.0
-                db.session.commit()
-                print('[CLEANUP] Orphaned scans marked as cancelled')
+            try:
+                # Cancel any scans that were marked as running when app was shut down
+                running_scans = Scan.query.filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing'])).all()
+                if running_scans:
+                    print(f'[CLEANUP] Found {len(running_scans)} orphaned scans, marking as cancelled')
+                    for scan in running_scans:
+                        scan.status = 'cancelled'
+                        scan.percent = 0.0
+                    db.session.commit()
+                    print('[CLEANUP] Orphaned scans marked as cancelled')
+            except Exception as e:
+                print(f'[CLEANUP] Error during database cleanup (likely test environment): {e}')
             
             # Kill any orphaned nmap processes
             import subprocess

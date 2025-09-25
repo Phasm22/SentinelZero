@@ -39,7 +39,7 @@ const ScanningSection = ({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center space-x-2 px-6 py-4 font-medium transition-all duration-200 first:rounded-tl-2xl last:rounded-tr-2xl ${
+            className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 font-medium transition-all duration-200 first:rounded-tl-2xl last:rounded-tr-2xl ${
               activeTab === tab.id
                 ? 'bg-blue-600/20 text-blue-300 border-b-2 border-blue-400'
                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
@@ -47,18 +47,18 @@ const ScanningSection = ({
             data-testid={`scanning-tab-${tab.id}`}
           >
             {tab.icon}
-            <span className="font-semibold">{tab.name}</span>
+            <span className="font-semibold text-xs sm:text-sm lg:text-base">{tab.name}</span>
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div className="p-6" data-testid="scanning-content">
+      <div className="p-3 sm:p-4 lg:p-6" data-testid="scanning-content">
         {activeTab === 'automated' && (
           <div data-testid="automated-scan-tab">
-            <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-100 mb-2" data-testid="automated-scan-title">Network Scanning</h3>
-              <p className="text-gray-400 text-sm" data-testid="automated-scan-description">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-100 mb-2" data-testid="automated-scan-title">Network Scanning</h3>
+              <p className="text-gray-400 text-xs sm:text-sm" data-testid="automated-scan-description">
                 {isConnected 
                   ? 'Choose a scan type to begin automated network discovery' 
                   : 'Scanner disconnected - try uploading manual scan results instead'
@@ -79,9 +79,9 @@ const ScanningSection = ({
 
         {activeTab === 'upload' && (
           <div data-testid="upload-scan-tab">
-            <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-100 mb-2" data-testid="upload-scan-title">Manual Scan Upload</h3>
-              <p className="text-gray-400 text-sm" data-testid="upload-scan-description">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-100 mb-2" data-testid="upload-scan-title">Manual Scan Upload</h3>
+              <p className="text-gray-400 text-xs sm:text-sm" data-testid="upload-scan-description">
                 Upload XML results from terminal scans - ideal for macOS WiFi or privileged scanning
               </p>
             </div>
@@ -95,10 +95,10 @@ const ScanningSection = ({
 
       {/* Quick Action Hint */}
       {!isScanning && (
-        <div className="px-6 pb-4" data-testid="scanning-hint">
+        <div className="px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4" data-testid="scanning-hint">
           <div className="flex items-center space-x-2 text-xs text-gray-500" data-testid="hint-content">
             <Settings className="w-3 h-3" />
-            <span data-testid="hint-text">
+            <span className="text-xs" data-testid="hint-text">
               {activeTab === 'automated' 
                 ? 'Automated scans will show real-time progress and results' 
                 : 'Uploaded scans are processed immediately and appear in scan history'

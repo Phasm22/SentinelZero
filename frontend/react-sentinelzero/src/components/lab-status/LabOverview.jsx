@@ -94,7 +94,7 @@ const LabOverview = ({ healthData, detailedData }) => {
         <h2 className="text-xl font-bold text-gray-200 dark:text-gray-200">Lab Network Overview</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {segments.map((segment) => {
           const StatusIcon = getStatusIcon(segment.health.status)
           const colorClass = getStatusColor(segment.health.status)
@@ -115,27 +115,27 @@ const LabOverview = ({ healthData, detailedData }) => {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400 dark:text-gray-400">Status</span>
+                  <span className="text-sm text-gray-200 dark:text-gray-200">Status</span>
                   <HealthIndicator status={segment.health.status} size="sm" showText />
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400 dark:text-gray-400">Hosts</span>
-                  <span className="text-sm text-gray-300 dark:text-gray-300 font-mono">
+                  <span className="text-sm text-gray-200 dark:text-gray-200">Hosts</span>
+                  <span className="text-sm text-gray-100 dark:text-gray-100 font-mono">
                     <AnimatedValue value={segment.health.count} />/{segment.health.total}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400 dark:text-gray-400">Health</span>
-                  <span className="text-sm text-gray-300 dark:text-gray-300">
+                  <span className="text-sm text-gray-200 dark:text-gray-200">Health</span>
+                  <span className="text-sm text-gray-100 dark:text-gray-100">
                     {segment.health.total > 0 ? Math.round((segment.health.count / segment.health.total) * 100) : 0}%
                   </span>
                 </div>
               </div>
 
               <div className="mt-3">
-                <div className="text-xs text-gray-500 dark:text-gray-500">{segment.description}</div>
+                <div className="text-xs text-gray-300 dark:text-gray-300">{segment.description}</div>
               </div>
             </div>
           )
@@ -145,8 +145,8 @@ const LabOverview = ({ healthData, detailedData }) => {
       {/* Network Health Sparkline */}
       <div className="mt-6 pt-4 border-t border-gray-600/30 dark:border-gray-600/30">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-gray-400 dark:text-gray-400">Network Health Distribution</span>
-          <span className="text-xs text-gray-500 dark:text-gray-500">
+          <span className="text-sm font-medium text-gray-200 dark:text-gray-200">Network Health Distribution</span>
+          <span className="text-xs text-gray-300 dark:text-gray-300">
             {allHosts.length} total hosts
           </span>
         </div>

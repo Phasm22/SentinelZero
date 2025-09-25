@@ -23,12 +23,12 @@ const NetworkScanners = ({ hosts }) => {
         <Globe className="w-5 h-5 text-slate-300 dark:text-slate-300" />
         <h3 className="text-lg font-semibold text-slate-200 dark:text-slate-200">Network Connectivity</h3>
         <div className="flex-1 h-px bg-gradient-to-r from-slate-600 dark:from-slate-600 to-transparent"></div>
-        <span className="text-sm text-slate-400 dark:text-slate-400">
+        <span className="text-sm text-slate-300 dark:text-slate-300">
           {hosts.length} {hosts.length === 1 ? 'scanner' : 'scanners'}
         </span>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {hosts.map((host, index) => {
           const Icon = getScannerIcon(host.name)
           const colorClass = getScannerColor(host.name)
@@ -52,16 +52,16 @@ const NetworkScanners = ({ hosts }) => {
               
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 dark:text-slate-400">IP</span>
-                  <span className="text-slate-300 dark:text-slate-300 font-mono">{host.ip}</span>
+                  <span className="text-slate-300 dark:text-slate-300">IP</span>
+                  <span className="text-slate-200 dark:text-slate-200 font-mono">{host.ip}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 dark:text-slate-400">Type</span>
-                  <span className="text-slate-300 dark:text-slate-300">{host.type || 'ICMP'}</span>
+                  <span className="text-slate-300 dark:text-slate-300">Type</span>
+                  <span className="text-slate-200 dark:text-slate-200">{host.type || 'ICMP'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 dark:text-slate-400">Latency</span>
-                  <span className="text-slate-300 dark:text-slate-300 font-mono">
+                  <span className="text-slate-300 dark:text-slate-300">Latency</span>
+                  <span className="text-slate-200 dark:text-slate-200 font-mono">
                     {responseTime ? `${responseTime.toFixed(1)}ms` : 'N/A'}
                   </span>
                 </div>

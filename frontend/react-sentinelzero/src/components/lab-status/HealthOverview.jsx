@@ -65,10 +65,10 @@ const HealthOverview = ({ healthData }) => {
                 />
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
-                <span className="text-lg sm:text-xl text-gray-300 dark:text-gray-300">
+                <span className="text-lg sm:text-xl text-gray-100 dark:text-gray-100">
                   <AnimatedValue value={totalUp} />
-                  <span className="text-gray-600 dark:text-gray-500">/{totalChecks}</span>
-                  <span className="text-gray-700 dark:text-gray-400 ml-2">systems operational</span>
+                  <span className="text-gray-300 dark:text-gray-300">/{totalChecks}</span>
+                  <span className="text-gray-200 dark:text-gray-200 ml-2">systems operational</span>
                 </span>
               </div>
             </div>
@@ -76,7 +76,7 @@ const HealthOverview = ({ healthData }) => {
         </div>
         
         <div className="text-left lg:text-right">
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+          <div className="flex items-center gap-2 text-gray-300 dark:text-gray-300 text-sm">
             <Clock className="w-4 h-4" />
             <span>
               Last updated: {getTimeAgo(safeHealthData.timestamp)}
@@ -91,14 +91,14 @@ const HealthOverview = ({ healthData }) => {
                 suffix="%" 
               />
             </div>
-            <div className="text-sm text-gray-700 dark:text-gray-500">uptime</div>
+            <div className="text-sm text-gray-300 dark:text-gray-300">uptime</div>
           </div>
         </div>
       </div>
 
       {/* Sparkline Health Segments */}
       <div className="mt-6">
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-3">
+        <div className="flex items-center justify-between text-sm text-gray-300 dark:text-gray-300 mb-3">
           <span>System Health</span>
           <span>{totalUp}/{totalChecks}</span>
         </div>
@@ -125,21 +125,21 @@ const HealthOverview = ({ healthData }) => {
         <div className="flex flex-wrap gap-2 mt-3">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-blue-400/80 dark:bg-blue-400/80"></div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">Loopbacks</span>
+            <span className="text-xs text-gray-300 dark:text-gray-300">Loopbacks</span>
             <span className="text-xs text-blue-400 dark:text-blue-400 font-mono">
               {safeHealthData.layers?.loopbacks?.up || 0}/{safeHealthData.layers?.loopbacks?.total || 0}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-purple-400/80 dark:bg-purple-400/80"></div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">Services</span>
+            <span className="text-xs text-gray-300 dark:text-gray-300">Services</span>
             <span className="text-xs text-purple-400 dark:text-purple-400 font-mono">
               {safeHealthData.layers?.services?.up || 0}/{safeHealthData.layers?.services?.total || 0}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-cyan-400/80 dark:bg-cyan-400/80"></div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">Infrastructure</span>
+            <span className="text-xs text-gray-300 dark:text-gray-300">Infrastructure</span>
             <span className="text-xs text-cyan-400 dark:text-cyan-400 font-mono">
               {safeHealthData.layers?.infrastructure?.up || 0}/{safeHealthData.layers?.infrastructure?.total || 0}
             </span>

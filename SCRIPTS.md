@@ -8,7 +8,10 @@
   - Syncs backend dependencies with uv
   - Installs systemd service
   - Starts and tests the application
-  - Usage: `./start-prod.sh`
+  - Usage: `./start-prod.sh [--test]`
+  - Options:
+    - `--test` - Run frontend and backend tests before deployment
+    - `--help` - Show usage information
 
 ### Development  
 - **`start-dev.sh`** - Development environment

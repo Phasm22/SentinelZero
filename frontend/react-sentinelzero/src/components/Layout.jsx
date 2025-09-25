@@ -55,7 +55,7 @@ const Layout = ({ children }) => {
         {/* Main content area - maximum width */}
         <div className="flex flex-col min-h-screen lg:ml-40 w-full" data-testid="main-content-area">
           {/* Custom header - minimal padding */}
-          <header className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-2 py-2 w-full" data-testid="main-header">
+          <header className="flex flex-wrap items-center justify-between gap-1 sm:gap-2 lg:gap-4 px-2 py-2 sm:px-3 sm:py-3 lg:px-4 lg:py-4 w-full" data-testid="main-header">
             <div className="flex items-center gap-4" data-testid="header-left">
               <button
                 type="button"
@@ -75,7 +75,7 @@ const Layout = ({ children }) => {
                     <span className="text-white font-bold text-lg">S</span>
                   </div> */}
                 </div>
-                <h1 className="text-4xl md:text-5xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight" data-testid="main-header-title">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-title font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight" data-testid="main-header-title">
                   SentinelZero
                 </h1>
               </div>
@@ -84,7 +84,7 @@ const Layout = ({ children }) => {
               <ThemeControls />
             </div>
           </header>
-          <main className="flex-1 w-full px-2 pb-2" data-testid="main-content">
+          <main className="flex-1 w-full px-2 pb-2 sm:px-3 sm:pb-3 lg:px-4 lg:pb-4" data-testid="main-content">
             {children}
           </main>
         </div>

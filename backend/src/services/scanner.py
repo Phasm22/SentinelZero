@@ -94,9 +94,14 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
         
         try:
             def emit_progress(status, percent, message):
-                scan.status = status
-                scan.percent = percent
-                db.session.commit()
+                try:
+                    scan.status = status
+                    scan.percent = percent
+                    db.session.commit()
+                except Exception as db_error:
+                    print(f"Database error in emit_progress: {db_error}")
+                    db.session.rollback()
+                
                 if socketio:
                     socketio.emit('scan_progress', {
                         'scan_id': scan_id,

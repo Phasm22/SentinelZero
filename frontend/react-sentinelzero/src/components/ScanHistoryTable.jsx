@@ -91,7 +91,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -99,7 +99,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
             placeholder="Search scans by type, ID, or status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div className="relative">
@@ -124,7 +124,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
           <div className="text-center py-12">
             <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-200 mb-2">No scans found</h3>
-            <p className="text-gray-400">
+            <p className="text-gray-300">
               {searchTerm || statusFilter !== 'all' 
                 ? 'Try adjusting your search or filter criteria'
                 : 'No scans available'
@@ -198,7 +198,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
           <div className="text-center py-12">
             <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-200 mb-2">No scans found</h3>
-            <p className="text-gray-400">
+            <p className="text-gray-300">
               {searchTerm || statusFilter !== 'all' 
                 ? 'Try adjusting your search or filter criteria'
                 : 'No scans available'

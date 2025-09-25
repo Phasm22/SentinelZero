@@ -61,14 +61,14 @@ const ScanControls = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Button
           data-testid="scan-discovery-btn"
           onClick={() => onRequestScan('Discovery Scan')}
           disabled={isScanning && scanningType === 'Discovery Scan'}
           loading={isScanning && scanningType === 'Discovery Scan'}
           variant="discovery-scan"
-          size="lg"
+          size="md"
           icon={<Rocket className="w-5 h-5 rotate-180" />}
           title="Lightweight host discovery only (no ports)."
         >
@@ -80,7 +80,7 @@ const ScanControls = ({
           disabled={isScanning}
           loading={isScanning && scanningType === 'Full TCP'}
           variant="full-tcp"
-          size="lg"
+          size="md"
           icon={<Rocket className="w-5 h-5" />}
           title="Full TCP SYN scan of all ports. If Pre-Discovery is enabled only live hosts are scanned."
         >
@@ -92,7 +92,7 @@ const ScanControls = ({
           disabled={isScanning}
           loading={isScanning && scanningType === 'IoT Scan'}
           variant="iot-scan"
-          size="lg"
+          size="md"
           icon={<Cpu className="w-5 h-5" />}
           title="Common IoT UDP/TCP service ports. Pre-Discovery narrows hosts first if enabled."
         >
@@ -104,7 +104,7 @@ const ScanControls = ({
           disabled={isScanning}
           loading={isScanning && scanningType === 'Vuln Scripts'}
           variant="vuln-scan"
-          size="lg"
+          size="md"
           icon={<Bug className="w-5 h-5" />}
           title="Full TCP plus vulnerability scripts. Pre-Discovery reduces host set first if enabled."
         >

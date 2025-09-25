@@ -13,16 +13,16 @@ describe('Button Component', () => {
     
     const button = screen.getByRole('button', { name: /test button/i })
     expect(button).toBeInTheDocument()
-    expect(button).toHaveClass('bg-blue-600') // Primary variant
+    expect(button).toHaveClass('from-blue-600') // Primary variant with gradient
     expect(button).toHaveClass('px-4', 'py-2') // Default size
   })
 
   it('should render with different variants', () => {
     const { rerender } = render(<Button variant="secondary">Secondary</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-gray-600')
+    expect(screen.getByRole('button')).toHaveClass('from-gray-600')
 
     rerender(<Button variant="danger">Danger</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-red-600')
+    expect(screen.getByRole('button')).toHaveClass('from-red-600')
 
     rerender(<Button variant="outline">Outline</Button>)
     expect(screen.getByRole('button')).toHaveClass('bg-transparent')
@@ -54,7 +54,7 @@ describe('Button Component', () => {
     
     const button = screen.getByRole('button')
     expect(button).toBeDisabled()
-    expect(button).toHaveClass('opacity-50')
+    expect(button).toHaveClass('disabled:opacity-50')
   })
 
   it('should show loading state', () => {
@@ -62,7 +62,7 @@ describe('Button Component', () => {
     
     const button = screen.getByRole('button')
     expect(button).toBeDisabled()
-    expect(button).toHaveClass('opacity-50')
+    expect(button).toHaveClass('disabled:opacity-50')
     expect(screen.getByRole('button')).toContainHTML('svg') // Loading spinner
   })
 
@@ -101,15 +101,15 @@ describe('Button Component', () => {
 
   it('should render scan-specific variants', () => {
     const { rerender } = render(<Button variant="discovery-scan">Discovery</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-green-600')
+    expect(screen.getByRole('button')).toHaveClass('from-green-600')
 
     rerender(<Button variant="full-tcp">Full TCP</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-blue-600')
+    expect(screen.getByRole('button')).toHaveClass('from-blue-600')
 
     rerender(<Button variant="iot-scan">IoT</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-purple-600')
+    expect(screen.getByRole('button')).toHaveClass('from-purple-600')
 
     rerender(<Button variant="vuln-scan">Vuln</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-red-600')
+    expect(screen.getByRole('button')).toHaveClass('from-red-600')
   })
 })

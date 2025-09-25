@@ -14,21 +14,29 @@ vi.mock('socket.io-client', () => ({
     emit: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
+    close: vi.fn(),
+    connected: true
+  }),
+  io: () => ({
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    emit: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    close: vi.fn(),
     connected: true
   })
 }))
 
 // Test wrapper component
 const TestWrapper = ({ children }) => (
-  <BrowserRouter>
-    <UserPreferencesProvider>
-      <ToastProvider>
-        <SocketProvider>
-          {children}
-        </SocketProvider>
-      </ToastProvider>
-    </UserPreferencesProvider>
-  </BrowserRouter>
+  <UserPreferencesProvider>
+    <ToastProvider>
+      <SocketProvider>
+        {children}
+      </SocketProvider>
+    </ToastProvider>
+  </UserPreferencesProvider>
 )
 
 describe('App Component', () => {

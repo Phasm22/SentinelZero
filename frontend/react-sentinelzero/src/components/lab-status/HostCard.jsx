@@ -211,7 +211,7 @@ const HostCard = ({ host }) => {
                 }`} />
               </div>
               
-              <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-400 mb-2 font-mono">
+              <div className="text-xs sm:text-sm text-gray-300 dark:text-gray-300 mb-2 font-mono">
                 {ip}
               </div>
               
@@ -227,7 +227,7 @@ const HostCard = ({ host }) => {
                 }`}>
                   {connectionDetails[0] || 'ICMP'}
                 </span>
-                <span className="text-gray-500 dark:text-gray-500 hidden sm:inline">•</span>
+                <span className="text-gray-400 dark:text-gray-400 hidden sm:inline">•</span>
                 <div className="flex items-center justify-center sm:justify-start gap-1">
                   <Zap className={`w-3 h-3 transition-colors duration-300 ${
                     responseTime < 5 ? 'text-green-400 dark:text-green-400' :
@@ -248,9 +248,9 @@ const HostCard = ({ host }) => {
           
           <div className="flex items-center ml-2">            
             {expanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-400 flex-shrink-0 transition-transform duration-200" />
+              <ChevronDown className="w-4 h-4 text-gray-300 dark:text-gray-300 flex-shrink-0 transition-transform duration-200" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-400 flex-shrink-0 transition-transform duration-200" />
+              <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-300 flex-shrink-0 transition-transform duration-200" />
             )}
           </div>
         </div>
@@ -261,11 +261,11 @@ const HostCard = ({ host }) => {
         <div className="border-t border-gray-700/50 dark:border-gray-600/50 p-3 sm:p-4 space-y-3">
           {connectionDetails.length > 1 && (
             <div className="space-y-1">
-              <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wide">
+              <h4 className="text-xs font-semibold text-gray-300 dark:text-gray-300 uppercase tracking-wide">
                 Connection Details
               </h4>
               {connectionDetails.slice(1).map((detail, index) => (
-                <div key={index} className="text-xs sm:text-sm text-gray-300 dark:text-gray-300 font-mono break-all">
+                <div key={index} className="text-xs sm:text-sm text-gray-200 dark:text-gray-200 font-mono break-all">
                   {detail}
                 </div>
               ))}
@@ -273,16 +273,16 @@ const HostCard = ({ host }) => {
           )}
           
           <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wide">
+            <h4 className="text-xs font-semibold text-gray-300 dark:text-gray-300 uppercase tracking-wide">
               Performance
             </h4>
             <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-400 dark:text-gray-400">Response Time</span>
+              <span className="text-gray-300 dark:text-gray-300">Response Time</span>
               <span className="text-green-400 dark:text-green-400 font-mono">{responseTime.toFixed(1)}ms</span>
             </div>
             <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-400 dark:text-gray-400">Last Check</span>
-              <div className="flex items-center gap-1 text-gray-300 dark:text-gray-300">
+              <span className="text-gray-300 dark:text-gray-300">Last Check</span>
+              <div className="flex items-center gap-1 text-gray-200 dark:text-gray-200">
                 <Clock className="w-3 h-3" />
                 <span className="text-xs">30s ago</span>
               </div>

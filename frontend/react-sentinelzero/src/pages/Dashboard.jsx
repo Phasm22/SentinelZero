@@ -358,37 +358,43 @@ const Dashboard = () => {
       <div className="relative" data-testid="dashboard-header">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4" data-testid="dashboard-actions">
-      <Button
-        onClick={clearAllData}
-        variant="error"
-        size="sm"
-        icon={<Trash2 className="w-4 h-4" />}
-        title="This will wipe all scan history. Are you sure?"
-        data-testid="clear-all-data-btn"
-      >
-        Clear All Data
-      </Button>
-      <Button
-        onClick={deleteAllScans}
-        variant="danger"
-        size="sm"
-        icon={<Trash2 className="w-4 h-4" />}
-        title="Delete all scans from the database. This cannot be undone."
-        className="ml-2"
-        data-testid="delete-all-scans-btn"
-      >
-        Delete All Scans
-      </Button>
-      <Button
-        onClick={testConnection}
-        variant="info"
-        size="sm"
-        title="Test API and Socket.IO connection"
-        className="ml-2"
-        data-testid="test-connection-btn"
-      >
-        Test Connection
-      </Button>
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <Button
+          onClick={clearAllData}
+          variant="error"
+          size="sm"
+          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
+          title="This will wipe all scan history. Are you sure?"
+          className="text-xs sm:text-sm"
+          data-testid="clear-all-data-btn"
+        >
+          <span className="hidden sm:inline">Clear All Data</span>
+          <span className="sm:hidden">Clear Data</span>
+        </Button>
+        <Button
+          onClick={deleteAllScans}
+          variant="danger"
+          size="sm"
+          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
+          title="Delete all scans from the database. This cannot be undone."
+          className="text-xs sm:text-sm"
+          data-testid="delete-all-scans-btn"
+        >
+          <span className="hidden sm:inline">Delete All Scans</span>
+          <span className="sm:hidden">Delete Scans</span>
+        </Button>
+        <Button
+          onClick={testConnection}
+          variant="info"
+          size="sm"
+          title="Test API and Socket.IO connection"
+          className="text-xs sm:text-sm"
+          data-testid="test-connection-btn"
+        >
+          <span className="hidden sm:inline">Test Connection</span>
+          <span className="sm:hidden">Test</span>
+        </Button>
+      </div>
           </div>
         </div>
         {/* Shimmer/progress bar under header during scan */}
@@ -404,9 +410,9 @@ const Dashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="dashboard-content-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6" data-testid="dashboard-content-grid">
         {/* Left Column - Insights and Controls */}
-        <div className="lg:col-span-2 space-y-4" data-testid="dashboard-left-column">
+        <div className="lg:col-span-2 space-y-3 sm:space-y-4 lg:space-y-6" data-testid="dashboard-left-column">
           {/* Insights Card */}
           <InsightsCard />
           
@@ -491,56 +497,57 @@ const Dashboard = () => {
         </div>
 
         {/* Right Column - Stats and Recent Scans */}
-        <div className="space-y-4" data-testid="dashboard-right-column">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-6" data-testid="dashboard-right-column">
           {/* System Info Cards Grid */}
-          <div className="grid grid-cols-2 gap-3" data-testid="stats-cards-grid">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4" data-testid="stats-cards-grid">
             <StatCard
-              icon={<Server className="w-6 h-6 text-blue-400 mb-1" />}
+              icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400 mb-1" />}
               label="Total Scans"
-              value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-2xl font-extrabold text-gray-100" />}
+              value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-100" />}
               hoverRing="hover:ring-blue-400/40"
               data-testid="total-scans-stat"
             />
             <StatCard
-              icon={<Shield className="w-6 h-6 text-green-400 mb-1" />}
+              icon={<Shield className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400 mb-1" />}
               label="Hosts Found"
-              value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-2xl font-extrabold text-gray-100" />}
+              value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-100" />}
               hoverRing="hover:ring-green-400/40"
               data-testid="hosts-found-stat"
             />
             <StatCard
               icon={VulnIcon({ count: systemInfo.vulns_count })}
               label="Vulnerabilities"
-              value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-2xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
+              value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-lg sm:text-xl lg:text-2xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
               hoverRing="hover:ring-red-400/40"
               data-testid="vulnerabilities-stat"
             />
             <StatCard
-              icon={<Clock className="w-6 h-6 text-yellow-300 mb-1" />}
+              icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-300 mb-1" />}
               label="Last Scan"
-              value={<div className="text-lg font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
+              value={<div className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
               hoverRing="hover:ring-yellow-300/40"
               data-testid="last-scan-stat"
             />
           </div>
 
           {/* Recent Scans - Compact Version */}
-          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4" data-testid="recent-scans-card">
-            <h2 className="text-xl font-title font-bold text-gray-100 mb-4" data-testid="recent-scans-title">Recent Scans</h2>
-            <div className="space-y-3" data-testid="recent-scans-list">
+          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-3 sm:p-4" data-testid="recent-scans-card">
+            <h2 className="text-lg sm:text-xl font-title font-bold text-gray-100 mb-3 sm:mb-4" data-testid="recent-scans-title">Recent Scans</h2>
+            <div className="space-y-2 sm:space-y-3" data-testid="recent-scans-list">
               {recentScans.slice(0, 3).map((scan) => (
-                <div key={scan.id} className="flex items-center justify-between p-3 bg-white/5 rounded-md" data-testid={`recent-scan-item-${scan.id}`}>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full" data-testid="scan-status-indicator"></div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-200" data-testid="scan-type">{scan.scan_type}</div>
-                      <div className="text-xs text-gray-400" data-testid="scan-timestamp">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
+                <div key={scan.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/5 rounded-md" data-testid={`recent-scan-item-${scan.id}`}>
+                  <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" data-testid="scan-status-indicator"></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs sm:text-sm font-medium text-gray-200 truncate" data-testid="scan-type">{scan.scan_type}</div>
+                      <div className="text-xs text-gray-400 truncate" data-testid="scan-timestamp">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
                     </div>
                   </div>
                   <Button 
                     onClick={() => handleViewDetails(scan)}
                     variant="outline"
                     size="sm"
+                    className="text-xs sm:text-sm flex-shrink-0"
                     data-testid={`recent-scan-view-btn-${scan.id}`}
                   >
                     View
@@ -609,14 +616,14 @@ const Dashboard = () => {
 
 const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, formatTimestamp, preferences }) {
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-6 flex flex-col justify-between" data-testid={`active-scan-card-${scan.id}`}>
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-3 sm:p-4 lg:p-6 flex flex-col justify-between" data-testid={`active-scan-card-${scan.id}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-lg font-title font-bold text-gray-100" data-testid="scan-type">{scan.scan_type}</div>
-        <div className="text-xs text-gray-400" data-testid="scan-id">ID: {scan.id}</div>
+        <div className="text-sm sm:text-base lg:text-lg font-title font-bold text-gray-100 truncate" data-testid="scan-type">{scan.scan_type}</div>
+        <div className="text-xs text-gray-400 flex-shrink-0 ml-2" data-testid="scan-id">ID: {scan.id}</div>
       </div>
-      <div className="mb-2 text-sm text-gray-300" data-testid="scan-started">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
-      <div className="mb-2 text-sm text-gray-300">Status: <span className="font-semibold text-primary-400" data-testid="scan-status">{scan.status}</span></div>
-      <div className="mb-2 text-sm text-gray-300">Progress: <span className="font-semibold" data-testid="scan-progress">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
+      <div className="mb-2 text-xs sm:text-sm text-gray-300 truncate" data-testid="scan-started">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
+      <div className="mb-2 text-xs sm:text-sm text-gray-300">Status: <span className="font-semibold text-primary-400" data-testid="scan-status">{scan.status}</span></div>
+      <div className="mb-2 text-xs sm:text-sm text-gray-300">Progress: <span className="font-semibold" data-testid="scan-progress">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
       <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-2" data-testid="progress-bar-container">
         <div
           className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
@@ -627,7 +634,7 @@ const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, forma
       <Button
         variant="outline"
         size="sm"
-        className="mt-2 w-full"
+        className="mt-2 w-full text-xs sm:text-sm"
         onClick={() => onViewDetails(scan)}
         data-testid={`view-details-btn-${scan.id}`}
       >

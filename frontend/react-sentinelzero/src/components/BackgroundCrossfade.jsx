@@ -85,16 +85,19 @@ const BackgroundCrossfade = () => {
     }
   }, [currentBg, isTransitioning, preferences.theme])
 
+  const isMobile = window.innerWidth <= 768
+  
   return (
     <>
       {/* Base (current) layer */}
       <div
+        className={isMobile ? 'mobile-bg' : ''}
         style={{
           backgroundImage: `url(${currentBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: isMobile ? 'contain' : 'cover',
+          backgroundPosition: isMobile ? 'center top' : 'center',
           backgroundRepeat: 'no-repeat',
-          backgroundColor: '#18181b',
+          backgroundColor: isMobile ? '#0f0f0f' : '#18181b',
           opacity: 1,
           position: 'fixed',
           inset: 0,
@@ -102,16 +105,26 @@ const BackgroundCrossfade = () => {
           pointerEvents: 'none',
           minHeight: '100vh',
           minWidth: '100vw',
+          ...(isMobile && {
+            backgroundAttachment: 'scroll',
+            backgroundSize: 'contain',
+            backgroundPosition: 'center center',
+            height: '100vh',
+            width: '100vw',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#0f0f0f',
+          })
         }}
         aria-hidden="true"
       />
       {/* Transition overlay */}
       {transitionBg && (
         <div
+          className={isMobile ? 'mobile-bg' : ''}
           style={{
             backgroundImage: `url(${transitionBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundSize: isMobile ? 'contain' : 'cover',
+            backgroundPosition: isMobile ? 'center top' : 'center',
             backgroundRepeat: 'no-repeat',
             backgroundColor: '#0f0f0f',
             opacity: isTransitioning ? 1 : 0,
@@ -122,6 +135,15 @@ const BackgroundCrossfade = () => {
             pointerEvents: 'none',
             minHeight: '100vh',
             minWidth: '100vw',
+            ...(isMobile && {
+              backgroundAttachment: 'scroll',
+              backgroundSize: 'contain',
+              backgroundPosition: 'center center',
+              height: '100vh',
+              width: '100vw',
+              backgroundRepeat: 'no-repeat',
+              backgroundColor: '#0f0f0f',
+            })
           }}
           aria-hidden="true"
         />

@@ -25,8 +25,8 @@ export const UserPreferencesProvider = ({ children }) => {
     const root = document.documentElement
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
-    const apply = () => {
-      const systemDark = mq.matches
+  const apply = () => {
+    const systemDark = mq && mq.matches
       const wantDark = preferences.theme === 'dark' || (preferences.theme === 'system' && systemDark)
       console.log('Applying theme:', { 
         theme: preferences.theme, 
@@ -61,10 +61,10 @@ export const UserPreferencesProvider = ({ children }) => {
       }
     }
 
-    if (mq.addEventListener) {
+    if (mq && mq.addEventListener) {
       mq.addEventListener('change', handleSystemThemeChange)
       return () => mq.removeEventListener('change', handleSystemThemeChange)
-    } else if (mq.addListener) {
+    } else if (mq && mq.addListener) {
       mq.addListener(handleSystemThemeChange)
       return () => mq.removeListener(handleSystemThemeChange)
     }

@@ -64,18 +64,19 @@ export const SocketProvider = ({ children }) => {
       rememberUpgrade: false
     });
 
-    newSocket.on('connect', () => {
-      console.log('🔌 Socket connected to', backendUrl);
-      setIsConnected(true);
-      setIsInitialized(true);
-    });
+    if (newSocket && newSocket.on) {
+      newSocket.on('connect', () => {
+        console.log('🔌 Socket connected to', backendUrl);
+        setIsConnected(true);
+        setIsInitialized(true);
+      });
 
-    newSocket.on('disconnect', (reason) => {
-      console.log('🔌 Socket disconnected:', reason);
-      setIsConnected(false);
-    });
+      newSocket.on('disconnect', (reason) => {
+        console.log('🔌 Socket disconnected:', reason);
+        setIsConnected(false);
+      });
 
-    newSocket.on('connect_error', (error) => {
+      newSocket.on('connect_error', (error) => {
       console.error('🔌 Socket connection error:', error.message || error);
       console.log('🔌 Ensure backend server is running on', backendUrl);
       
@@ -106,12 +107,15 @@ export const SocketProvider = ({ children }) => {
     newSocket.on('reconnect_failed', () => {
       console.error('🔌 Socket reconnection failed - all attempts exhausted');
     });
+    }
 
     setSocket(newSocket);
 
     return () => {
       console.log('🔌 Cleaning up socket connection');
-      newSocket.close();
+      if (newSocket && newSocket.close) {
+        newSocket.close();
+      }
     };
   }, []);
 

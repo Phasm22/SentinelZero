@@ -115,11 +115,11 @@ const Button = ({
   }
   
   const sizes = {
-    xs: 'px-2 py-1 text-xs font-medium',
-    sm: 'px-3 py-1.5 text-sm font-medium',
-    md: 'px-4 py-2 text-sm font-medium',
-    lg: 'px-6 py-3 text-base font-semibold',
-    xl: 'px-8 py-4 text-lg font-bold'
+    xs: 'px-3 py-2 text-xs font-medium min-h-[36px]',
+    sm: 'px-4 py-2 text-sm font-medium min-h-[40px]',
+    md: 'px-4 py-3 text-sm font-medium min-h-[44px]',
+    lg: 'px-6 py-4 text-base font-semibold min-h-[48px]',
+    xl: 'px-8 py-5 text-lg font-bold min-h-[56px]'
   }
   
   const iconClasses = icon ? (iconPosition === 'left' ? 'mr-2' : 'ml-2') : ''

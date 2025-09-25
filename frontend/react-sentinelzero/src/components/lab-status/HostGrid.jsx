@@ -128,15 +128,15 @@ const HostGrid = ({ detailedData, filter }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-300 dark:text-gray-300">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-100 dark:text-gray-100">
           Host Details
-          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-400">
+          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-300 dark:text-gray-300">
             ({hosts.length} {hosts.length === 1 ? 'host' : 'hosts'})
           </span>
         </h2>
         
         {filter !== 'all' && (
-          <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-400 bg-white/10 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-white/20 dark:border-white/20 self-start capitalize">
+          <div className="text-xs sm:text-sm text-gray-300 dark:text-gray-300 bg-white/10 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-white/20 dark:border-white/20 self-start capitalize">
             Filtered: {filter}
           </div>
         )}
@@ -150,14 +150,14 @@ const HostGrid = ({ detailedData, filter }) => {
       {sortedGroups.map(([segment, segmentHosts]) => (
         <div key={segment} className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-3">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-300 dark:text-gray-300">{segment}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-200 dark:text-gray-200">{segment}</h3>
             <div className="flex-1 h-px bg-gradient-to-r from-gray-600 dark:from-gray-600 to-transparent"></div>
-            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+            <span className="text-xs sm:text-sm text-gray-300 dark:text-gray-300">
               {segmentHosts.length} {segmentHosts.length === 1 ? 'host' : 'hosts'}
             </span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             {segmentHosts.map((host, index) => (
               <HostCard 
                 key={`${host.ip}-${host.name}-${index}`} 

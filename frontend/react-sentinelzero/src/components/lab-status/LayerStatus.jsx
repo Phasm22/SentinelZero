@@ -66,7 +66,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
     <div className="space-y-4">
       {/* Filter selector */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-gray-300 dark:text-gray-300">
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filter:</span>
         </div>
@@ -114,7 +114,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
                   <Icon className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:scale-110 ${colorClasses.text}`} />
                   <div className="text-left">
                     <div className="text-white dark:text-white font-semibold text-sm sm:text-base">{layer.name}</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-400">{layer.description}</div>
+                    <div className="text-xs text-gray-300 dark:text-gray-300">{layer.description}</div>
                   </div>
                 </div>
                 
@@ -127,7 +127,7 @@ const LayerStatus = ({ healthData, filter, setFilter }) => {
                     }`}>
                       {layer.data.up}/{layer.data.total}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-500">
+                    <div className="text-xs text-gray-300 dark:text-gray-300">
                       {Math.round((layer.data.up / layer.data.total) * 100)}% up
                     </div>
                   </div>

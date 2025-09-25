@@ -2,16 +2,30 @@ import sys
 import os
 import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
-from backend.app import app, db
+from backend.app import create_app, db
 
-def test_dashboard_stats():
+@pytest.fixture
+def app():
+    """Create test app with in-memory database"""
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    
     with app.app_context():
         db.create_all()
-        client = app.test_client()
-        response = client.get('/api/dashboard-stats')
-        assert response.status_code == 200
-        assert response.is_json
-        data = response.get_json()
-        assert 'hosts_count' in data
-        assert 'vulns_count' in data
-        assert 'total_scans' in data 
+        yield app
+        db.drop_all()
+
+@pytest.fixture
+def client(app):
+    """Create test client"""
+    return app.test_client()
+
+def test_dashboard_stats(client):
+    response = client.get('/api/dashboard-stats')
+    assert response.status_code == 200
+    assert response.is_json
+    data = response.get_json()
+    assert 'totalScans' in data
+    assert 'totalAlerts' in data
+    assert 'systemStatus' in data 

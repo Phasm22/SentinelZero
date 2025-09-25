@@ -45,6 +45,54 @@ html.dark body {
   color: #f9fafb;
 }
 
+/* Mobile-specific background scaling */
+@media (max-width: 768px) {
+  body {
+    background-size: contain !important;
+    background-position: center center !important;
+    background-attachment: scroll !important;
+    background-repeat: no-repeat !important;
+    height: 100vh !important;
+    background-color: #0f0f0f !important;
+  }
+  
+  html.dark body {
+    background-size: contain !important;
+    background-position: center center !important;
+    background-attachment: scroll !important;
+    background-repeat: no-repeat !important;
+    height: 100vh !important;
+    background-color: #0f0f0f !important;
+  }
+  
+  /* Override any fixed background positioning on mobile */
+  [style*="position: fixed"] {
+    background-size: contain !important;
+    background-position: center center !important;
+    background-attachment: scroll !important;
+    height: 100vh !important;
+    background-color: #0f0f0f !important;
+  }
+  
+  /* Ensure proper mobile scaling */
+  html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Mobile background class for BackgroundCrossfade */
+  .mobile-bg {
+    background-size: contain !important;
+    background-position: center center !important;
+    background-attachment: scroll !important;
+    background-repeat: no-repeat !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    background-color: #0f0f0f !important;
+    overflow: hidden !important;
+  }
+}
+
 /* Set up base font families */
 @layer base {
   html {
