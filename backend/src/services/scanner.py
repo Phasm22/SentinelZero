@@ -138,9 +138,9 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
             except Exception as _e:
                 print(f'[WARN] Could not ensure scans directory: {_e}')
             
-            # Optional pre-discovery phase for heavy scans (not for explicit discovery scan or fallback retries)
+            # Optional pre-discovery phase for heavy scans (not for explicit discovery scan)
             discovered_hosts = []
-            if pre_discovery and scan_type_normalized not in ('discovery scan',) and not _priv_fallback:
+            if pre_discovery and scan_type_normalized not in ('discovery scan',):
                 try:
                     emit_progress('running', 1, 'Pre-discovery: enumerating live hosts...')
                     pre_xml = f'scans/pre_discovery_{now}.xml'
@@ -184,11 +184,14 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 cmd = ['nmap', '-v', '-T4', '-Pn']  # retain -Pn for other scan types to skip unreliable ping on some Wi-Fi setups
             if scan_type_normalized == 'full tcp':
                 # Use very conservative parameters to prevent firewall state table overflow
-                cmd += ['-sS', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
+                if _priv_fallback:
+                    cmd += ['-sT', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
+                else:
+                    cmd += ['-sS', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
             elif scan_type_normalized == 'iot scan':
                 if _priv_fallback:
-                    # Fallback removes UDP requirement (switch to TCP SYN limited ports)
-                    cmd += ['-sS', '-p', '53,67,68,80,443,1900,5353,554,8080']
+                    # Fallback removes UDP requirement (switch to TCP connect scan)
+                    cmd += ['-sT', '-p', '53,67,68,80,443,1900,5353,554,8080']
                 else:
                     cmd += ['-sU', '-p', '53,67,68,80,443,1900,5353,554,8080']
             elif scan_type_normalized == 'discovery scan':
@@ -200,7 +203,10 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 # Speed: reduce retries
                 cmd += ['--max-retries', '1', '-T4']
             elif scan_type_normalized == 'vuln scripts':
-                cmd += ['-sS', '-p-', '--open']
+                if _priv_fallback:
+                    cmd += ['-sT', '-p-', '--open']
+                else:
+                    cmd += ['-sS', '-p-', '--open']
             else:
                 emit_progress('error', 0, f'Unknown scan type: {scan_type}')
                 msg = f'Unknown scan type: {scan_type}'
@@ -367,11 +373,11 @@ def run_nmap_scan(scan_type, security_settings=None, socketio=None, app=None, ta
                 output_tail = '\n'.join(recent_lines)
                 lowered = output_tail.lower()
                 privilege_issue = any(k in lowered for k in ['requires root', 'cap_net_raw', 'dnet'])
-                if privilege_issue and scan_type_normalized == 'iot scan' and not _priv_fallback:
-                    emit_progress('running', percent, 'Privilege issue: retrying IoT scan without -sU/-O (degraded TCP mode)...')
+                if privilege_issue and not _priv_fallback:
+                    emit_progress('running', percent, 'Raw socket access denied: retrying with TCP connect scan (degraded mode)...')
                     if socketio:
                         try:
-                            socketio.emit('scan_log', {'msg': 'Retrying in degraded mode: removed -sU and -O'})
+                            socketio.emit('scan_log', {'msg': 'Retrying in degraded mode: using TCP connect scan instead of SYN scan'})
                         except Exception:
                             pass
                     degraded_security = dict(security_settings or {})

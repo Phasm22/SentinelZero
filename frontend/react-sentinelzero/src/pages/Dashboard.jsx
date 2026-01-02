@@ -73,7 +73,21 @@ const Dashboard = () => {
       ])
       
       setRecentScans(scansData.scans || [])
-      setSystemInfo(statsData)
+      
+      // If we have scans, use data from the most recent scan
+      if (scansData.scans && scansData.scans.length > 0) {
+        const latestScan = scansData.scans[0]
+        setSystemInfo({
+          total_scans: scansData.scans.length,
+          hosts_count: latestScan.hosts_count || 0,
+          vulns_count: latestScan.vulns_count || 0,
+          latest_scan_time: latestScan.timestamp
+        })
+      } else {
+        // Fallback to API stats if no scans
+        setSystemInfo(statsData)
+      }
+      
       setIsLoading(false)
     } catch (error) {
       console.error('Error loading dashboard data:', error)

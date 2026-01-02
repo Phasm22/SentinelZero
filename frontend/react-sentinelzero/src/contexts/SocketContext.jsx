@@ -19,22 +19,28 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     console.log('Initializing Socket.IO client...');
     
-    // In development mode (Vite), use the current origin which will be proxied
+    // In development mode (Vite), ALWAYS use the current origin which will be proxied
+    // This avoids CORS issues by going through the Vite proxy
     // In production (static served), connect directly to the backend
     const isDevelopment = import.meta.env?.DEV === true || import.meta.env?.MODE === 'development';
     const configuredUrl = import.meta.env?.VITE_BACKEND_URL;
     
     let backendUrl;
-    if (configuredUrl) {
+    if (isDevelopment) {
+      // In development, ALWAYS use the proxy to avoid CORS issues
+      // The Vite proxy handles /socket.io requests and forwards them to the backend
+      backendUrl = window.location.origin;
+      console.log('🔌 Development mode: Using proxy URL:', backendUrl);
+    } else if (configuredUrl) {
+      // In production, use configured URL or same origin
       if (configuredUrl === '/') {
-        // Use same origin when configured as '/'
         backendUrl = window.location.origin;
       } else {
         backendUrl = configuredUrl;
       }
+      console.log('🔌 Production mode: Using configured URL:', backendUrl);
     } else {
-      // For server deployment, always use the same origin (frontend server proxies to backend)
-      // This ensures we connect to sentinelzero.prox:3173, not localhost:5000
+      // Fallback: use same origin
       backendUrl = window.location.origin;
       console.log('🔌 Using same origin (proxy) URL:', backendUrl);
     }

@@ -48,8 +48,8 @@ html.dark body {
 /* Mobile-specific background scaling */
 @media (max-width: 768px) {
   body {
-    background-size: contain !important;
-    background-position: center center !important;
+    background-size: cover !important;
+    background-position: center top !important;
     background-attachment: scroll !important;
     background-repeat: no-repeat !important;
     height: 100vh !important;
@@ -57,8 +57,8 @@ html.dark body {
   }
   
   html.dark body {
-    background-size: contain !important;
-    background-position: center center !important;
+    background-size: cover !important;
+    background-position: center top !important;
     background-attachment: scroll !important;
     background-repeat: no-repeat !important;
     height: 100vh !important;
@@ -67,8 +67,8 @@ html.dark body {
   
   /* Override any fixed background positioning on mobile */
   [style*="position: fixed"] {
-    background-size: contain !important;
-    background-position: center center !important;
+    background-size: cover !important;
+    background-position: center top !important;
     background-attachment: scroll !important;
     height: 100vh !important;
     background-color: #0f0f0f !important;
@@ -82,8 +82,8 @@ html.dark body {
   
   /* Mobile background class for BackgroundCrossfade */
   .mobile-bg {
-    background-size: contain !important;
-    background-position: center center !important;
+    background-size: cover !important;
+    background-position: center top !important;
     background-attachment: scroll !important;
     background-repeat: no-repeat !important;
     height: 100vh !important;

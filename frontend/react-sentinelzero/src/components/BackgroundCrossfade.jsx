@@ -107,8 +107,8 @@ const BackgroundCrossfade = () => {
           minWidth: '100vw',
           ...(isMobile && {
             backgroundAttachment: 'scroll',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center center',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
             height: '100vh',
             width: '100vw',
             backgroundRepeat: 'no-repeat',
@@ -137,8 +137,8 @@ const BackgroundCrossfade = () => {
             minWidth: '100vw',
             ...(isMobile && {
               backgroundAttachment: 'scroll',
-              backgroundSize: 'contain',
-              backgroundPosition: 'center center',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center top',
               height: '100vh',
               width: '100vw',
               backgroundRepeat: 'no-repeat',

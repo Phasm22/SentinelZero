@@ -16,12 +16,15 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
+# Security settings - relaxed for network scanning
+NoNewPrivileges=false
+PrivateTmp=false
+ProtectSystem=false
 ProtectHome=false
 ReadWritePaths=/home/sentinel/SentinelZero
+# Allow raw socket access for nmap
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 
 [Install]
 WantedBy=multi-user.target

@@ -12,7 +12,7 @@ load_dotenv()
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from flask_cors import CORS
@@ -47,8 +47,17 @@ def create_app():
     # Create Flask app
     app = Flask(__name__)
     
-    # Enable CORS for all routes
-    CORS(app, origins="*", supports_credentials=True)
+    # Enable CORS for all routes - allow all origins for development
+    CORS(app, origins="*", supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
+    
+    # Add CORS headers manually for Socket.IO preflight requests
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     
     # Configuration
     app.config['SECRET_KEY'] = 'sentinelzero-dev-key-change-in-production'
@@ -65,7 +74,17 @@ def create_app():
     # Initialize extensions
     db = init_db(app)
     # Use eventlet async_mode (matches dependencies)
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', logger=True, engineio_logger=True)
+    # Explicitly allow all origins for Socket.IO CORS
+    socketio = SocketIO(
+        app, 
+        cors_allowed_origins="*", 
+        async_mode='eventlet', 
+        logger=True, 
+        engineio_logger=True,
+        allow_upgrades=True,
+        ping_timeout=60,
+        ping_interval=25
+    )
     scheduler = init_scheduler()
     try:
         # Run cleanup daily at 03:15 UTC (no lambda for serializable ref)
@@ -73,10 +92,22 @@ def create_app():
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
     
+    # Handle OPTIONS requests for CORS preflight
+    @app.route('/socket.io/', methods=['OPTIONS'])
+    @app.route('/socket.io/<path:path>', methods=['OPTIONS'])
+    def socketio_options(path=''):
+        """Handle CORS preflight for Socket.IO"""
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
     # Socket.IO event handlers
     @socketio.on('connect')
     def handle_connect():
-        print(f'[SOCKET] Client connected')
+        print(f'[SOCKET] Client connected from origin: {request.origin if hasattr(request, "origin") else "unknown"}')
         socketio.emit('scan_log', {'msg': 'Connected to SentinelZero'})
     
     @socketio.on('disconnect')
