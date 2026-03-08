@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -30,15 +31,22 @@ class _FakeProcess:
         self.stdout = iter(stdout_lines)
         self.returncode = returncode
         self.pid = pid
+        self._running = True
 
     def terminate(self):
+        self._running = False
         return None
 
     def kill(self):
+        self._running = False
         return None
 
     def wait(self, timeout=None):
+        self._running = False
         return self.returncode
+
+    def poll(self):
+        return None if self._running else self.returncode
 
 
 class _PopenFactory:
@@ -81,7 +89,7 @@ def test_scan_runtime_transitions_emit_scoped_events(app, monkeypatch):
         assert scan.id is not None
 
         runtime.append_log(scan.id, 'starting thread')
-        runtime.set_state(scan.id, 'running', 10.0, 'Running scan')
+        runtime.set_state(scan.id, 'running', 'Running scan')
         runtime.complete_scan(scan.id, 'Done')
 
         updated = db.session.get(Scan, scan.id)
@@ -171,3 +179,114 @@ def test_run_nmap_scan_retries_in_degraded_mode_without_new_scan(app, monkeypatc
         assert refreshed.process_id == 2222
         assert Scan.query.count() == 1
         assert len(popen.calls) == 2
+
+
+def test_run_nmap_scan_retries_transient_xml_parse_error(app, monkeypatch):
+    with app.app_context():
+        runtime = app.extensions['scan_runtime']
+        monkeypatch.setattr(runtime.socketio, 'emit', lambda *args, **kwargs: None)
+        monkeypatch.setattr(scanner_module, 'generate_and_store_insights', lambda scan_id: [])
+        monkeypatch.setattr(scanner_module.shutil, 'which', lambda name: f'/usr/bin/{name}')
+        monkeypatch.setattr(scanner_module.os, 'makedirs', lambda *args, **kwargs: None)
+        monkeypatch.setattr(scanner_module.os.path, 'exists', lambda path: True)
+        monkeypatch.setattr(scanner_module.os.path, 'getsize', lambda path: 2048)
+
+        parse_calls = {'count': 0}
+
+        def parse_with_retry(path):
+            parse_calls['count'] += 1
+            if parse_calls['count'] == 1:
+                raise scanner_module.ET.ParseError('no element found: line 1, column 0')
+            return _sample_xml_tree()
+
+        monkeypatch.setattr(scanner_module.ET, 'parse', parse_with_retry)
+        monkeypatch.setenv('SCAN_XML_PARSE_RETRIES', '2')
+        monkeypatch.setenv('SCAN_XML_PARSE_RETRY_DELAY_SECONDS', '0')
+
+        popen = _PopenFactory([_FakeProcess(['About 99.00% done\n', 'done\n'], returncode=0, pid=3001)])
+        monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+
+        scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
+        scanner_module.run_nmap_scan(
+            scan.id,
+            'Full TCP',
+            security_settings={
+                'vuln_scanning_enabled': False,
+                'os_detection_enabled': False,
+                'service_detection_enabled': False,
+                'aggressive_scanning': False,
+            },
+            socketio=runtime.socketio,
+            app=app,
+            target_network='192.168.1.0/24',
+        )
+
+        db.session.expire_all()
+        refreshed = db.session.get(Scan, scan.id)
+        assert parse_calls['count'] == 2
+        assert refreshed.status == 'complete'
+        assert refreshed.error_code is None
+
+
+def test_run_nmap_scan_fails_when_watchdog_timeout_reached(app, monkeypatch):
+    class _BlockingStdout:
+        def __init__(self, process):
+            self._process = process
+
+        def readline(self):
+            while self._process._running:
+                time.sleep(0.05)
+            return ''
+
+    class _LongRunningProcess:
+        def __init__(self, pid=4001):
+            self.pid = pid
+            self.returncode = 143
+            self._running = True
+            self.stdout = _BlockingStdout(self)
+
+        def terminate(self):
+            self._running = False
+
+        def kill(self):
+            self._running = False
+
+        def wait(self, timeout=None):
+            self._running = False
+            return self.returncode
+
+        def poll(self):
+            return None if self._running else self.returncode
+
+    with app.app_context():
+        runtime = app.extensions['scan_runtime']
+        monkeypatch.setattr(runtime.socketio, 'emit', lambda *args, **kwargs: None)
+        monkeypatch.setattr(scanner_module.shutil, 'which', lambda name: f'/usr/bin/{name}')
+        monkeypatch.setattr(scanner_module.os, 'makedirs', lambda *args, **kwargs: None)
+        monkeypatch.setattr(scanner_module.os.path, 'exists', lambda path: False)
+        monkeypatch.setenv('SCAN_TIMEOUT_SECONDS', '5')
+        monotonic_values = iter([0.0, 6.0, 6.0, 6.0])
+        monkeypatch.setattr(scanner_module.time, 'monotonic', lambda: next(monotonic_values, 6.0))
+        popen = _PopenFactory([_LongRunningProcess()])
+        monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+
+        scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
+        scanner_module.run_nmap_scan(
+            scan.id,
+            'Full TCP',
+            security_settings={
+                'vuln_scanning_enabled': False,
+                'os_detection_enabled': False,
+                'service_detection_enabled': False,
+                'aggressive_scanning': False,
+            },
+            socketio=runtime.socketio,
+            app=app,
+            target_network='192.168.1.0/24',
+        )
+
+        db.session.expire_all()
+        refreshed = db.session.get(Scan, scan.id)
+        assert refreshed.status == 'failed'
+        assert refreshed.error_code == 'scan_timeout'
+        assert 'timed out' in (refreshed.status_message or '')

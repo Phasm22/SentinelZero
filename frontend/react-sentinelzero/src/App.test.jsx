@@ -5,6 +5,16 @@ import App from './App'
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { SocketProvider } from './contexts/SocketContext'
+import axios from 'axios'
+
+vi.mock('axios', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    delete: vi.fn(),
+    put: vi.fn(),
+  },
+}))
 
 // Mock socket.io
 vi.mock('socket.io-client', () => ({
@@ -41,6 +51,7 @@ const TestWrapper = ({ children }) => (
 
 describe('App Component', () => {
   it('should render without crashing', () => {
+    axios.get.mockResolvedValue({ data: { scans: [] } })
     render(
       <TestWrapper>
         <App />

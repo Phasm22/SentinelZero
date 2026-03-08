@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 cd /home/sentinel/SentinelZero/backend
 export PATH="/home/sentinel/.local/bin:$PATH"
 
@@ -8,8 +10,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Configuration
-BACKEND_PORT=5000
+# Configuration (can be overridden by systemd Environment=)
+BACKEND_PORT="${SENTINEL_BIND_PORT:-5000}"
+BACKEND_HOST="${SENTINEL_BIND_HOST:-0.0.0.0}"
+SCAN_TIMEOUT_SECONDS="${SCAN_TIMEOUT_SECONDS:-1800}"
 
 # Function to check if port is in use
 check_port() {
@@ -19,6 +23,51 @@ check_port() {
     else
         return 1  # Port is free
     fi
+}
+
+require_command() {
+    local cmd="$1"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo -e "${RED}❌ Missing required command: ${cmd}${NC}"
+        exit 1
+    fi
+}
+
+require_writable_dir() {
+    local dir="$1"
+    mkdir -p "$dir"
+    if [ ! -w "$dir" ]; then
+        echo -e "${RED}❌ Directory is not writable: ${dir}${NC}"
+        exit 1
+    fi
+}
+
+validate_port() {
+    if ! [[ "$BACKEND_PORT" =~ ^[0-9]+$ ]] || [ "$BACKEND_PORT" -lt 1 ] || [ "$BACKEND_PORT" -gt 65535 ]; then
+        echo -e "${RED}❌ Invalid SENTINEL_BIND_PORT: ${BACKEND_PORT}${NC}"
+        exit 1
+    fi
+}
+
+preflight_checks() {
+    echo -e "${YELLOW}🧪 Running startup preflight checks...${NC}"
+    require_command uv
+    require_command nmap
+    require_command lsof
+    require_command pkill
+    require_command pgrep
+    validate_port
+
+    require_writable_dir "/home/sentinel/SentinelZero/backend/scans"
+    require_writable_dir "/home/sentinel/SentinelZero/backend/instance"
+    require_writable_dir "/home/sentinel/SentinelZero/backend/logs"
+
+    if [ ! -f "/home/sentinel/SentinelZero/backend/network_settings.json" ]; then
+        echo -e "${YELLOW}⚠️  network_settings.json not found, using defaults${NC}"
+    fi
+
+    echo -e "${GREEN}✅ Preflight checks passed${NC}"
+    echo -e "${GREEN}ℹ️  Bind: ${BACKEND_HOST}:${BACKEND_PORT} | Scan timeout: ${SCAN_TIMEOUT_SECONDS}s${NC}"
 }
 
 # Function to kill processes on specific ports
@@ -75,6 +124,8 @@ cleanup() {
 
 # Set up signal handlers for graceful shutdown
 trap cleanup SIGTERM SIGINT
+
+preflight_checks
 
 # Run cleanup before starting
 cleanup_processes

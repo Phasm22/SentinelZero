@@ -1,11 +1,13 @@
 import json
 import os
+import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from ..models.scan import Scan
 from ..services.scanner import parse_vulners_output
+from ..services.observability import get_request_id
 
 def create_upload_blueprint(db, socketio):
     bp = Blueprint('upload', __name__)
@@ -42,8 +44,8 @@ def create_upload_blueprint(db, socketio):
                 scan_type=scan_type,
                 source='upload',
                 initiated_by='upload',
+                correlation_id=get_request_id() or str(uuid.uuid4()),
                 state='parsing',
-                percent=0.0,
                 message=f'Parsing uploaded scan: {scan_type}',
             )
             scan_id = scan.id
@@ -68,7 +70,6 @@ def create_upload_blueprint(db, socketio):
             scan.raw_xml_path = xml_path
             scan.status = 'complete'
             scan.status_message = f'Upload complete: {len(hosts)} hosts, {len(vulns)} vulnerabilities'
-            scan.percent = 100.0
             scan.total_hosts = len(hosts)
             scan.hosts_up = len(hosts)
             scan.completed_at = datetime.utcnow()

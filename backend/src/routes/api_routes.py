@@ -5,9 +5,10 @@ import json
 import os
 import pytz
 from datetime import datetime
-from flask import Blueprint, jsonify, Response
+from flask import Blueprint, jsonify, Response, request
 from ..models import Scan, Alert
 from ..services.scan_runtime import ACTIVE_SCAN_STATUSES
+from ..services.data_management import delete_data
 
 def create_api_blueprint(db):
     """Create and configure general API routes blueprint"""
@@ -41,7 +42,6 @@ def create_api_blueprint(db):
                     'id': recent_scan.id,
                     'scan_type': recent_scan.scan_type,
                     'status': recent_scan.status,
-                    'percent': recent_scan.percent,
                     'created_at': recent_scan.created_at.isoformat() if recent_scan.created_at else None,
                     'completed_at': recent_scan.completed_at.isoformat() if recent_scan.completed_at else None
                 }
@@ -80,7 +80,6 @@ def create_api_blueprint(db):
                     'status': scan.status,
                     'state': scan.status,
                     'message': getattr(scan, 'status_message', None),
-                    'percent': scan.percent,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
                     'total_hosts': scan.total_hosts,
@@ -113,7 +112,6 @@ def create_api_blueprint(db):
                     'status': scan.status,
                     'state': scan.status,
                     'message': getattr(scan, 'status_message', None),
-                    'percent': scan.percent,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
                     'timestamp': scan.created_at,  # Add timestamp field for frontend compatibility
@@ -171,7 +169,6 @@ def create_api_blueprint(db):
                     'status': scan.status,
                     'state': scan.status,
                     'message': getattr(scan, 'status_message', None),
-                    'percent': scan.percent,
                     'execution_mode': getattr(scan, 'execution_mode', 'normal'),
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'total_hosts': scan.total_hosts,
@@ -189,17 +186,54 @@ def create_api_blueprint(db):
         """Sync scans between filesystem and database"""
         try:
             from ..services.sync import sync_scans_from_filesystem
-            
-            result = sync_scans_from_filesystem()
+            payload = request.get_json(silent=True) or {}
+            mode = payload.get('mode', 'import_missing')
+            prune_missing = mode in ('reconcile_db', 'reconcile')
+            result = sync_scans_from_filesystem(prune_missing_in_filesystem=prune_missing)
             
             return jsonify({
                 'status': 'success',
                 'message': 'Scans synced successfully',
+                'mode': mode,
                 'sync_result': result
             })
         except Exception as e:
             print(f'[DEBUG] Error syncing scans: {e}')
             return jsonify({'status': 'error', 'message': f'Failed to sync scans: {str(e)}'}), 500
+
+    @bp.route('/data/delete', methods=['POST'])
+    def delete_data_route():
+        """Unified data deletion endpoint for dashboard/history cleanup actions."""
+        try:
+            payload = request.get_json(silent=True) or {}
+            scope = payload.get('scope', 'scans')
+            if scope not in ('scans', 'all'):
+                return jsonify({'status': 'error', 'message': 'Invalid scope'}), 400
+            delete_files = bool(payload.get('delete_files', False))
+            prune_orphan_files = bool(payload.get('prune_orphan_files', False))
+            sync_after = bool(payload.get('sync_after', False))
+
+            summary = delete_data(
+                db,
+                scope=scope,
+                delete_files=delete_files,
+                prune_orphan_files=prune_orphan_files,
+            )
+            response = {
+                'status': 'success',
+                'message': 'Data deletion completed',
+                'summary': summary,
+            }
+            if sync_after:
+                from ..services.sync import sync_scans_from_filesystem, get_sync_status
+                sync_result = sync_scans_from_filesystem(prune_missing_in_filesystem=True)
+                response['sync_result'] = sync_result
+                response['sync_status'] = get_sync_status()
+            return jsonify(response)
+        except Exception as e:
+            print(f'[DEBUG] Error deleting data: {e}')
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': f'Failed to delete data: {str(e)}'}), 500
 
     @bp.route('/alerts', methods=['GET'])
     def get_alerts():
@@ -256,7 +290,6 @@ def create_api_blueprint(db):
                 'status': scan.status,
                 'state': scan.status,
                 'message': getattr(scan, 'status_message', None),
-                'percent': scan.percent,
                 'created_at': scan.created_at.isoformat() if scan.created_at else None,
                 'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
                 'timestamp': scan.created_at,
@@ -543,6 +576,74 @@ def create_api_blueprint(db):
             'timestamp': datetime.utcnow().isoformat(),
             'version': '1.0.0'
         })
+
+    @bp.route('/metrics', methods=['GET'])
+    def metrics():
+        """Prometheus-style operational metrics."""
+        try:
+            total_scans = Scan.query.count()
+            active_scans = Scan.query.filter(Scan.status.in_(ACTIVE_SCAN_STATUSES)).count()
+            failed_scans = Scan.query.filter_by(status='failed').count()
+            completed_scans = Scan.query.filter_by(status='complete').count()
+            cancelled_scans = Scan.query.filter_by(status='cancelled').count()
+            completed_with_duration = (
+                Scan.query
+                .filter(Scan.status == 'complete')
+                .filter(Scan.completed_at.isnot(None))
+                .filter(Scan.created_at.isnot(None))
+                .all()
+            )
+            duration_values = [
+                (scan.completed_at - scan.created_at).total_seconds()
+                for scan in completed_with_duration
+                if scan.completed_at and scan.created_at and scan.completed_at >= scan.created_at
+            ]
+            avg_duration_seconds = (sum(duration_values) / len(duration_values)) if duration_values else 0.0
+            max_duration_seconds = max(duration_values) if duration_values else 0.0
+            failure_rate_ratio = (failed_scans / total_scans) if total_scans else 0.0
+
+            last_scan = Scan.query.order_by(Scan.id.desc()).first()
+            last_scan_timestamp = 0
+            if last_scan and last_scan.created_at:
+                last_scan_timestamp = int(last_scan.created_at.timestamp())
+
+            lines = [
+                '# HELP sentinelzero_scans_total Total number of scans recorded.',
+                '# TYPE sentinelzero_scans_total gauge',
+                f'sentinelzero_scans_total {total_scans}',
+                '# HELP sentinelzero_scans_active Number of currently active scans.',
+                '# TYPE sentinelzero_scans_active gauge',
+                f'sentinelzero_scans_active {active_scans}',
+                '# HELP sentinelzero_scans_failed_total Total failed scans.',
+                '# TYPE sentinelzero_scans_failed_total counter',
+                f'sentinelzero_scans_failed_total {failed_scans}',
+                '# HELP sentinelzero_scans_failure_rate_ratio Failed scans / total scans.',
+                '# TYPE sentinelzero_scans_failure_rate_ratio gauge',
+                f'sentinelzero_scans_failure_rate_ratio {round(failure_rate_ratio, 6)}',
+                '# HELP sentinelzero_scans_completed_total Total completed scans.',
+                '# TYPE sentinelzero_scans_completed_total counter',
+                f'sentinelzero_scans_completed_total {completed_scans}',
+                '# HELP sentinelzero_scans_cancelled_total Total cancelled scans.',
+                '# TYPE sentinelzero_scans_cancelled_total counter',
+                f'sentinelzero_scans_cancelled_total {cancelled_scans}',
+                '# HELP sentinelzero_scans_duration_seconds_avg Average duration for completed scans in seconds.',
+                '# TYPE sentinelzero_scans_duration_seconds_avg gauge',
+                f'sentinelzero_scans_duration_seconds_avg {round(avg_duration_seconds, 4)}',
+                '# HELP sentinelzero_scans_duration_seconds_max Max duration for completed scans in seconds.',
+                '# TYPE sentinelzero_scans_duration_seconds_max gauge',
+                f'sentinelzero_scans_duration_seconds_max {round(max_duration_seconds, 4)}',
+                '# HELP sentinelzero_scans_last_created_unix Last scan creation timestamp (unix seconds).',
+                '# TYPE sentinelzero_scans_last_created_unix gauge',
+                f'sentinelzero_scans_last_created_unix {last_scan_timestamp}',
+            ]
+            return Response('\n'.join(lines) + '\n', mimetype='text/plain; version=0.0.4')
+        except Exception as e:
+            print(f'[DEBUG] Error building metrics: {e}')
+            return Response(
+                '# SentinelZero metrics unavailable\nsentinelzero_metrics_up 0\n',
+                status=500,
+                mimetype='text/plain; version=0.0.4',
+            )
     
 
     @bp.route('/sync-status', methods=['GET'])

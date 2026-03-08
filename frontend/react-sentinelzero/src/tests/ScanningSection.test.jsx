@@ -72,7 +72,6 @@ describe('ScanningSection Component', () => {
     onRequestScan: vi.fn(),
     isScanning: false,
     scanningType: null,
-    scanProgress: null,
     scanStatus: 'idle',
     scanMessage: '',
     isConnected: true,

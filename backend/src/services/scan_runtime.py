@@ -6,6 +6,7 @@ from flask import request
 from flask_socketio import emit, join_room, leave_room
 
 from ..models import Scan
+from .observability import log_event
 
 ACTIVE_SCAN_STATUSES = (
     'queued',
@@ -37,9 +38,9 @@ class ScanRuntime:
             'scan_type': scan.scan_type,
             'source': getattr(scan, 'source', 'manual') or 'manual',
             'initiated_by': getattr(scan, 'initiated_by', 'api') or 'api',
+            'correlation_id': getattr(scan, 'correlation_id', None),
             'state': scan.status,
             'status': scan.status,
-            'percent': scan.percent or 0.0,
             'message': getattr(scan, 'status_message', None) or f'Status: {scan.status}',
             'execution_mode': getattr(scan, 'execution_mode', None) or 'normal',
             'error_code': getattr(scan, 'error_code', None),
@@ -69,18 +70,27 @@ class ScanRuntime:
     def get_scan(self, scan_id):
         return self.db.session.get(Scan, scan_id)
 
-    def create_scan(self, scan_type, source='manual', initiated_by='api', state='queued', percent=0.0, message='Queued scan request', execution_mode='normal'):
+    def create_scan(self, scan_type, source='manual', initiated_by='api', state='queued', message='Queued scan request', execution_mode='normal', correlation_id=None):
         scan = Scan(
             scan_type=scan_type,
             status=state,
-            percent=percent,
             status_message=message,
             execution_mode=execution_mode,
             source=source,
             initiated_by=initiated_by,
+            correlation_id=correlation_id,
         )
         self.db.session.add(scan)
         self.db.session.commit()
+        log_event(
+            'scan.created',
+            scan_id=scan.id,
+            scan_type=scan.scan_type,
+            source=scan.source,
+            initiated_by=scan.initiated_by,
+            correlation_id=scan.correlation_id,
+            state=scan.status,
+        )
         return scan
 
     def update_scan(self, scan_id, **changes):
@@ -101,13 +111,6 @@ class ScanRuntime:
         room = self.scan_room(scan.id)
         self.socketio.emit(event_name, payload, room=room)
 
-        if event_name == 'scan.progress':
-            self.socketio.emit('scan_progress', payload, room=room)
-        elif event_name == 'scan.completed':
-            self.socketio.emit('scan_complete', payload, room=room)
-        elif event_name == 'scan.log' and 'msg' in payload:
-            self.socketio.emit('scan_log', {'scan_id': scan.id, 'msg': payload['msg']}, room=room)
-
         return payload
 
     def emit_snapshot(self, scan, include_results=False):
@@ -122,11 +125,10 @@ class ScanRuntime:
             'timestamp': datetime.utcnow().isoformat(),
         })
 
-    def set_state(self, scan_id, state, percent, message, emit_event=True, event_name='scan.progress', **extra_updates):
+    def set_state(self, scan_id, state, message, emit_event=True, event_name='scan.progress', **extra_updates):
         scan = self.update_scan(
             scan_id,
             status=state,
-            percent=percent,
             status_message=message,
             **extra_updates,
         )
@@ -134,37 +136,51 @@ class ScanRuntime:
             self.emit_scan_event(event_name, scan)
         return scan
 
-    def fail_scan(self, scan_id, message, error_code='scan_failed', percent=0.0):
+    def fail_scan(self, scan_id, message, error_code='scan_failed'):
         scan = self.update_scan(
             scan_id,
             status='failed',
-            percent=percent,
             status_message=message,
             error_code=error_code,
             error_detail=message,
             completed_at=datetime.utcnow(),
         )
         self.emit_scan_event('scan.failed', scan)
+        log_event(
+            'scan.failed',
+            scan_id=scan.id,
+            error_code=scan.error_code,
+            execution_mode=scan.execution_mode,
+            correlation_id=getattr(scan, 'correlation_id', None),
+        )
         return scan
 
     def complete_scan(self, scan_id, message='Scan complete!'):
         scan = self.update_scan(
             scan_id,
             status='complete',
-            percent=100.0,
             status_message=message,
             completed_at=datetime.utcnow(),
             error_code=None,
             error_detail=None,
         )
         self.emit_scan_event('scan.completed', scan)
+        duration_ms = None
+        if scan.created_at and scan.completed_at:
+            duration_ms = round((scan.completed_at - scan.created_at).total_seconds() * 1000, 2)
+        log_event(
+            'scan.completed',
+            scan_id=scan.id,
+            execution_mode=scan.execution_mode,
+            duration_ms=duration_ms,
+            correlation_id=getattr(scan, 'correlation_id', None),
+        )
         return scan
 
-    def cancel_scan(self, scan_id, message='Scan cancelled by user', percent=0.0):
+    def cancel_scan(self, scan_id, message='Scan cancelled by user'):
         scan = self.update_scan(
             scan_id,
             status='cancelled',
-            percent=percent,
             status_message=message,
             completed_at=datetime.utcnow(),
         )

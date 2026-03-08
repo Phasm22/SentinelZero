@@ -7,7 +7,6 @@ const ScanningSection = ({
   onRequestScan,
   isScanning,
   scanningType,
-  scanProgress,
   scanStatus,
   scanMessage,
   isConnected,
@@ -69,7 +68,6 @@ const ScanningSection = ({
               onRequestScan={onRequestScan}
               isScanning={isScanning}
               scanningType={scanningType}
-              scanProgress={scanProgress}
               scanStatus={scanStatus}
               scanMessage={scanMessage}
               isConnected={isConnected}

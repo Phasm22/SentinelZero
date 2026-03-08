@@ -54,12 +54,20 @@ export const apiService = {
   },
 
   clearAllData: async () => {
-    const response = await axios.post('/clear-all-data')
+    const response = await axios.post(`${API_BASE_URL}/data/delete`, {
+      scope: 'all',
+      delete_files: true,
+      prune_orphan_files: true,
+      sync_after: false,
+    })
     return response.data
   },
 
-  deleteAllScans: async () => {
-    const response = await axios.post(`${API_BASE_URL}/delete-all-scans`)
+  deleteAllScans: async (options = {}) => {
+    const response = await axios.post(`${API_BASE_URL}/delete-all-scans`, {
+      delete_files: Boolean(options.deleteFiles),
+      prune_orphan_files: Boolean(options.pruneOrphanFiles),
+    })
     return response.data
   },
 
@@ -173,8 +181,8 @@ export const apiService = {
   },
 
   // Scan synchronization
-  syncScans: async () => {
-    const response = await axios.post(`${API_BASE_URL}/sync-scans`)
+  syncScans: async (mode = 'import_missing') => {
+    const response = await axios.post(`${API_BASE_URL}/sync-scans`, { mode })
     return response.data
   },
 

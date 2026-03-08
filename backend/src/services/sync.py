@@ -5,10 +5,28 @@ import os
 import json
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 from ..models.scan import Scan
 from ..config.database import db
 from .scanner import parse_vulners_output
+
+
+def _normalize_path(path: str, base_dir: str) -> str:
+    """Normalize db/file paths to absolute canonical filesystem paths."""
+    if not path:
+        return ''
+    if os.path.isabs(path):
+        return os.path.normpath(path)
+    return os.path.normpath(os.path.join(base_dir, path))
+
+
+def _to_relative_path(path: str, base_dir: str) -> str:
+    """Store paths relative to backend root for portability."""
+    try:
+        rel = os.path.relpath(path, base_dir)
+        return rel if rel and rel != '.' else path
+    except Exception:
+        return path
 
 
 def parse_xml_file(xml_path: str) -> Dict[str, Any]:
@@ -193,7 +211,7 @@ def parse_xml_file(xml_path: str) -> Dict[str, Any]:
         return None
 
 
-def sync_scans_from_filesystem(scans_dir: str = 'scans') -> Dict[str, Any]:
+def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesystem: bool = False) -> Dict[str, Any]:
     """
     Synchronize database with filesystem XML files
     
@@ -209,22 +227,27 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans') -> Dict[str, Any]:
     if not os.path.isdir(target_dir):
         return {'error': f'Scans directory not found: {target_dir}'}
     
-    # Get existing database scans
-    existing_scans = {scan.raw_xml_path: scan for scan in Scan.query.all()}
+    # Get existing database scans and normalize paths so relative/absolute don't duplicate
+    scans_with_paths = [scan for scan in Scan.query.all() if scan.raw_xml_path]
+    existing_scans_by_path = {
+        _normalize_path(scan.raw_xml_path, base_dir): scan
+        for scan in scans_with_paths
+    }
     
     # Get filesystem XML files
     xml_files = [f for f in os.listdir(target_dir) if f.endswith('.xml')]
     
     synced_count = 0
     skipped_count = 0
+    pruned_count = 0
     error_count = 0
     errors = []
     
     for xml_file in sorted(xml_files):
-        xml_path = os.path.join(target_dir, xml_file)
+        xml_path = os.path.normpath(os.path.join(target_dir, xml_file))
         
         # Skip if already in database
-        if xml_path in existing_scans:
+        if xml_path in existing_scans_by_path:
             skipped_count += 1
             continue
         
@@ -240,14 +263,13 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans') -> Dict[str, Any]:
             scan = Scan(
                 scan_type=scan_data['scan_type'],
                 status='complete',
-                percent=100.0,
                 total_hosts=scan_data['total_hosts'],
                 hosts_up=scan_data['hosts_up'],
                 total_ports=scan_data['total_ports'],
                 open_ports=scan_data['open_ports'],
                 hosts_json=json.dumps(scan_data['hosts']),
                 vulns_json=json.dumps(scan_data['vulns']),
-                raw_xml_path=xml_path,
+                raw_xml_path=_to_relative_path(xml_path, base_dir),
                 created_at=scan_data['start_time'] or datetime.utcnow(),
                 completed_at=scan_data['end_time'] or datetime.utcnow()
             )
@@ -264,10 +286,27 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans') -> Dict[str, Any]:
             errors.append(error_msg)
             print(f"[ERROR] {error_msg}")
             db.session.rollback()
+
+    if prune_missing_in_filesystem:
+        fs_files = {
+            os.path.normpath(os.path.join(target_dir, name))
+            for name in os.listdir(target_dir)
+            if name.endswith('.xml')
+        }
+        stale_scans = [
+            scan for scan in scans_with_paths
+            if _normalize_path(scan.raw_xml_path, base_dir) not in fs_files
+        ]
+        for stale in stale_scans:
+            db.session.delete(stale)
+            pruned_count += 1
+        if stale_scans:
+            db.session.commit()
     
     return {
         'synced_count': synced_count,
         'skipped_count': skipped_count,
+        'pruned_count': pruned_count,
         'error_count': error_count,
         'total_files': len(xml_files),
         'errors': errors
@@ -292,10 +331,18 @@ def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
     
     # Get database scans
     db_scans = Scan.query.all()
-    db_paths = {scan.raw_xml_path for scan in db_scans if scan.raw_xml_path}
+    db_paths = {
+        _normalize_path(scan.raw_xml_path, base_dir)
+        for scan in db_scans
+        if scan.raw_xml_path
+    }
     
     # Get filesystem files
-    fs_files = {os.path.join(target_dir, f) for f in os.listdir(target_dir) if f.endswith('.xml')}
+    fs_files = {
+        os.path.normpath(os.path.join(target_dir, f))
+        for f in os.listdir(target_dir)
+        if f.endswith('.xml')
+    }
     
     # Find missing in database
     missing_in_db = fs_files - db_paths
@@ -308,7 +355,7 @@ def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
         'filesystem_files': len(fs_files),
         'missing_in_database': len(missing_in_db),
         'missing_in_filesystem': len(missing_in_fs),
-        'missing_in_db_files': list(missing_in_db),
-        'missing_in_fs_files': list(missing_in_fs),
+        'missing_in_db_files': sorted(list(missing_in_db)),
+        'missing_in_fs_files': sorted(list(missing_in_fs)),
         'in_sync': len(missing_in_db) == 0 and len(missing_in_fs) == 0
     }

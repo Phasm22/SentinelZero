@@ -15,12 +15,12 @@ class Scan(db.Model):
     raw_xml_path = db.Column(db.String(256))
     status = db.Column(db.String(32), default='pending')
     status_message = db.Column(db.Text, default='Pending')
-    percent = db.Column(db.Float, default=0.0)
     execution_mode = db.Column(db.String(32), default='normal')
     error_code = db.Column(db.String(64), nullable=True)
     error_detail = db.Column(db.Text, nullable=True)
     source = db.Column(db.String(32), default='manual')
     initiated_by = db.Column(db.String(64), default='api')
+    correlation_id = db.Column(db.String(64), nullable=True)
     total_hosts = db.Column(db.Integer, default=0)
     hosts_up = db.Column(db.Integer, default=0)
     total_ports = db.Column(db.Integer, default=0)
@@ -41,12 +41,12 @@ class Scan(db.Model):
             'raw_xml_path': self.raw_xml_path,
             'status': self.status,
             'status_message': self.status_message,
-            'percent': self.percent,
             'execution_mode': self.execution_mode,
             'error_code': self.error_code,
             'error_detail': self.error_detail,
             'source': self.source,
             'initiated_by': self.initiated_by,
+            'correlation_id': self.correlation_id,
             'process_id': self.process_id,
             'total_hosts': self.total_hosts,
             'hosts_up': self.hosts_up,

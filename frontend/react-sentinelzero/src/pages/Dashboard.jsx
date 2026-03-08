@@ -38,7 +38,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null)
   const [isScanning, setIsScanning] = useState(false)
   const [scanningType, setScanningType] = useState(null)
-  const [scanProgress, setScanProgress] = useState(null)
   const [scanStatus, setScanStatus] = useState('idle')
   const [scanMessage, setScanMessage] = useState('')
   const [scanId, setScanId] = useState(null)
@@ -120,7 +119,6 @@ const Dashboard = () => {
     const handleScanUpdate = (data) => {
       if (!scanId || data.scan_id !== scanId) return
       const state = data.state || data.status
-      setScanProgress(data.percent)
       setScanStatus(state)
       setScanMessage(data.message)
       if (state === 'complete' || state === 'failed' || state === 'cancelled') {
@@ -137,23 +135,17 @@ const Dashboard = () => {
       }
     }
 
-    socket.on('scan_log', handleScanLog)
     socket.on('scan.log', handleScanLog)
-    socket.on('scan_progress', handleScanUpdate)
     socket.on('scan.progress', handleScanUpdate)
     socket.on('scan.snapshot', handleScanUpdate)
-    socket.on('scan.complete', handleScanUpdate)
     socket.on('scan.completed', handleScanUpdate)
     socket.on('scan.failed', handleScanUpdate)
     socket.on('scan.cancelled', handleScanUpdate)
 
     return () => {
-      socket.off('scan_log', handleScanLog)
       socket.off('scan.log', handleScanLog)
-      socket.off('scan_progress', handleScanUpdate)
       socket.off('scan.progress', handleScanUpdate)
       socket.off('scan.snapshot', handleScanUpdate)
-      socket.off('scan.complete', handleScanUpdate)
       socket.off('scan.completed', handleScanUpdate)
       socket.off('scan.failed', handleScanUpdate)
       socket.off('scan.cancelled', handleScanUpdate)
@@ -169,7 +161,6 @@ const Dashboard = () => {
     const interval = setInterval(async () => {
       try {
         const status = await apiService.getScanStatus(scanId)
-        setScanProgress(status.percent)
         const state = status.state || status.status
         setScanStatus(state)
         setScanMessage(status.message)
@@ -217,7 +208,6 @@ const Dashboard = () => {
     try {
       setIsScanning(true)
       setScanningType(scanType)
-      setScanProgress(0)
       setScanStatus('running')
       setScanMessage('Starting scan...')
       setScanStartTime(Date.now())
@@ -230,7 +220,6 @@ const Dashboard = () => {
       console.error('Error triggering scan:', error)
       setIsScanning(false)
       setScanningType(null)
-      setScanProgress(null)
       setScanStatus('idle')
       setScanMessage('')
       setScanId(null)
@@ -250,23 +239,37 @@ const Dashboard = () => {
   }
 
   const clearAllData = async () => {
-    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+    if (window.confirm('Full reset: delete all scans, alerts, and scan XML files. Continue?')) {
       try {
-        await apiService.clearAllData()
-        showToast('All data cleared successfully', 'success')
+        const result = await apiService.clearAllData()
+        const summary = result.summary || {}
+        showToast(
+          `Reset complete: ${summary.deleted_scans || 0} scans, ${summary.deleted_alerts || 0} alerts, ${summary.deleted_scan_files || 0} files`,
+          'success'
+        )
         loadDashboardData()
       } catch (error) {
         console.error('Error clearing data:', error)
-        showToast('Failed to clear data', 'danger')
+        showToast('Failed to run full reset', 'danger')
       }
     }
   }
 
-  const deleteAllScans = async () => {
-    if (window.confirm('Are you sure you want to delete ALL scans? This cannot be undone.')) {
+  const deleteAllScans = async (deleteFiles = false) => {
+    const prompt = deleteFiles
+      ? 'Delete all scans and remove XML scan files?'
+      : 'Delete all scans from the database only?'
+    if (window.confirm(prompt)) {
       try {
-        await apiService.deleteAllScans()
-        showToast('All scans deleted successfully', 'success')
+        const result = await apiService.deleteAllScans({
+          deleteFiles,
+          pruneOrphanFiles: deleteFiles,
+        })
+        const summary = result.summary || {}
+        showToast(
+          `Deleted ${summary.deleted_scans || 0} scans${deleteFiles ? ` and ${summary.deleted_scan_files || 0} files` : ''}`,
+          'success'
+        )
         loadDashboardData()
       } catch (error) {
         showToast('Failed to delete all scans', 'danger')
@@ -399,16 +402,28 @@ const Dashboard = () => {
           <span className="sm:hidden">Clear Data</span>
         </Button>
         <Button
-          onClick={deleteAllScans}
+          onClick={() => deleteAllScans(false)}
           variant="danger"
           size="sm"
           icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
-          title="Delete all scans from the database. This cannot be undone."
+          title="Delete all scans from the database."
           className="text-xs sm:text-sm"
           data-testid="delete-all-scans-btn"
         >
-          <span className="hidden sm:inline">Delete All Scans</span>
+          <span className="hidden sm:inline">Delete Scans (DB)</span>
           <span className="sm:hidden">Delete Scans</span>
+        </Button>
+        <Button
+          onClick={() => deleteAllScans(true)}
+          variant="warning"
+          size="sm"
+          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
+          title="Delete all scans and stored XML files."
+          className="text-xs sm:text-sm"
+          data-testid="delete-all-scans-files-btn"
+        >
+          <span className="hidden sm:inline">Delete Scans + Files</span>
+          <span className="sm:hidden">Delete + Files</span>
         </Button>
         <Button
           onClick={testConnection}
@@ -424,10 +439,6 @@ const Dashboard = () => {
       </div>
           </div>
         </div>
-        {/* Shimmer/progress bar under header during scan */}
-        {isScanning && (
-          <div className="absolute left-0 right-0 top-full mt-2 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded-full shadow-lg" data-testid="scan-progress-bar" />
-        )}
         {isScanning && (
           <div className="flex items-center mt-2" data-testid="scan-status-indicator">
             <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-400" data-testid="scan-loading-icon" />
@@ -448,7 +459,6 @@ const Dashboard = () => {
             onRequestScan={handleRequestScan}
             isScanning={isScanning}
             scanningType={scanningType}
-            scanProgress={scanProgress}
             scanStatus={scanStatus}
             scanMessage={scanMessage}
             isConnected={isConnected}
@@ -650,14 +660,7 @@ const ActiveScanCard = memo(function ActiveScanCard({ scan, onViewDetails, forma
       </div>
       <div className="mb-2 text-xs sm:text-sm text-gray-300 truncate" data-testid="scan-started">Started: {scan.timestamp ? formatTimestamp(scan.timestamp, preferences.use24Hour) : '-'}</div>
       <div className="mb-2 text-xs sm:text-sm text-gray-300">Status: <span className="font-semibold text-primary-400" data-testid="scan-status">{scan.status}</span></div>
-      <div className="mb-2 text-xs sm:text-sm text-gray-300">Progress: <span className="font-semibold" data-testid="scan-progress">{scan.percent ? `${Math.round(scan.percent)}%` : '0%'}</span></div>
-      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-2" data-testid="progress-bar-container">
-        <div
-          className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
-          style={{ width: `${scan.percent || 0}%`, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
-          data-testid="progress-bar-fill"
-        ></div>
-      </div>
+      <div className="mb-2 text-xs sm:text-sm text-gray-300">Message: <span className="font-semibold" data-testid="scan-message">{scan.message || 'Scan running'}</span></div>
       <Button
         variant="outline"
         size="sm"

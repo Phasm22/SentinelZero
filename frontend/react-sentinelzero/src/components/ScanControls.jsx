@@ -46,7 +46,6 @@ const buildNmapCommand = (scanType, security, targetNetwork = '172.16.0.0/22') =
 const ScanControls = ({
   isScanning,
   scanningType,
-  scanProgress,
   scanStatus,
   scanMessage,
   isConnected,
@@ -121,26 +120,14 @@ const ScanControls = ({
         </div>
       )}
 
-      {/* Progress Bar */}
+      {/* Stage Status */}
       {isScanning && (
         <div className="mt-4" data-testid="scan-progress-section">
           {scanMessage && (
             <div className="mb-2 text-sm font-medium text-blue-200" data-testid="scan-message">{scanMessage}</div>
           )}
-          <div className="flex items-center justify-between mb-2" data-testid="progress-header">
-            <span className="text-sm font-medium text-gray-300" data-testid="progress-label">
-              Scan in Progress...
-            </span>
-            <span className="text-sm text-gray-400" data-testid="progress-percentage">
-              {scanProgress ? `${Math.round(scanProgress)}%` : '0%'}
-            </span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden" data-testid="progress-bar-container">
-            <div
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-2 rounded-full animate-pulse transition-all duration-300"
-              style={{ width: `${scanProgress || 0}%` }}
-              data-testid="progress-bar-fill"
-            ></div>
+          <div className="text-sm text-gray-300" data-testid="progress-header">
+            Stage: <span className="font-semibold text-primary-400" data-testid="progress-label">{scanStatus || 'running'}</span>
           </div>
         </div>
       )}

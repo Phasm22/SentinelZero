@@ -5,6 +5,7 @@ import os
 import re
 import time
 import json
+import queue
 import threading
 import subprocess
 import shutil
@@ -15,6 +16,58 @@ import xml.etree.ElementTree as ET
 from ..models import Scan
 from ..config.database import db
 from .insights import generate_and_store_insights
+
+
+def _get_scan_timeout_seconds():
+    raw_value = os.environ.get('SCAN_TIMEOUT_SECONDS', '1800')
+    try:
+        timeout_value = int(raw_value)
+    except (TypeError, ValueError):
+        timeout_value = 1800
+    return max(timeout_value, 5)
+
+
+def _get_xml_parse_retry_policy():
+    raw_attempts = os.environ.get('SCAN_XML_PARSE_RETRIES', '3')
+    raw_delay = os.environ.get('SCAN_XML_PARSE_RETRY_DELAY_SECONDS', '1')
+    try:
+        attempts = int(raw_attempts)
+    except (TypeError, ValueError):
+        attempts = 3
+    try:
+        delay = float(raw_delay)
+    except (TypeError, ValueError):
+        delay = 1.0
+    return max(attempts, 1), max(delay, 0.0)
+
+
+def _terminate_process(proc):
+    try:
+        proc.terminate()
+    except Exception:
+        pass
+    try:
+        proc.wait(timeout=5)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+
+
+def _stream_process_output(proc, output_queue):
+    try:
+        stdout = proc.stdout
+        if hasattr(stdout, 'readline'):
+            iterator = iter(stdout.readline, '')
+        else:
+            iterator = iter(stdout)
+        for line in iterator:
+            output_queue.put(line)
+    except Exception:
+        pass
+    finally:
+        output_queue.put(None)
 
 def should_include_vulnerability(vuln_id, score, has_exploit):
     """Filter out false positives and low-value vulnerabilities"""
@@ -92,13 +145,12 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             raise LookupError(f'Scan {scan_id} not found')
 
         try:
-            def emit_progress(status, percent, message):
+            def emit_stage(status, message):
                 try:
                     nonlocal scan
                     scan = runtime.set_state(
                         scan_id,
                         status,
-                        percent,
                         message,
                         execution_mode='degraded' if _priv_fallback else 'normal',
                     )
@@ -106,7 +158,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     print(f"Database error in emit_progress: {db_error}")
                     db.session.rollback()
 
-            emit_progress('running', 0, f'Started scan: {scan_type}')
+            emit_stage('running', f'Started scan: {scan_type}')
             msg = f'Thread started for scan: {scan_type} (scheduled={threading.current_thread().name.startswith("APScheduler")})'
             runtime.append_log(scan_id, msg)
             print(msg)
@@ -133,7 +185,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             discovered_hosts = []
             if pre_discovery and scan_type_normalized not in ('discovery scan',):
                 try:
-                    emit_progress('running', 1, 'Pre-discovery: enumerating live hosts...')
+                    emit_stage('running', 'Pre-discovery: enumerating live hosts...')
                     pre_xml = f'scans/pre_discovery_{now}.xml'
                     pre_cmd = ['nmap', '-sn', '-PE', '-PP', '-PM', '-PR', '-n', '--max-retries', '1', '-T4', target_network, '-oX', pre_xml]
                     runtime.append_log(scan_id, f'Pre-discovery command: {" ".join(pre_cmd)}')
@@ -153,10 +205,10 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                         except Exception as _e:
                             print(f'[WARN] Pre-discovery parse failed: {_e}')
                     if discovered_hosts:
-                        emit_progress('running', 2, f'Pre-discovery found {len(discovered_hosts)} hosts – targeting only live hosts')
+                        emit_stage('running', f'Pre-discovery found {len(discovered_hosts)} hosts – targeting only live hosts')
                         runtime.append_log(scan_id, f'Pre-discovery found {len(discovered_hosts)} live hosts')
                     else:
-                        emit_progress('running', 2, 'Pre-discovery found no hosts (falling back to full range)')
+                        emit_stage('running', 'Pre-discovery found no hosts (falling back to full range)')
                 except Exception as _e:
                     print(f'[WARN] Pre-discovery step failed: {_e}')
             # Build nmap command (user-facing prior to privilege adjustments)
@@ -253,6 +305,8 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             msg = f'Nmap process started (PID: {proc.pid})...'
             runtime.append_log(scan_id, msg)
             print(msg)
+            scan_timeout_seconds = _get_scan_timeout_seconds()
+            runtime.append_log(scan_id, f'Watchdog timeout set to {scan_timeout_seconds}s')
             
             # Cleanup function for interrupted scans
             def cleanup_interrupted_scan():
@@ -260,7 +314,6 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     # Mark scan as cancelled if it's still running
                     if scan.status in ['running', 'parsing', 'saving', 'postprocessing']:
                         scan.status = 'cancelled'
-                        scan.percent = 0.0
                         db.session.commit()
                         print(f'[DEBUG] Marked interrupted scan {scan_id} as cancelled')
                     
@@ -276,9 +329,18 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 except Exception as e:
                     print(f'[WARN] Error during scan cleanup: {e}')
             
-            percent = 0
+            timed_out = False
+            started_at = time.monotonic()
             recent_lines = deque(maxlen=40)
-            for line in proc.stdout:
+            output_queue = queue.Queue()
+            reader = threading.Thread(
+                target=_stream_process_output,
+                args=(proc, output_queue),
+                daemon=True,
+            )
+            reader.start()
+
+            while True:
                 # Check for cancellation
                 scan_check = db.session.get(Scan, scan_id)
                 if scan_check and scan_check.status == 'cancelled':
@@ -306,7 +368,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                             print(f'[WARN] Could not kill child processes: {e}')
                     except Exception as e:
                         print(f'[WARN] Could not kill process: {e}')
-                    scan = runtime.cancel_scan(scan_id, 'Scan cancelled by user', percent=percent)
+                    scan = runtime.cancel_scan(scan_id, 'Scan cancelled by user')
                     msg = 'Scan cancelled by user.'
                     runtime.append_log(scan_id, msg)
                     print(msg)
@@ -316,30 +378,54 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     except Exception:
                         pass
                     return
-                
+
+                try:
+                    line = output_queue.get(timeout=1.0)
+                except queue.Empty:
+                    if proc.poll() is not None:
+                        break
+                    if (time.monotonic() - started_at) > scan_timeout_seconds:
+                        timed_out = True
+                        _terminate_process(proc)
+                        runtime.append_log(
+                            scan_id,
+                            f'Scan watchdog timeout reached after {scan_timeout_seconds}s',
+                        )
+                        break
+                    continue
+
+                if line is None:
+                    break
+
                 runtime.append_log(scan_id, line.rstrip())
                 recent_lines.append(line.rstrip())
                 
                 match = re.search(r'About ([0-9.]+)% done', line)
                 if match:
-                    percent = float(match.group(1))
-                    emit_progress('running', percent, f'Scanning: {percent:.1f}%')
+                    runtime.append_log(scan_id, f'nmap reported progress: {match.group(1)}%')
             
             proc.wait()
+            if timed_out:
+                runtime.fail_scan(
+                    scan_id,
+                    f'Scan timed out after {scan_timeout_seconds}s',
+                    error_code='scan_timeout',
+                )
+                return
             # Handle failure before parsing
             if proc.returncode != 0:
                 output_tail = '\n'.join(recent_lines)
                 lowered = output_tail.lower()
                 privilege_issue = any(k in lowered for k in ['requires root', 'cap_net_raw', 'dnet'])
                 if privilege_issue and not _priv_fallback:
-                    emit_progress('running', percent, 'Raw socket access denied: retrying with TCP connect scan (degraded mode)...')
+                    emit_stage('running', 'Raw socket access denied: retrying with TCP connect scan (degraded mode)...')
                     runtime.append_log(scan_id, 'Retrying in degraded mode: using TCP connect scan instead of SYN scan')
                     degraded_security = dict(security_settings or {})
                     degraded_security['os_detection_enabled'] = False
                     try:
                         run_nmap_scan(scan_id, scan_type, degraded_security, socketio, app, target_network, _priv_fallback=True)
                     except Exception as e:
-                        runtime.fail_scan(scan_id, f'Fallback failed: {e}', error_code='degraded_retry_failed', percent=percent)
+                        runtime.fail_scan(scan_id, f'Fallback failed: {e}', error_code='degraded_retry_failed')
                     return
                 guidance = ''
                 if privilege_issue:
@@ -348,7 +434,6 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     scan_id,
                     f'nmap exited with code {proc.returncode}{guidance}',
                     error_code='nmap_exit_code',
-                    percent=percent,
                 )
                 runtime.append_log(scan_id, '--- Nmap last output (truncated) ---')
                 for l in list(recent_lines)[-10:]:
@@ -362,18 +447,35 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     break
                 time.sleep(1)
             if not os.path.exists(xml_path) or os.path.getsize(xml_path) < 100:
-                runtime.fail_scan(scan_id, 'XML file not found or too small (no results)', error_code='missing_xml', percent=percent)
+                runtime.fail_scan(scan_id, 'XML file not found or too small (no results)', error_code='missing_xml')
                 return
 
-            emit_progress('parsing', 90, 'Parsing scan results...')
+            emit_stage('parsing', 'Parsing scan results...')
             
             # Parse XML results
-            emit_progress('parsing', 95, 'Parsing XML results...')
+            emit_stage('parsing', 'Parsing XML results...')
             hosts = []
             vulns = []
             
             try:
-                tree = ET.parse(xml_path)
+                parse_attempts, parse_delay = _get_xml_parse_retry_policy()
+                tree = None
+                parse_error = None
+                for attempt in range(1, parse_attempts + 1):
+                    try:
+                        tree = ET.parse(xml_path)
+                        parse_error = None
+                        break
+                    except ET.ParseError as e:
+                        parse_error = e
+                        if attempt < parse_attempts:
+                            runtime.append_log(
+                                scan_id,
+                                f'XML parse retry {attempt}/{parse_attempts - 1} after error: {e}',
+                            )
+                            time.sleep(parse_delay)
+                if parse_error is not None:
+                    raise parse_error
                 root = tree.getroot()
                 total_open_ports = 0
                 for host in root.findall('host'):
@@ -488,23 +590,22 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 print(msg)
                 
             except Exception as e:
-                runtime.fail_scan(scan_id, f'XML parse error: {str(e)}', error_code='xml_parse_error', percent=95)
+                runtime.fail_scan(scan_id, f'XML parse error: {str(e)}', error_code='xml_parse_error')
                 return
             
             # Save results
-            emit_progress('saving', 98, 'Saving scan results to database...')
+            emit_stage('saving', 'Saving scan results to database...')
             scan.hosts_json = json.dumps(hosts)
             scan.vulns_json = json.dumps(vulns)
             scan.raw_xml_path = xml_path
             # Do not mark complete until after insights
-            scan.percent = 99.0
             db.session.commit()
             
             # Generate insights unless discovery-only
             if scan_type_normalized == 'discovery scan':
-                emit_progress('postprocessing', 99, 'Discovery complete – skipping insights...')
+                emit_stage('postprocessing', 'Discovery complete – skipping insights...')
             else:
-                emit_progress('postprocessing', 99, 'Generating insights...')
+                emit_stage('postprocessing', 'Generating insights...')
                 try:
                     insights = generate_and_store_insights(scan_id)
                     print(f'Generated {len(insights) if insights else 0} insights for scan {scan_id}')
@@ -519,7 +620,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 db.session.rollback()
             except Exception:
                 pass
-            runtime.fail_scan(scan_id, f'Error: {str(e)}', error_code='scanner_exception', percent=0)
+            runtime.fail_scan(scan_id, f'Error: {str(e)}', error_code='scanner_exception')
             print(f'Scan error: {str(e)}')
             try:
                 scan = runtime.get_scan(scan_id)

@@ -43,7 +43,6 @@ def sample_scan_data():
     return {
         'scan_type': 'Full TCP',
         'status': 'complete',
-        'percent': 100.0,
         'total_hosts': 5,
         'hosts_up': 3,
         'total_ports': 1000,
@@ -169,8 +168,7 @@ class TestGeneralAPI:
         """Test get active scans with running scan"""
         scan = Scan(
             scan_type='Full TCP',
-            status='running',
-            percent=50.0
+            status='running'
         )
         db.session.add(scan)
         db.session.commit()
@@ -410,8 +408,7 @@ class TestScanAPI:
         for i in range(3):
             scan = Scan(
                 scan_type='Full TCP',
-                status='running',
-                percent=50.0
+                status='running'
             )
             db.session.add(scan)
         db.session.commit()
@@ -438,8 +435,7 @@ class TestScanAPI:
         assert data['scan_id'] == scan_id
         assert data['status'] == 'complete'
         assert data['state'] == 'complete'
-        assert data['percent'] == 100.0
-    
+            
     def test_get_scan_status_nonexistent(self, client):
         """Test get scan status for non-existent scan"""
         response = client.get('/api/scan-status/999')
@@ -561,9 +557,11 @@ class TestErrorHandling:
     
     def test_missing_required_fields(self, client):
         """Test missing required fields"""
-        response = client.post('/api/scan')
-        # Should still work with default values
-        assert response.status_code in [200, 400]  # Depends on validation
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
+            mock_scan.return_value = None
+            response = client.post('/api/scan')
+            # Should still work with default values
+            assert response.status_code in [200, 400]  # Depends on validation
     
     def test_large_file_upload(self, client):
         """Test large file upload handling"""

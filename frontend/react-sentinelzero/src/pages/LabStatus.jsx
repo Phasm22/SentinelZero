@@ -133,14 +133,10 @@ const LabStatus = () => {
       }
 
       socket.on('whats_up.snapshot', handleHealthUpdate)
-      socket.on('whats_up_update', handleHealthUpdate)
-      socket.on('health_update', handleHealthUpdate)
 
       return () => {
         console.log('Cleaning up socket listeners')
         socket.off('whats_up.snapshot', handleHealthUpdate)
-        socket.off('whats_up_update', handleHealthUpdate)
-        socket.off('health_update', handleHealthUpdate)
       }
     } else if (socket && !isConnected) {
       console.log('Socket exists but not connected yet')

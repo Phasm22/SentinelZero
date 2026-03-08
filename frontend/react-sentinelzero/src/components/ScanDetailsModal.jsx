@@ -19,6 +19,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [hosts, setHosts] = useState([])
   const [vulns, setVulns] = useState([])
   const [xmlData, setXmlData] = useState('')
+  const [xmlUnavailableReason, setXmlUnavailableReason] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [scanDetails, setScanDetails] = useState(scan)
   const [diffData, setDiffData] = useState(null)
@@ -58,6 +59,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen && scan) {
+      setDiffData(null)
       loadScanData()
     }
   }, [isOpen, scan])
@@ -72,19 +74,40 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
     if (!scan) return
 
     setIsLoading(true)
+    setXmlData('')
+    setXmlUnavailableReason('')
     try {
       // Fetch full scan details
       const scanData = await apiService.getScan(scan.id)
       setScanDetails(scanData)
-      const [hostsData, vulnsData, xmlData] = await Promise.all([
+      const [hostsData, vulnsData] = await Promise.all([
         apiService.getScanHosts(scan.id),
-        apiService.getScanVulns(scan.id),
-        apiService.getScanXml(scan.id)
+        apiService.getScanVulns(scan.id)
       ])
 
       setHosts(hostsData.hosts || [])
       setVulns(vulnsData.vulns || [])
-      setXmlData(xmlData)
+
+      const state = (scanData?.state || scanData?.status || '').toLowerCase()
+      const isTerminal = ['complete', 'failed', 'cancelled'].includes(state)
+      const hasXmlPath = Boolean(scanData?.raw_xml_path)
+
+      if (!isTerminal) {
+        setXmlUnavailableReason('Raw XML becomes available after the scan finishes.')
+      } else if (!hasXmlPath) {
+        setXmlUnavailableReason('No raw XML path is stored for this scan.')
+      } else {
+        try {
+          const xmlPayload = await apiService.getScanXml(scan.id)
+          setXmlData(xmlPayload || '')
+        } catch (xmlError) {
+          if (xmlError?.response?.status === 404) {
+            setXmlUnavailableReason('Raw XML file was not found on disk for this scan.')
+          } else {
+            throw xmlError
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading scan data:', error)
       showToast('Failed to load scan details', 'danger')
@@ -95,20 +118,36 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 
   const loadDiff = async () => {
     if (!scan) return
+    const currentState = (scanDetails?.state || scanDetails?.status || scan?.state || scan?.status || '').toLowerCase()
+    if (currentState && currentState !== 'complete') {
+      setDiffData({ info: 'Diff is available after the scan is complete.' })
+      return
+    }
     setDiffLoading(true)
     try {
       const data = await apiService.getScanDiff(scan.id)
       setDiffData(data)
     } catch (e) {
       console.error('Error loading diff:', e)
-      setDiffData({ error: 'Failed to load diff' })
+      if (e?.response?.status === 400) {
+        const backendMessage = e?.response?.data?.error
+        if (backendMessage) {
+          setDiffData({ info: backendMessage })
+        } else {
+          setDiffData({ info: 'Diff is not available for this scan yet.' })
+        }
+      } else if (e?.response?.status === 404) {
+        setDiffData({ info: 'Scan not found for diff.' })
+      } else {
+        setDiffData({ error: 'Failed to load diff' })
+      }
     } finally {
       setDiffLoading(false)
     }
   }
 
   const handleDownloadXml = () => {
-    if (!scan) return
+    if (!scan || !xmlData) return
 
     const blob = new Blob([xmlData], { type: 'application/xml' })
     const url = URL.createObjectURL(blob)
@@ -152,6 +191,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                   onClick={handleDownloadXml}
                   variant="outline"
                   size="sm"
+                  disabled={!xmlData}
                   icon={<Download className="w-4 h-4" />}
                   data-testid="download-xml-btn"
                 >
@@ -487,6 +527,8 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
                       </div>
+                    ) : diffData && diffData.info ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">{diffData.info}</div>
                     ) : diffData && diffData.error ? (
                       <div className="text-center py-8 text-red-400 text-sm">{diffData.error}</div>
                     ) : diffData == null ? (
@@ -626,14 +668,20 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Raw XML Data</h3>
                     </div>
-                    
+
+                    {xmlUnavailableReason && (
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                        {xmlUnavailableReason}
+                      </div>
+                    )}
+
                     {xmlData ? (
                       <div className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
                         <pre className="text-xs">{xmlData}</pre>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <p>Loading XML data...</p>
+                        <p>{xmlUnavailableReason || 'Loading XML data...'}</p>
                       </div>
                     )}
                   </div>

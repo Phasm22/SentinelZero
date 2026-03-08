@@ -3,6 +3,7 @@ Scheduler-related API routes
 """
 import json
 import os
+import uuid
 from flask import Blueprint, request, jsonify, current_app
 from apscheduler.triggers.cron import CronTrigger
 
@@ -82,8 +83,8 @@ def create_schedule_blueprint(db, socketio, scheduler):
                                 scan_type=scan_type,
                                 source='scheduled',
                                 initiated_by='scheduler',
+                                correlation_id=str(uuid.uuid4()),
                                 state='queued',
-                                percent=0.0,
                                 message=f'Queued scheduled scan: {scan_type}',
                             )
                             runtime.emit_scan_event('scan.started', scan)

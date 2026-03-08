@@ -8,6 +8,8 @@ from ..models import Scan
 from ..services.scanner import run_nmap_scan
 from ..services.notifications import send_pushover_alert
 from ..services.scan_runtime import ACTIVE_SCAN_STATUSES
+from ..services.data_management import delete_data
+from ..services.observability import get_request_id
 import os, json as _json
 
 def create_scan_blueprint(db, socketio):
@@ -96,8 +98,8 @@ def create_scan_blueprint(db, socketio):
             scan_type=scan_type,
             source='manual',
             initiated_by='api',
+            correlation_id=get_request_id(),
             state='queued',
-            percent=0.0,
             message=f'Queued scan: {scan_type}',
         )
         runtime.emit_scan_event('scan.started', scan)
@@ -165,7 +167,7 @@ def create_scan_blueprint(db, socketio):
             msg = f'Cancelled {count} active scans, killed {killed_processes} processes'
             print(f'[DEBUG] {msg}')
             for scan in active_scans:
-                runtime.cancel_scan(scan.id, msg, percent=scan.percent or 0.0)
+                runtime.cancel_scan(scan.id, msg)
             return jsonify({'status': 'success', 'message': msg, 'cancelled': count, 'killed_processes': killed_processes})
         except Exception as e:
             from ..config.database import db as _db
@@ -218,7 +220,7 @@ def create_scan_blueprint(db, socketio):
             
             msg = f'Scan {scan_id} cancelled' + (f' and process killed' if killed_process else '')
             print(f'[DEBUG] {msg}')
-            runtime.cancel_scan(scan_id, msg, percent=scan.percent or 0.0)
+            runtime.cancel_scan(scan_id, msg)
             return jsonify({'status': 'success', 'message': msg, 'scan_id': scan_id, 'killed_process': killed_process})
         except Exception as e:
             from ..config.database import db as _db
@@ -247,12 +249,18 @@ def create_scan_blueprint(db, socketio):
     def delete_all_scans():
         """Delete all scan records"""
         try:
-            # Delete all scans
-            deleted_count = Scan.query.count()
-            Scan.query.delete()
-            db.session.commit()
-            print(f'[DEBUG] {deleted_count} scans deleted.')
-            return jsonify({'status': 'success', 'message': f'{deleted_count} scans deleted'})
+            payload = request.get_json(silent=True) or {}
+            summary = delete_data(
+                db,
+                scope='scans',
+                delete_files=bool(payload.get('delete_files', False)),
+                prune_orphan_files=bool(payload.get('prune_orphan_files', False)),
+            )
+            return jsonify({
+                'status': 'success',
+                'message': f"{summary['deleted_scans']} scans deleted",
+                'summary': summary,
+            })
         except Exception as e:
             db.session.rollback()
             print(f'[DEBUG] Error deleting all scans: {e}')

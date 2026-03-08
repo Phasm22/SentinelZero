@@ -87,4 +87,4 @@ def test_whats_up_monitor_emits_snapshot_events():
 
     emitted_events = [event for event, _ in socket.emitted]
     assert payload['total_checks'] == 1
-    assert emitted_events == ['whats_up.snapshot', 'whats_up_update', 'health_update']
+    assert emitted_events == ['whats_up.snapshot']

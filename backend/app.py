@@ -2,6 +2,7 @@
 import os
 import sys
 import threading
+import time
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -10,7 +11,7 @@ load_dotenv()
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, send_from_directory, jsonify, request
+from flask import Flask, send_from_directory, jsonify, request, g
 from flask_socketio import SocketIO
 from flask_cors import CORS
 
@@ -29,6 +30,7 @@ from src.services.whats_up import whats_up_monitor
 from src.services.whats_up import get_monitor as get_whats_up_monitor
 from src.services.cleanup import scheduled_cleanup_job
 from src.services.scan_runtime import ScanRuntime, register_socket_handlers
+from src.services.observability import configure_logging, ensure_request_id, log_event
 
 # Import models to register them with SQLAlchemy
 from src.models import Scan, Alert
@@ -43,6 +45,14 @@ def _resolve_allowed_origins(app):
     if configured:
         return configured
 
+    env_origins = os.environ.get('SENTINEL_ALLOWED_ORIGINS')
+    if env_origins:
+        raw_values = [value.strip() for value in env_origins.split(',') if value.strip()]
+        if any(value == '*' for value in raw_values):
+            return '*'
+        if raw_values:
+            return raw_values
+
     if app.config.get('TESTING'):
         return ['http://localhost']
 
@@ -51,6 +61,10 @@ def _resolve_allowed_origins(app):
         'http://127.0.0.1:3173',
         'http://localhost:5000',
         'http://127.0.0.1:5000',
+        'http://sentinelzero.prox:3173',
+        'http://sentinelzero.prox:5000',
+        'http://sentinelzero.prox',
+        'https://sentinelzero.prox',
     ]
 
 def _ensure_database_schema(app, db):
@@ -69,6 +83,7 @@ def _ensure_database_schema(app, db):
             'error_detail': 'TEXT',
             'source': "VARCHAR(32) DEFAULT 'manual'",
             'initiated_by': "VARCHAR(64) DEFAULT 'api'",
+            'correlation_id': "VARCHAR(64)",
         }
 
         table_name = Scan.__table__.name
@@ -121,6 +136,11 @@ def create_app(test_config=None):
     )
 
     # Add CORS headers manually for Socket.IO preflight requests
+    @app.before_request
+    def before_request_logging():
+        ensure_request_id()
+        request._sentinel_started_at = time.monotonic()
+
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
@@ -129,6 +149,17 @@ def create_app(test_config=None):
             response.headers['Vary'] = 'Origin'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
         response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        request_id = getattr(g, 'request_id', None)
+        if request_id:
+            response.headers['X-Request-ID'] = request_id
+        started_at = getattr(request, '_sentinel_started_at', None)
+        if started_at is not None:
+            duration_ms = round((time.monotonic() - started_at) * 1000, 2)
+            log_event(
+                'http.request.completed',
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
         return response
 
     # Initialize extensions
@@ -200,15 +231,14 @@ def create_app(test_config=None):
     def clear_all_data():
         """Legacy route to clear all scan data"""
         try:
-            from src.models import Scan, Alert
-            # Delete all scans and alerts
-            scan_count = Scan.query.count()
-            alert_count = Alert.query.count()
-            Scan.query.delete()
-            Alert.query.delete()
-            db.session.commit()
-            print(f'[DEBUG] Cleared {scan_count} scans and {alert_count} alerts.')
-            return jsonify({'status': 'success', 'message': f'Cleared {scan_count} scans and {alert_count} alerts'})
+            from src.services.data_management import delete_data
+            summary = delete_data(
+                db,
+                scope='all',
+                delete_files=True,
+                prune_orphan_files=True,
+            )
+            return jsonify({'status': 'success', 'message': 'Data reset complete', 'summary': summary})
         except Exception as e:
             db.session.rollback()
             print(f'[DEBUG] Error clearing all data: {e}')
@@ -251,7 +281,6 @@ def create_app(test_config=None):
                     print(f'[CLEANUP] Found {len(running_scans)} orphaned scans, marking as cancelled')
                     for scan in running_scans:
                         scan.status = 'cancelled'
-                        scan.percent = 0.0
                     db.session.commit()
                     print('[CLEANUP] Orphaned scans marked as cancelled')
             except Exception as e:
@@ -293,13 +322,19 @@ def create_app(test_config=None):
 def main():
     """Main entry point"""
     app = create_app()
+    bind_host = os.environ.get('SENTINEL_BIND_HOST', '0.0.0.0')
+    bind_port_raw = os.environ.get('SENTINEL_BIND_PORT', '5000')
+    try:
+        bind_port = int(bind_port_raw)
+    except (TypeError, ValueError):
+        bind_port = 5000
     
     # Development server
     if __name__ == '__main__':
         print('='*60)
         print('🛡️  SentinelZero Network Security Scanner')
         print('='*60)
-        print('📡 Backend Server: http://0.0.0.0:5000 (accessible from any interface)')
+        print(f'📡 Backend Server: http://{bind_host}:{bind_port} (configured bind)')
         print('🌐 Frontend (dev): http://localhost:3173 or http://sentinelzero.prox:3173') 
         print('📊 Dashboard: http://localhost:3173/dashboard')
         print('⚙️  Settings: http://localhost:3173/settings')
@@ -315,10 +350,11 @@ def main():
         print('🔧 Debug mode disabled for stable socket connections')
         
         # Run with SocketIO - debug=False prevents reloader
-        socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+        socketio.run(app, host=bind_host, port=bind_port, debug=False, allow_unsafe_werkzeug=True)
 
 # Create app instance for gunicorn
 app = create_app()
 
 if __name__ == '__main__':
     main()
+    configure_logging()

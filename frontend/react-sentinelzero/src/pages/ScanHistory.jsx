@@ -16,6 +16,7 @@ const ScanHistory = () => {
   const [selectedScan, setSelectedScan] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMode, setSyncMode] = useState('import_missing')
   const [syncStatus, setSyncStatus] = useState(null)
   const { showToast } = useToast()
 
@@ -71,7 +72,7 @@ const ScanHistory = () => {
   const handleSyncScans = async () => {
     setIsSyncing(true)
     try {
-      const result = await apiService.syncScans()
+      const result = await apiService.syncScans(syncMode)
       showToast(result.message, 'success')
       loadScanHistory()
       loadSyncStatus()
@@ -130,6 +131,14 @@ const ScanHistory = () => {
               <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Syncing...' : 'Sync Scans'}</span>
             </Button>
+            <select
+              value={syncMode}
+              onChange={(e) => setSyncMode(e.target.value)}
+              className="px-3 py-2 rounded-md bg-gray-900/50 border border-gray-600 text-sm text-gray-200"
+            >
+              <option value="import_missing">Import Missing Files</option>
+              <option value="reconcile_db">Import + Prune Missing DB Rows</option>
+            </select>
           </div>
         </div>
         

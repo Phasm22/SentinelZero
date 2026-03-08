@@ -152,8 +152,6 @@ class WhatsUpMonitor:
     def emit_snapshot(self, socketio, snapshot=None):
         payload = snapshot or self.get_snapshot(refresh=True)
         socketio.emit('whats_up.snapshot', payload)
-        socketio.emit('whats_up_update', payload)
-        socketio.emit('health_update', payload)
         return payload
 
     def _collect_loopbacks(self):
