@@ -7,6 +7,7 @@ import pytz
 from datetime import datetime
 from flask import Blueprint, jsonify, Response
 from ..models import Scan, Alert
+from ..services.scan_runtime import ACTIVE_SCAN_STATUSES
 
 def create_api_blueprint(db):
     """Create and configure general API routes blueprint"""
@@ -77,6 +78,8 @@ def create_api_blueprint(db):
                     'id': scan.id,
                     'scan_type': scan.scan_type,
                     'status': scan.status,
+                    'state': scan.status,
+                    'message': getattr(scan, 'status_message', None),
                     'percent': scan.percent,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
@@ -108,6 +111,8 @@ def create_api_blueprint(db):
                     'id': scan.id,
                     'scan_type': scan.scan_type,
                     'status': scan.status,
+                    'state': scan.status,
+                    'message': getattr(scan, 'status_message', None),
                     'percent': scan.percent,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
@@ -153,9 +158,8 @@ def create_api_blueprint(db):
         Older transitional statuses (starting, in_progress) are also included for backward compatibility.
         """
         try:
-            active_statuses = ['running', 'parsing', 'saving', 'postprocessing', 'starting', 'in_progress']
             active_scans = (Scan.query
-                                .filter(Scan.status.in_(active_statuses))
+                                .filter(Scan.status.in_(ACTIVE_SCAN_STATUSES))
                                 .order_by(Scan.id.desc())
                                 .all())
 
@@ -165,7 +169,10 @@ def create_api_blueprint(db):
                     'id': scan.id,
                     'scan_type': scan.scan_type,
                     'status': scan.status,
+                    'state': scan.status,
+                    'message': getattr(scan, 'status_message', None),
                     'percent': scan.percent,
+                    'execution_mode': getattr(scan, 'execution_mode', 'normal'),
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'total_hosts': scan.total_hosts,
                     'hosts_up': scan.hosts_up
@@ -247,6 +254,8 @@ def create_api_blueprint(db):
                 'id': scan.id,
                 'scan_type': scan.scan_type,
                 'status': scan.status,
+                'state': scan.status,
+                'message': getattr(scan, 'status_message', None),
                 'percent': scan.percent,
                 'created_at': scan.created_at.isoformat() if scan.created_at else None,
                 'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,

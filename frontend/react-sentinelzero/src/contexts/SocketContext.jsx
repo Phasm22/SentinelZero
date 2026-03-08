@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { io } from 'socket.io-client'
 
 const SocketContext = createContext()
@@ -15,6 +15,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [activeScanId, setActiveScanId] = useState(null)
 
   useEffect(() => {
     console.log('Initializing Socket.IO client...');
@@ -54,18 +55,15 @@ export const SocketProvider = ({ children }) => {
     
     const newSocket = io(backendUrl, {
       path: '/socket.io',
-      transports: ['polling', 'websocket'], // Try polling first, then websocket
+      transports: ['websocket', 'polling'],
       autoConnect: true,
-      forceNew: true,
-      timeout: 20000, // Increase timeout to 20 seconds
+      timeout: 20000,
       reconnection: true,
-      reconnectionDelay: 1000, // Reduce initial delay
-      reconnectionDelayMax: 5000, // Reduce max delay
-      reconnectionAttempts: 10, // Increase attempts
-      maxHttpBufferSize: 1e8, // 100MB buffer for large scan results
-      // Force the client to use the proxy in development
-      withCredentials: true,
-      // Ensure we're using the correct URL
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      maxHttpBufferSize: 1e8,
+      withCredentials: false,
       upgrade: true,
       rememberUpgrade: false
     });
@@ -75,6 +73,9 @@ export const SocketProvider = ({ children }) => {
         console.log('🔌 Socket connected to', backendUrl);
         setIsConnected(true);
         setIsInitialized(true);
+        if (activeScanId) {
+          newSocket.emit('scan.subscribe', { scan_id: activeScanId });
+        }
       });
 
       newSocket.on('disconnect', (reason) => {
@@ -125,10 +126,39 @@ export const SocketProvider = ({ children }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!socket || !isConnected || !activeScanId) return
+    socket.emit('scan.subscribe', { scan_id: activeScanId })
+
+    return () => {
+      socket.emit('scan.unsubscribe', { scan_id: activeScanId })
+    }
+  }, [socket, isConnected, activeScanId])
+
+  const subscribeToScan = useCallback((scanId) => {
+    setActiveScanId(scanId)
+    if (socket && isConnected && scanId) {
+      socket.emit('scan.subscribe', { scan_id: scanId })
+    }
+  }, [socket, isConnected])
+
+  const unsubscribeFromScan = useCallback((scanId) => {
+    const resolvedScanId = scanId ?? activeScanId
+    if (socket && isConnected && resolvedScanId) {
+      socket.emit('scan.unsubscribe', { scan_id: resolvedScanId })
+    }
+    if (!scanId || scanId === activeScanId) {
+      setActiveScanId(null)
+    }
+  }, [activeScanId, socket, isConnected])
+
   const value = {
     socket,
     isConnected,
     isInitialized,
+    activeScanId,
+    subscribeToScan,
+    unsubscribeFromScan,
   }
 
   return (

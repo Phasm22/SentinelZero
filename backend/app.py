@@ -1,6 +1,4 @@
-"""
-New modular Flask application entry point
-"""
+"""Modular Flask application entry point."""
 import os
 import sys
 import threading
@@ -13,10 +11,8 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, send_from_directory, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # Import our modular components
 from src.config.database import init_db
@@ -30,7 +26,9 @@ from src.routes.whatsup_routes import bp as whatsup_bp
 from src.routes.insights_routes import insights_bp
 from src.routes.diff_routes import diff_bp
 from src.services.whats_up import whats_up_monitor
+from src.services.whats_up import get_monitor as get_whats_up_monitor
 from src.services.cleanup import scheduled_cleanup_job
+from src.services.scan_runtime import ScanRuntime, register_socket_handlers
 
 # Import models to register them with SQLAlchemy
 from src.models import Scan, Alert
@@ -40,100 +38,152 @@ db = None
 socketio = None
 scheduler = None
 
-def create_app():
-    """Application factory pattern"""
+def _resolve_allowed_origins(app):
+    configured = app.config.get('CORS_ORIGINS')
+    if configured:
+        return configured
+
+    if app.config.get('TESTING'):
+        return ['http://localhost']
+
+    return [
+        'http://localhost:3173',
+        'http://127.0.0.1:3173',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+    ]
+
+def _ensure_database_schema(app, db):
+    """Create tables and add runtime columns when opening an older SQLite DB."""
+    with app.app_context():
+        db.create_all()
+
+        engine = db.engine
+        if not engine.url.drivername.startswith('sqlite'):
+            return
+
+        required_columns = {
+            'status_message': "TEXT DEFAULT 'Pending'",
+            'execution_mode': "VARCHAR(32) DEFAULT 'normal'",
+            'error_code': "VARCHAR(64)",
+            'error_detail': 'TEXT',
+            'source': "VARCHAR(32) DEFAULT 'manual'",
+            'initiated_by': "VARCHAR(64) DEFAULT 'api'",
+        }
+
+        table_name = Scan.__table__.name
+        with engine.begin() as connection:
+            existing = {
+                row[1]
+                for row in connection.exec_driver_sql(f'PRAGMA table_info({table_name})').fetchall()
+            }
+            for column_name, ddl in required_columns.items():
+                if column_name not in existing:
+                    connection.exec_driver_sql(
+                        f'ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}'
+                    )
+
+def create_app(test_config=None):
+    """Application factory pattern."""
     global db, socketio, scheduler
-    
+
     # Create Flask app
     app = Flask(__name__)
-    
-    # Enable CORS for all routes - allow all origins for development
-    CORS(app, origins="*", supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
-    
-    # Add CORS headers manually for Socket.IO preflight requests
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
-    
-    # Configuration
-    app.config['SECRET_KEY'] = 'sentinelzero-dev-key-change-in-production'
-    
+
+    app.config.update({
+        'SECRET_KEY': os.environ.get('SECRET_KEY', 'sentinelzero-dev-key-change-in-production'),
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'ENABLE_BACKGROUND_SERVICES': True,
+        'CORS_ORIGINS': None,
+    })
+
+    if os.environ.get('PYTEST_VERSION') or os.environ.get('PYTEST_CURRENT_TEST'):
+        app.config['ENABLE_BACKGROUND_SERVICES'] = False
+        app.config['TESTING'] = True
+
+    if test_config:
+        app.config.update(test_config)
+
     # Ensure instance directory exists
     instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
     os.makedirs(instance_dir, exist_ok=True)
-    
-    # Use absolute path for database
-    db_path = os.path.join(instance_dir, 'sentinelzero.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
+
+    # Use absolute path for database unless tests override it
+    default_db_path = os.path.join(instance_dir, 'sentinelzero.db')
+    app.config.setdefault('SQLALCHEMY_DATABASE_URI', f'sqlite:///{default_db_path}')
+
+    allowed_origins = _resolve_allowed_origins(app)
+    CORS(
+        app,
+        origins=allowed_origins,
+        supports_credentials=False,
+        allow_headers=['Content-Type', 'Authorization'],
+    )
+
+    # Add CORS headers manually for Socket.IO preflight requests
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin and (allowed_origins == '*' or origin in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Vary'] = 'Origin'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        return response
+
     # Initialize extensions
     db = init_db(app)
-    # Use eventlet async_mode (matches dependencies)
-    # Explicitly allow all origins for Socket.IO CORS
     socketio = SocketIO(
-        app, 
-        cors_allowed_origins="*", 
-        async_mode='eventlet', 
-        logger=True, 
+        app,
+        cors_allowed_origins=allowed_origins,
+        async_mode='eventlet',
+        logger=not app.config.get('TESTING', False),
         engineio_logger=True,
         allow_upgrades=True,
         ping_timeout=60,
-        ping_interval=25
+        ping_interval=25,
     )
-    scheduler = init_scheduler()
+    runtime = ScanRuntime(db, socketio)
+    app.extensions['scan_runtime'] = runtime
+    register_socket_handlers(socketio, runtime)
+    app.extensions['whats_up_monitor'] = get_whats_up_monitor()
+
+    scheduler = init_scheduler() if not app.config.get('TESTING') else None
     try:
-        # Run cleanup daily at 03:15 UTC (no lambda for serializable ref)
-        scheduler.add_job(scheduled_cleanup_job, 'cron', hour=3, minute=15, id='xml_cleanup', replace_existing=True)
+        if scheduler:
+            scheduler.add_job(
+                scheduled_cleanup_job,
+                'cron',
+                hour=3,
+                minute=15,
+                id='xml_cleanup',
+                replace_existing=True,
+            )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
-    
+
     # Handle OPTIONS requests for CORS preflight
     @app.route('/socket.io/', methods=['OPTIONS'])
     @app.route('/socket.io/<path:path>', methods=['OPTIONS'])
     def socketio_options(path=''):
         """Handle CORS preflight for Socket.IO"""
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        origin = request.headers.get('Origin')
+        if origin and (allowed_origins == '*' or origin in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Vary'] = 'Origin'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
         return response
-    
-    # Socket.IO event handlers
-    @socketio.on('connect')
-    def handle_connect():
-        print(f'[SOCKET] Client connected from origin: {request.origin if hasattr(request, "origin") else "unknown"}')
-        socketio.emit('scan_log', {'msg': 'Connected to SentinelZero'})
-    
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        print(f'[SOCKET] Client disconnected')
-    
-    @socketio.on('ping')
-    def handle_ping(data=None):
-        print(f'[SOCKET] Ping received from client: {data}')
-        socketio.emit('pong', {'message': 'Server received ping'})
-    
+
     # Create database tables
     try:
-        with app.app_context():
-            if os.environ.get('FLASK_ENV') == 'production':
-                # Only ensure tables exist in production (no destructive drop)
-                db.create_all()
-                print(f'[INFO] Database tables ensured at: {db_path}')
-            else:
-                db.drop_all()
-                db.create_all()
-                print(f'[INFO] Database schema recreated at: {db_path}')
+        _ensure_database_schema(app, db)
+        print(f"[INFO] Database tables ensured at: {app.config['SQLALCHEMY_DATABASE_URI']}")
     except Exception as e:
         print(f'[ERROR] Failed to initialize database: {e}')
         raise
-    
+
     # Register blueprints
     app.register_blueprint(create_scan_blueprint(db, socketio), url_prefix='/api')
     app.register_blueprint(create_settings_blueprint(db), url_prefix='/api')
@@ -234,9 +284,10 @@ def create_app():
             threading.Thread(target=whats_up_monitor, args=(socketio, app), daemon=True).start()
     
     # Initialize background services after app is ready
-    threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
-    threading.Timer(2.0, start_background_services).start()
-    
+    if app.config.get('ENABLE_BACKGROUND_SERVICES') and not app.config.get('TESTING'):
+        threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
+        threading.Timer(2.0, start_background_services).start()
+
     return app
 
 def main():

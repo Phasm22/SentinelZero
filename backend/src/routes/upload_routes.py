@@ -2,7 +2,7 @@ import json
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from ..models.scan import Scan
 from ..services.scanner import parse_vulners_output
@@ -14,6 +14,7 @@ def create_upload_blueprint(db, socketio):
     def upload_scan():
         """Upload and parse an nmap XML file"""
         print("[DEBUG] Upload route called!")
+        runtime = current_app.extensions['scan_runtime']
         try:
             if 'file' not in request.files:
                 return jsonify({'error': 'No file provided'}), 400
@@ -37,14 +38,17 @@ def create_upload_blueprint(db, socketio):
                 return jsonify({'error': 'File does not appear to be an nmap XML file'}), 400
             
             # Create scan record
-            scan = Scan(
+            scan = runtime.create_scan(
                 scan_type=scan_type,
-                status='parsing',
-                percent=0.0
+                source='upload',
+                initiated_by='upload',
+                state='parsing',
+                percent=0.0,
+                message=f'Parsing uploaded scan: {scan_type}',
             )
-            db.session.add(scan)
-            db.session.commit()
             scan_id = scan.id
+            runtime.emit_scan_event('scan.started', scan)
+            runtime.emit_snapshot(scan)
             
             # Save XML file
             now = datetime.now().strftime('%Y-%m-%d_%H%M')
@@ -63,24 +67,16 @@ def create_upload_blueprint(db, socketio):
             scan.vulns_json = json.dumps(vulns)
             scan.raw_xml_path = xml_path
             scan.status = 'complete'
+            scan.status_message = f'Upload complete: {len(hosts)} hosts, {len(vulns)} vulnerabilities'
             scan.percent = 100.0
             scan.total_hosts = len(hosts)
-            scan.hosts_up = len([h for h in hosts if h.get('status') == 'up'])
+            scan.hosts_up = len(hosts)
             scan.completed_at = datetime.utcnow()
             
             db.session.commit()
             
-            # Emit completion event via socketio
-            if socketio:
-                try:
-                    socketio.emit('scan_progress', {
-                        'scan_id': scan_id,
-                        'status': 'complete',
-                        'percent': 100,
-                        'message': f'Upload complete: {len(hosts)} hosts, {len(vulns)} vulnerabilities'
-                    })
-                except Exception as e:
-                    print(f'[DEBUG] Could not emit to socketio: {e}')
+            runtime.emit_snapshot(scan, include_results=True)
+            runtime.complete_scan(scan_id, scan.status_message)
             
             return jsonify({
                 'status': 'success',

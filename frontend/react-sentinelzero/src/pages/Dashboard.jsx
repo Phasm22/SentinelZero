@@ -45,7 +45,7 @@ const Dashboard = () => {
   const [scanStartTime, setScanStartTime] = useState(null)
   const [selectedScan, setSelectedScan] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { socket, isConnected, isInitialized } = useSocket()
+  const { socket, isConnected, isInitialized, subscribeToScan, unsubscribeFromScan } = useSocket()
   const { showToast } = useToast()
   const [pollInterval, setPollInterval] = useState(null)
   const [showScanConfirm, setShowScanConfirm] = useState(false)
@@ -101,52 +101,64 @@ const Dashboard = () => {
   }, [])
 
   useEffect(() => {
+    if (!scanId) return undefined
+    subscribeToScan(scanId)
+
+    return () => {
+      unsubscribeFromScan(scanId)
+    }
+  }, [scanId, subscribeToScan, unsubscribeFromScan])
+
+  useEffect(() => {
     if (!socket || !isInitialized) return
 
     const handleScanLog = (data) => {
+      if (scanId && data.scan_id && data.scan_id !== scanId) return
       console.log('📝 Scan log:', data.msg)
     }
 
-    const handleScanProgress = (data) => {
+    const handleScanUpdate = (data) => {
       if (!scanId || data.scan_id !== scanId) return
+      const state = data.state || data.status
       setScanProgress(data.percent)
-      setScanStatus(data.status)
+      setScanStatus(state)
       setScanMessage(data.message)
-      if (data.status === 'complete' || data.status === 'error') {
+      if (state === 'complete' || state === 'failed' || state === 'cancelled') {
         setIsScanning(false)
         setScanningType(null)
         setScanId(null)
         setScanStartTime(null)
         setPollInterval(null)
         loadDashboardData()
-        showToast(data.status === 'complete' ? 'Scan completed successfully' : 'Scan failed', data.status === 'complete' ? 'success' : 'danger')
+        showToast(
+          state === 'complete' ? 'Scan completed successfully' : data.message || 'Scan ended',
+          state === 'complete' ? 'success' : state === 'cancelled' ? 'warning' : 'danger'
+        )
       }
     }
 
-    const handleScanComplete = (data) => {
-      if (!scanId || data.scan_id !== scanId) return
-      setIsScanning(false)
-      setScanningType(null)
-      setScanProgress(100)
-      setScanStatus('complete')
-      setScanMessage('Scan complete!')
-      setScanId(null)
-      setScanStartTime(null)
-      setPollInterval(null)
-      loadDashboardData()
-      showToast('Scan completed successfully', 'success')
-    }
-
     socket.on('scan_log', handleScanLog)
-    socket.on('scan_progress', handleScanProgress)
-    socket.on('scan_complete', handleScanComplete)
+    socket.on('scan.log', handleScanLog)
+    socket.on('scan_progress', handleScanUpdate)
+    socket.on('scan.progress', handleScanUpdate)
+    socket.on('scan.snapshot', handleScanUpdate)
+    socket.on('scan.complete', handleScanUpdate)
+    socket.on('scan.completed', handleScanUpdate)
+    socket.on('scan.failed', handleScanUpdate)
+    socket.on('scan.cancelled', handleScanUpdate)
 
     return () => {
       socket.off('scan_log', handleScanLog)
-      socket.off('scan_progress', handleScanProgress)
-      socket.off('scan_complete', handleScanComplete)
+      socket.off('scan.log', handleScanLog)
+      socket.off('scan_progress', handleScanUpdate)
+      socket.off('scan.progress', handleScanUpdate)
+      socket.off('scan.snapshot', handleScanUpdate)
+      socket.off('scan.complete', handleScanUpdate)
+      socket.off('scan.completed', handleScanUpdate)
+      socket.off('scan.failed', handleScanUpdate)
+      socket.off('scan.cancelled', handleScanUpdate)
     }
-  }, [socket, isInitialized, scanId])
+  }, [socket, isInitialized, scanId, showToast])
 
   // Poll scan status if no events received
   useEffect(() => {
@@ -158,9 +170,10 @@ const Dashboard = () => {
       try {
         const status = await apiService.getScanStatus(scanId)
         setScanProgress(status.percent)
-        setScanStatus(status.status)
+        const state = status.state || status.status
+        setScanStatus(state)
         setScanMessage(status.message)
-        if (status.status === 'complete' || status.status === 'error') {
+        if (state === 'complete' || state === 'failed' || state === 'cancelled') {
           setIsScanning(false)
           setScanningType(null)
           setScanId(null)
@@ -168,7 +181,10 @@ const Dashboard = () => {
           clearInterval(interval)
           setPollInterval(null)
           loadDashboardData()
-          showToast(status.status === 'complete' ? 'Scan completed successfully' : 'Scan failed', status.status === 'complete' ? 'success' : 'danger')
+          showToast(
+            state === 'complete' ? 'Scan completed successfully' : status.message || 'Scan ended',
+            state === 'complete' ? 'success' : state === 'cancelled' ? 'warning' : 'danger'
+          )
         }
       } catch (e) {
         // ignore
@@ -206,12 +222,9 @@ const Dashboard = () => {
       setScanMessage('Starting scan...')
       setScanStartTime(Date.now())
       const resp = await apiService.triggerScan(scanType)
-      // Backend does not return scan_id, so fetch latest scan
-      const scans = await apiService.getScanHistory()
-      const latest = scans.scans && scans.scans.length > 0 ? scans.scans[0] : null
-      if (latest) {
-        setScanId(latest.id)
-      }
+      setScanId(resp.scan_id)
+      setScanStatus(resp.state || 'queued')
+      setScanMessage(resp.message || `${scanType} started`)
       showToast(`${scanType} started`, 'info')
     } catch (error) {
       console.error('Error triggering scan:', error)

@@ -21,9 +21,11 @@ from src.models import Scan, Alert
 @pytest.fixture
 def app():
     """Create test app with in-memory database"""
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'ENABLE_BACKGROUND_SERVICES': False,
+    })
     
     with app.app_context():
         db.create_all()
@@ -348,29 +350,32 @@ class TestScanAPI:
     
     def test_trigger_scan_discovery(self, client):
         """Test trigger discovery scan"""
-        with patch('src.services.scanner.run_nmap_scan') as mock_scan:
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
             mock_scan.return_value = None
             
             response = client.post('/api/scan', data={'scan_type': 'Discovery Scan'})
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data['status'] == 'success'
+            assert 'scan_id' in data
+            assert data['state'] == 'queued'
             assert 'message' in data
             assert 'Discovery Scan scan started' in data['message']
     
     def test_trigger_scan_full_tcp(self, client):
         """Test trigger full TCP scan"""
-        with patch('src.services.scanner.run_nmap_scan') as mock_scan:
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
             mock_scan.return_value = None
             
             response = client.post('/api/scan', data={'scan_type': 'Full TCP'})
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data['status'] == 'success'
+            assert 'scan_id' in data
     
     def test_trigger_scan_iot(self, client):
         """Test trigger IoT scan"""
-        with patch('src.services.scanner.run_nmap_scan') as mock_scan:
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
             mock_scan.return_value = None
             
             response = client.post('/api/scan', data={'scan_type': 'IoT Scan'})
@@ -380,7 +385,7 @@ class TestScanAPI:
     
     def test_trigger_scan_vuln(self, client):
         """Test trigger vulnerability scan"""
-        with patch('src.services.scanner.run_nmap_scan') as mock_scan:
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
             mock_scan.return_value = None
             
             response = client.post('/api/scan', data={'scan_type': 'Vuln Scripts'})
@@ -432,6 +437,7 @@ class TestScanAPI:
         data = json.loads(response.data)
         assert data['scan_id'] == scan_id
         assert data['status'] == 'complete'
+        assert data['state'] == 'complete'
         assert data['percent'] == 100.0
     
     def test_get_scan_status_nonexistent(self, client):

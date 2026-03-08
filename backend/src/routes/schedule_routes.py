@@ -3,8 +3,7 @@ Scheduler-related API routes
 """
 import json
 import os
-from flask import Blueprint, request, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Blueprint, request, jsonify, current_app
 from apscheduler.triggers.cron import CronTrigger
 
 def create_schedule_blueprint(db, socketio, scheduler):
@@ -37,16 +36,20 @@ def create_schedule_blueprint(db, socketio, scheduler):
                 json.dump(data, f, indent=4)
             
             # Clear existing scheduled jobs
-            for job in scheduler.get_jobs():
-                if job.id.startswith('scheduled_scan_'):
-                    scheduler.remove_job(job.id)
+            if scheduler:
+                for job in scheduler.get_jobs():
+                    if job.id.startswith('scheduled_scan_'):
+                        scheduler.remove_job(job.id)
             
             # Add new scheduled jobs
             from ..services.scanner import run_nmap_scan
-            from flask import current_app
+            app = current_app._get_current_object()
+            runtime = current_app.extensions['scan_runtime']
             
             for i, scan_config in enumerate(data):
                 if scan_config.get('enabled', False):
+                    if scheduler is None:
+                        continue
                     job_id = f'scheduled_scan_{i}'
                     
                     # Create cron trigger from configuration
@@ -58,9 +61,9 @@ def create_schedule_blueprint(db, socketio, scheduler):
                         day_of_week=scan_config.get('dayOfWeek', '*')
                     )
                     
-                    def scheduled_scan_wrapper(scan_type=scan_config['scanType']):
+                    def scheduled_scan_wrapper(scan_type=scan_config['scanType'], scheduled_network=scan_config.get('targetNetwork', '172.16.0.0/22')):
                         """Wrapper function for scheduled scans"""
-                        with current_app.app_context():
+                        with app.app_context():
                             security_settings = {
                                 'vuln_scanning_enabled': True,
                                 'os_detection_enabled': True,
@@ -75,10 +78,17 @@ def create_schedule_blueprint(db, socketio, scheduler):
                             except Exception as e:
                                 print(f'[DEBUG] Could not load security settings for scheduled scan: {e}')
                             
-                            # Load target network from scheduled scan settings
-                            target_network = scan_config.get('targetNetwork', '172.16.0.0/22')
-                            
-                            run_nmap_scan(scan_type, security_settings, socketio, current_app, target_network)
+                            scan = runtime.create_scan(
+                                scan_type=scan_type,
+                                source='scheduled',
+                                initiated_by='scheduler',
+                                state='queued',
+                                percent=0.0,
+                                message=f'Queued scheduled scan: {scan_type}',
+                            )
+                            runtime.emit_scan_event('scan.started', scan)
+                            runtime.emit_snapshot(scan)
+                            run_nmap_scan(scan.id, scan_type, security_settings, socketio, app, scheduled_network)
                     
                     scheduler.add_job(
                         func=scheduled_scan_wrapper,

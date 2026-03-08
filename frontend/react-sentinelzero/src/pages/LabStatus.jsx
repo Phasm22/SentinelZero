@@ -5,34 +5,78 @@ import LabOverview from '../components/lab-status/LabOverview'
 import LayerStatus from '../components/lab-status/LayerStatus'
 import HostGrid from '../components/lab-status/HostGrid'
 
-const LabStatus = () => {
-  const [healthData, setHealthData] = useState({
-    // Start with safe defaults to prevent NaN errors
-    total_checks: 0,
-    total_up: 0,
-    overall_health: 'unknown',
-    timestamp: new Date().toISOString(),
-    layers: {
-      loopbacks: { total: 0, up: 0 },
-      services: { total: 0, up: 0 },
-      infrastructure: { total: 0, up: 0 }
+const initialHealthData = {
+  total_checks: 0,
+  total_up: 0,
+  overall_status: 'unknown',
+  health_percentage: 0,
+  timestamp: new Date().toISOString(),
+  layers: {
+    loopbacks: { total: 0, up: 0 },
+    services: { total: 0, up: 0 },
+    infrastructure: { total: 0, up: 0 }
+  },
+  categories: {
+    loopbacks: { items: [] },
+    services: { items: [] },
+    infrastructure: { items: [] }
+  }
+}
+
+const normalizeSnapshot = (data = {}) => ({
+  ...initialHealthData,
+  ...data,
+  total_checks: Number.isFinite(data.total_checks) ? data.total_checks : 0,
+  total_up: Number.isFinite(data.total_up) ? data.total_up : 0,
+  health_percentage: Number.isFinite(data.health_percentage) ? data.health_percentage : 0,
+  layers: {
+    loopbacks: {
+      total: Number.isFinite(data.layers?.loopbacks?.total) ? data.layers.loopbacks.total : 0,
+      up: Number.isFinite(data.layers?.loopbacks?.up) ? data.layers.loopbacks.up : 0
+    },
+    services: {
+      total: Number.isFinite(data.layers?.services?.total) ? data.layers.services.total : 0,
+      up: Number.isFinite(data.layers?.services?.up) ? data.layers.services.up : 0
+    },
+    infrastructure: {
+      total: Number.isFinite(data.layers?.infrastructure?.total) ? data.layers.infrastructure.total : 0,
+      up: Number.isFinite(data.layers?.infrastructure?.up) ? data.layers.infrastructure.up : 0
     }
+  },
+  categories: {
+    loopbacks: { items: data.categories?.loopbacks?.items || [] },
+    services: { items: data.categories?.services?.items || [] },
+    infrastructure: { items: data.categories?.infrastructure?.items || [] }
+  }
+})
+
+const LabStatus = () => {
+  const [healthData, setHealthData] = useState(initialHealthData)
+  const [detailedData, setDetailedData] = useState({
+    loopbacks: [],
+    services: [],
+    infrastructure: []
   })
-  const [detailedData, setDetailedData] = useState({})
   const [loading, setLoading] = useState(true) // Start with loading true
   const [filter, setFilter] = useState('all') // all, loopbacks, services, infrastructure
   const { socket, isConnected } = useSocket()
 
-  // Fetch health summary with timeout
-  const fetchHealthData = async () => {
+  const applySnapshot = (snapshot) => {
+    const safeData = normalizeSnapshot(snapshot)
+    setHealthData(safeData)
+    setDetailedData({
+      loopbacks: safeData.categories.loopbacks.items,
+      services: safeData.categories.services.items,
+      infrastructure: safeData.categories.infrastructure.items
+    })
+    setLoading(false)
+  }
+
+  const fetchSnapshot = async () => {
     try {
-      // In development, use the same origin (Vite proxy handles the backend)
-      // In production, connect directly to the backend
-      const baseUrl = import.meta.env.DEV 
-        ? window.location.origin
-        : `http://${window.location.hostname}:5000`;
+      const baseUrl = window.location.origin
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout for proxy latency
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
       
       const response = await fetch(`${baseUrl}/api/whatsup/summary`, {
         signal: controller.signal
@@ -41,28 +85,7 @@ const LabStatus = () => {
       
       if (response.ok) {
         const data = await response.json()
-        // Ensure numeric values are safe
-        const safeData = {
-          ...data,
-          total_up: Number.isFinite(data.total_up) ? data.total_up : 0,
-          total_checks: Number.isFinite(data.total_checks) ? data.total_checks : 0,
-          layers: {
-            loopbacks: {
-              up: Number.isFinite(data.layers?.loopbacks?.up) ? data.layers.loopbacks.up : 0,
-              total: Number.isFinite(data.layers?.loopbacks?.total) ? data.layers.loopbacks.total : 0
-            },
-            services: {
-              up: Number.isFinite(data.layers?.services?.up) ? data.layers.services.up : 0,
-              total: Number.isFinite(data.layers?.services?.total) ? data.layers.services.total : 0
-            },
-            infrastructure: {
-              up: Number.isFinite(data.layers?.infrastructure?.up) ? data.layers.infrastructure.up : 0,
-              total: Number.isFinite(data.layers?.infrastructure?.total) ? data.layers.infrastructure.total : 0
-            }
-          }
-        }
-        setHealthData(safeData)
-        setLoading(false)
+        applySnapshot(data)
       } else {
         setLoading(false)
       }
@@ -74,52 +97,14 @@ const LabStatus = () => {
     }
   }
 
-  // Fetch detailed host information with timeout
-  const fetchDetailedData = async () => {
-    try {
-      // In development, use the same origin (Vite proxy handles the backend)
-      // In production, connect directly to the backend
-      const baseUrl = import.meta.env.DEV 
-        ? window.location.origin
-        : `http://${window.location.hostname}:5000`;
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout for proxy latency
-      
-      const requests = [
-        fetch(`${baseUrl}/api/whatsup/loopbacks`, { signal: controller.signal }),
-        fetch(`${baseUrl}/api/whatsup/services`, { signal: controller.signal }),
-        fetch(`${baseUrl}/api/whatsup/infrastructure`, { signal: controller.signal })
-      ]
-      
-      const responses = await Promise.all(requests)
-      clearTimeout(timeoutId)
-      
-      const [loopbacks, services, infrastructure] = await Promise.all(
-        responses.map(r => r.ok ? r.json() : {})
-      )
-      
-      setDetailedData({
-        loopbacks: loopbacks.loopbacks || [],
-        services: services.services || [],
-        infrastructure: infrastructure.infrastructure || []
-      })
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Failed to fetch detailed data:', error)
-      }
-    }
-  }
-
   useEffect(() => {
-    // Load immediately with fast timeout, show stale data quickly
-    setLoading(true) // Show loading state initially
-    
-    // Fetch data in background with timeout
+    setLoading(true)
+
     const fetchWithTimeout = async () => {
       try {
         await Promise.race([
-          Promise.all([fetchHealthData(), fetchDetailedData()]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 25000)) // 25 second initial timeout
+          fetchSnapshot(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
         ])
       } catch (error) {
         console.log('Initial fetch timed out, using polling interval')
@@ -131,9 +116,8 @@ const LabStatus = () => {
 
     // Longer polling interval to reduce server load
     const interval = setInterval(() => {
-      fetchHealthData()
-      fetchDetailedData()
-    }, 60000) // Poll every 60 seconds instead of 30
+      fetchSnapshot()
+    }, 60000)
 
     return () => clearInterval(interval)
   }, [])
@@ -145,13 +129,17 @@ const LabStatus = () => {
       
       const handleHealthUpdate = (data) => {
         console.log('Received health update:', data)
-        setHealthData(data)
+        applySnapshot(data)
       }
 
+      socket.on('whats_up.snapshot', handleHealthUpdate)
+      socket.on('whats_up_update', handleHealthUpdate)
       socket.on('health_update', handleHealthUpdate)
 
       return () => {
         console.log('Cleaning up socket listeners')
+        socket.off('whats_up.snapshot', handleHealthUpdate)
+        socket.off('whats_up_update', handleHealthUpdate)
         socket.off('health_update', handleHealthUpdate)
       }
     } else if (socket && !isConnected) {

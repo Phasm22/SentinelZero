@@ -13,14 +13,20 @@ class Scan(db.Model):
     diff_from_previous = db.Column(db.Text)
     vulns_json = db.Column(db.Text)
     raw_xml_path = db.Column(db.String(256))
-    status = db.Column(db.String(32), default='pending')  # pending, running, parsing, saving, complete, error
-    percent = db.Column(db.Float, default=0.0)            # progress percent
+    status = db.Column(db.String(32), default='pending')
+    status_message = db.Column(db.Text, default='Pending')
+    percent = db.Column(db.Float, default=0.0)
+    execution_mode = db.Column(db.String(32), default='normal')
+    error_code = db.Column(db.String(64), nullable=True)
+    error_detail = db.Column(db.Text, nullable=True)
+    source = db.Column(db.String(32), default='manual')
+    initiated_by = db.Column(db.String(64), default='api')
     total_hosts = db.Column(db.Integer, default=0)
     hosts_up = db.Column(db.Integer, default=0)
     total_ports = db.Column(db.Integer, default=0)
     open_ports = db.Column(db.Integer, default=0)
-    insights_json = db.Column(db.Text)  # Store insights as JSON
-    process_id = db.Column(db.Integer, nullable=True)  # Store the nmap process ID for killing
+    insights_json = db.Column(db.Text)
+    process_id = db.Column(db.Integer, nullable=True)
     
     def as_dict(self):
         """Convert scan instance to dictionary"""
@@ -34,7 +40,14 @@ class Scan(db.Model):
             'vulns_json': self.vulns_json,
             'raw_xml_path': self.raw_xml_path,
             'status': self.status,
+            'status_message': self.status_message,
             'percent': self.percent,
+            'execution_mode': self.execution_mode,
+            'error_code': self.error_code,
+            'error_detail': self.error_detail,
+            'source': self.source,
+            'initiated_by': self.initiated_by,
+            'process_id': self.process_id,
             'total_hosts': self.total_hosts,
             'hosts_up': self.hosts_up,
             'total_ports': self.total_ports,

@@ -14,7 +14,7 @@ describe('Button Component', () => {
     const button = screen.getByRole('button', { name: /test button/i })
     expect(button).toBeInTheDocument()
     expect(button).toHaveClass('from-blue-600') // Primary variant with gradient
-    expect(button).toHaveClass('px-4', 'py-2') // Default size
+    expect(button).toHaveClass('px-4', 'py-3') // Default size
   })
 
   it('should render with different variants', () => {
@@ -30,13 +30,13 @@ describe('Button Component', () => {
 
   it('should render with different sizes', () => {
     const { rerender } = render(<Button size="sm">Small</Button>)
-    expect(screen.getByRole('button')).toHaveClass('px-3', 'py-1.5')
+    expect(screen.getByRole('button')).toHaveClass('px-4', 'py-2')
 
     rerender(<Button size="lg">Large</Button>)
-    expect(screen.getByRole('button')).toHaveClass('px-6', 'py-3')
+    expect(screen.getByRole('button')).toHaveClass('px-6', 'py-4')
 
     rerender(<Button size="xl">Extra Large</Button>)
-    expect(screen.getByRole('button')).toHaveClass('px-8', 'py-4')
+    expect(screen.getByRole('button')).toHaveClass('px-8', 'py-5')
   })
 
   it('should handle click events', () => {

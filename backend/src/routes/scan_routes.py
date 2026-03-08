@@ -3,10 +3,11 @@ Scan-related API routes
 """
 import json
 import threading
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from ..models import Scan
 from ..services.scanner import run_nmap_scan
 from ..services.notifications import send_pushover_alert
+from ..services.scan_runtime import ACTIVE_SCAN_STATUSES
 import os, json as _json
 
 def create_scan_blueprint(db, socketio):
@@ -17,6 +18,7 @@ def create_scan_blueprint(db, socketio):
     def trigger_scan():
         """Trigger a new network scan"""
         scan_type = request.form.get('scan_type', 'Full TCP')
+        runtime = current_app.extensions['scan_runtime']
         try:
             print(f"[DEBUG] /scan requested with scan_type='{scan_type}'")
         except Exception:
@@ -73,16 +75,10 @@ def create_scan_blueprint(db, socketio):
                 max_concurrent_val = 1
             # Only count "heavy" scans toward concurrency: exclude Discovery Scan
             active_count = (Scan.query
-                                .filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing']))
+                                .filter(Scan.status.in_(ACTIVE_SCAN_STATUSES))
                                 .filter(Scan.scan_type != 'Discovery Scan')
                                 .count())
             if active_count >= max_concurrent_val:
-                # Emit socket log so UI sees reason even without HTTP body inspection
-                if socketio:
-                    try:
-                        socketio.emit('scan_log', {'msg': f'Concurrency limit reached ({active_count}/{max_concurrent_val}) – waiting for existing scans to finish'})
-                    except Exception:
-                        pass
                 return jsonify({
                     'status': 'error',
                     'message': f'Max concurrent scans ({max_concurrent_val}) reached'
@@ -95,29 +91,38 @@ def create_scan_blueprint(db, socketio):
         except Exception:
             return jsonify({'status': 'error', 'message': f'Invalid target network CIDR: {target_network}'}), 400
 
-        # Start scan in background thread with proper app context
-        from flask import current_app
         app = current_app._get_current_object()  # Get the actual app instance
+        scan = runtime.create_scan(
+            scan_type=scan_type,
+            source='manual',
+            initiated_by='api',
+            state='queued',
+            percent=0.0,
+            message=f'Queued scan: {scan_type}',
+        )
+        runtime.emit_scan_event('scan.started', scan)
+        runtime.emit_snapshot(scan)
         threading.Thread(
             target=run_nmap_scan, 
-            args=(scan_type, security_settings, socketio, app, target_network),
+            args=(scan.id, scan_type, security_settings, socketio, app, target_network),
             kwargs={'pre_discovery': pre_discovery_enabled},
             daemon=True
         ).start()
-        # Inform clients via socket immediately (especially helpful for very fast discovery scans)
-        if socketio:
-            try:
-                socketio.emit('scan_log', {'msg': f'Launching scan thread for: {scan_type}'})
-            except Exception:
-                pass
-        
-        return jsonify({'status': 'success', 'message': f'{scan_type} scan started'})
+        runtime.append_log(scan.id, f'Launching scan thread for: {scan_type}')
+
+        return jsonify({
+            'status': 'success',
+            'scan_id': scan.id,
+            'state': scan.status,
+            'message': f'{scan_type} scan started',
+        })
 
     @bp.route('/kill-all-scans', methods=['POST'])
     def kill_all_scans():
         """Mark all active scans as cancelled and kill their processes."""
         try:
-            active_scans = Scan.query.filter(Scan.status.in_(['running', 'parsing', 'saving', 'postprocessing'])).all()
+            runtime = current_app.extensions['scan_runtime']
+            active_scans = Scan.query.filter(Scan.status.in_(ACTIVE_SCAN_STATUSES)).all()
             count = 0
             killed_processes = 0
             
@@ -159,11 +164,8 @@ def create_scan_blueprint(db, socketio):
             
             msg = f'Cancelled {count} active scans, killed {killed_processes} processes'
             print(f'[DEBUG] {msg}')
-            if socketio:
-                try:
-                    socketio.emit('scan_log', {'msg': msg})
-                except Exception:
-                    pass
+            for scan in active_scans:
+                runtime.cancel_scan(scan.id, msg, percent=scan.percent or 0.0)
             return jsonify({'status': 'success', 'message': msg, 'cancelled': count, 'killed_processes': killed_processes})
         except Exception as e:
             from ..config.database import db as _db
@@ -174,7 +176,8 @@ def create_scan_blueprint(db, socketio):
     def cancel_scan(scan_id):
         """Cancel a single running scan and kill its process."""
         try:
-            scan = Scan.query.get(scan_id)
+            runtime = current_app.extensions['scan_runtime']
+            scan = db.session.get(Scan, scan_id)
             if not scan:
                 return jsonify({'status': 'error', 'message': 'Scan not found'}), 404
             if scan.status in ['complete', 'error', 'cancelled']:
@@ -215,11 +218,7 @@ def create_scan_blueprint(db, socketio):
             
             msg = f'Scan {scan_id} cancelled' + (f' and process killed' if killed_process else '')
             print(f'[DEBUG] {msg}')
-            if socketio:
-                try:
-                    socketio.emit('scan_log', {'msg': msg})
-                except Exception:
-                    pass
+            runtime.cancel_scan(scan_id, msg, percent=scan.percent or 0.0)
             return jsonify({'status': 'success', 'message': msg, 'scan_id': scan_id, 'killed_process': killed_process})
         except Exception as e:
             from ..config.database import db as _db
@@ -263,16 +262,11 @@ def create_scan_blueprint(db, socketio):
     def get_scan_status(scan_id):
         """Get the status of a specific scan"""
         try:
-            scan = Scan.query.get(scan_id)
+            runtime = current_app.extensions['scan_runtime']
+            scan = db.session.get(Scan, scan_id)
             if not scan:
                 return jsonify({'error': 'Scan not found'}), 404
-            
-            return jsonify({
-                'scan_id': scan.id,
-                'status': scan.status,
-                'percent': scan.percent,
-                'message': f'Status: {scan.status}, {scan.percent:.1f}%',
-            })
+            return jsonify(runtime.serialize_scan(scan, include_results=False))
         except Exception as e:
             print(f'[DEBUG] Error getting scan status for {scan_id}: {e}')
             return jsonify({'error': 'Failed to get scan status'}), 500
