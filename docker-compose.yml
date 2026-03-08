@@ -1,5 +1,9 @@
 version: '3.8'
 
+# Basic Docker Compose setup - NO AUTHENTICATION
+# This is for development/testing only or standalone deployments without SSO
+# For production with Authentik SSO, use systemd services + remote Traefik (see AUTHENTIK_SETUP.md)
+
 services:
   sentinelzero:
     build: .

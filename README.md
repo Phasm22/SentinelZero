@@ -109,8 +109,33 @@ sudo journalctl -u sentinelzero -f
 ./cleanup-sentinelzero.sh cleanup
 ```
 
+## Authentication & Deployment
+
+### Systemd Services (Production - Current Setup)
+
+This machine runs SentinelZero via systemd services:
+- Backend: port 5000
+- Frontend: port 3173
+
+Authentication is handled by **remote Traefik + Authentik** (forward auth).
+
+See **[AUTHENTIK_SETUP.md](AUTHENTIK_SETUP.md)** for complete setup instructions.
+
+### Docker (Development/Testing)
+
+For standalone deployment without authentication:
+
+```bash
+docker-compose up -d
+```
+
+See `docker-compose.yml` for configuration.
+
 ## Documentation
 
+- **[Authentik Setup](AUTHENTIK_SETUP.md)** - SSO authentication setup
+- **[Traefik Configuration](traefik/README.md)** - Remote Traefik setup
+- **[Nginx Alternative](nginx/README.md)** - Alternative reverse proxy
 - **[Backend Architecture](backend/src/README.md)** - Modular structure
 - **[Scripts Guide](SCRIPTS.md)** - All available scripts
 - **[Backend Setup](backend/README.md)** - Installation guide

@@ -1,0 +1,37 @@
+# Traefik File Provider Configuration for SentinelZero
+# Routes sentinelzero.prox to host services (ports 5000 and 3173)
+# This file should be placed in Traefik's dynamic config directory
+
+http:
+  routers:
+    # HTTP router - redirect to HTTPS
+    sentinelzero-http:
+      rule: "Host(`sentinelzero.prox`)"
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      service: sentinelzero-frontend
+    
+    # HTTPS router with Authentik middleware
+    # Routes to frontend (port 3173) which proxies /api and /socket.io to backend (port 5000)
+    sentinelzero:
+      rule: "Host(`sentinelzero.prox`)"
+      entryPoints:
+        - websecure
+      middlewares:
+        - auth@file  # Authentik forward auth
+        - websocket-headers@file
+      service: sentinelzero-frontend
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    # Frontend service (port 3173)
+    # Vite dev server proxies /api and /socket.io to backend on port 5000
+    sentinelzero-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://172.16.0.198:3173"  # SentinelZero frontend (Vite dev server)
+        passHostHeader: true
+
