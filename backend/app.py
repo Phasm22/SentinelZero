@@ -86,6 +86,7 @@ def _ensure_database_schema(app, db):
             'source': "VARCHAR(32) DEFAULT 'manual'",
             'initiated_by': "VARCHAR(64) DEFAULT 'api'",
             'correlation_id': "VARCHAR(64)",
+            'analysis_json': 'TEXT',
         }
 
         table_name = Scan.__table__.name

@@ -9,8 +9,10 @@ import {
   FileText,
   X,
   Download,
-  Eye
+  Eye,
+  Bot,
 } from 'lucide-react'
+import ScanAiTab from './ScanAiTab'
 import { formatTimestamp } from '../utils/date'
 import Button from './Button'
 
@@ -44,12 +46,12 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
       baseTabs.push({ id: 'vulns', name: 'Vulnerabilities', icon: <AlertTriangle className="w-4 h-4" /> })
     }
     
-    // Only show diff tab if there are previous scans to compare
     if (scanDetails?.id > 1) {
       baseTabs.push({ id: 'diff', name: 'Diff', icon: <Eye className="w-4 h-4" /> })
     }
+
+    baseTabs.push({ id: 'ai', name: 'AI', icon: <Bot className="w-4 h-4" /> })
     
-    // Always show raw XML tab
     baseTabs.push({ id: 'raw', name: 'Raw XML', icon: <FileText className="w-4 h-4" /> })
     
     return baseTabs
@@ -230,7 +232,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
           </div>
 
           {/* Content */}
-          <div className="px-6 py-6 max-h-96 overflow-y-auto">
+          <div className={`px-6 py-6 overflow-y-auto ${activeTab === 'ai' ? 'max-h-[32rem]' : 'max-h-96'}`}>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
@@ -259,6 +261,17 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan ID</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">#{scanDetails.id}</div>
+                      </div>
+                      <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border border-violet-500/20">
+                        <div className="text-sm font-medium text-violet-400 flex items-center gap-1">
+                          <Bot className="w-3 h-3" /> Insights
+                        </div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {scanDetails.insights_count ?? 0}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {scanDetails.verdict_agent_summary || 'Open AI tab for agent run'}
+                        </div>
                       </div>
                     </div>
 
@@ -660,6 +673,10 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       </div>
                     )}
                   </div>
+                )}
+
+                {activeTab === 'ai' && (
+                  <ScanAiTab scanId={scanDetails.id} scanDetails={scanDetails} />
                 )}
 
                 {/* Raw XML Tab */}

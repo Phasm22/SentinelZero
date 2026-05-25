@@ -114,6 +114,29 @@ def test_insights_generator_compares_scans_and_persists(app):
         assert len(persisted) == len(stored)
 
 
+def test_generate_and_store_insights_before_complete_status(app):
+    """Insights run during postprocessing while status is still running."""
+    with app.app_context():
+        previous = _scan(
+            hosts=[{'ip': '10.0.0.1', 'ports': [{'port': 22, 'service': 'ssh'}]}],
+            created_at=datetime.utcnow() - timedelta(days=1),
+        )
+        current = _scan(
+            hosts=[{'ip': '10.0.0.1', 'ports': [{'port': 22, 'service': 'ssh'}, {'port': 443, 'service': 'https'}]}],
+            created_at=datetime.utcnow(),
+        )
+        current.status = 'running'
+        db.session.add_all([previous, current])
+        db.session.commit()
+
+        stored = generate_and_store_insights(current.id)
+        assert len(stored) >= 1
+        refreshed = db.session.get(Scan, current.id)
+        assert refreshed.insights_json is not None
+        analysis = json.loads(refreshed.analysis_json or '{}')
+        assert analysis['insights_generation']['count'] == len(stored)
+
+
 def test_new_port_enrichment_endpoint_and_asset(app, monkeypatch):
     with app.app_context():
         monkeypatch.setattr(

@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, Response, request
 from ..models import Scan, Alert
 from ..services.scan_runtime import ACTIVE_SCAN_STATUSES
 from ..services.data_management import delete_data
+from ..services import scan_analysis
 
 def create_api_blueprint(db):
     """Create and configure general API routes blueprint"""
@@ -112,14 +113,19 @@ def create_api_blueprint(db):
                     'status': scan.status,
                     'state': scan.status,
                     'message': getattr(scan, 'status_message', None),
+                    'error_code': scan.error_code,
+                    'error_detail': scan.error_detail,
+                    'source': scan.source,
+                    'execution_mode': scan.execution_mode,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
-                    'timestamp': scan.created_at,  # Add timestamp field for frontend compatibility
+                    'timestamp': scan.created_at,
                     'total_hosts': scan.total_hosts,
                     'hosts_up': scan.hosts_up,
                     'total_ports': scan.total_ports,
-                    'open_ports': scan.open_ports
+                    'open_ports': scan.open_ports,
                 }
+                scan_dict.update(scan_analysis.public_summary(scan))
                 
                 # Convert timestamp to Denver timezone
                 if scan_dict['timestamp']:
@@ -284,12 +290,19 @@ def create_api_blueprint(db):
                 return jsonify({'error': 'Scan not found'}), 404
             
             # Convert scan to dictionary
+            analysis = scan_analysis.load_analysis(scan)
             scan_data = {
                 'id': scan.id,
                 'scan_type': scan.scan_type,
                 'status': scan.status,
                 'state': scan.status,
                 'message': getattr(scan, 'status_message', None),
+                'error_code': scan.error_code,
+                'error_detail': scan.error_detail,
+                'source': scan.source,
+                'initiated_by': scan.initiated_by,
+                'correlation_id': scan.correlation_id,
+                'execution_mode': scan.execution_mode,
                 'created_at': scan.created_at.isoformat() if scan.created_at else None,
                 'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
                 'timestamp': scan.created_at,
@@ -297,8 +310,10 @@ def create_api_blueprint(db):
                 'hosts_up': scan.hosts_up,
                 'total_ports': scan.total_ports,
                 'open_ports': scan.open_ports,
-                'raw_xml_path': scan.raw_xml_path
+                'raw_xml_path': scan.raw_xml_path,
+                'analysis': analysis,
             }
+            scan_data.update(scan_analysis.public_summary(scan))
             
             # Convert timestamp to ISO string in Denver timezone for frontend parsing
             if scan_data['timestamp']:

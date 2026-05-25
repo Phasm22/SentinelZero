@@ -26,6 +26,7 @@ class Scan(db.Model):
     total_ports = db.Column(db.Integer, default=0)
     open_ports = db.Column(db.Integer, default=0)
     insights_json = db.Column(db.Text)
+    analysis_json = db.Column(db.Text)  # insights + verdict agent run history
     process_id = db.Column(db.Integer, nullable=True)
     
     def as_dict(self):
@@ -52,5 +53,6 @@ class Scan(db.Model):
             'hosts_up': self.hosts_up,
             'total_ports': self.total_ports,
             'open_ports': self.open_ports,
-            'insights_json': self.insights_json
+            'insights_json': self.insights_json,
+            'analysis_json': self.analysis_json,
         }

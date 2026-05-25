@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
-import { Info, Eye, ChevronUp, ChevronDown, ChevronsUpDown, Search, Filter } from 'lucide-react'
+import { Info, Eye, ChevronUp, ChevronDown, ChevronsUpDown, Search, Filter, Bot } from 'lucide-react'
+import ScanInsightBadge from './ScanInsightBadge'
 import { formatTimestamp } from '../utils/date'
 import Button from './Button'
 
@@ -14,6 +15,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
     scan_type: { label: 'TYPE', type: 'string' },
     hosts_count: { label: 'HOSTS', type: 'number' },
     vulns_count: { label: 'VULNS', type: 'number' },
+    insights_count: { label: 'AI', type: 'number' },
     status: { label: 'STATUS', type: 'string' }
   }
 
@@ -162,6 +164,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
                   </td>
                   <td>{scan.hosts_count || 0}</td>
                   <td>{scan.vulns_count || 0}</td>
+                  <td><ScanInsightBadge scan={scan} /></td>
                   <td>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       scan.status === 'complete' 
@@ -244,6 +247,15 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
                 </div>
               </div>
             </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Bot className="w-4 h-4 text-violet-400" />
+              <ScanInsightBadge scan={scan} />
+            </div>
+            {scan.verdict_agent_summary && (
+              <p className="text-xs text-gray-500 truncate" title={scan.verdict_agent_summary}>
+                {scan.verdict_agent_summary}
+              </p>
+            )}
             <div className="pt-2">
               <Button 
                 variant="outline" 

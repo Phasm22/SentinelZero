@@ -311,6 +311,10 @@ def create_scan_blueprint(db, socketio):
                 scan_data['vulns'] = []
                 scan_data['vulns_count'] = 0
             
+            from ..services import scan_analysis
+            scan_data['analysis'] = scan_analysis.load_analysis(scan)
+            scan_data.update(scan_analysis.public_summary(scan))
+
             return jsonify(scan_data)
         except Exception as e:
             print(f'[DEBUG] Error getting scan {scan_id}: {e}')

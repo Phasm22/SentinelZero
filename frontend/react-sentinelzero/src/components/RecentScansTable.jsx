@@ -1,5 +1,6 @@
 import React from 'react'
-import { Info, Eye } from 'lucide-react'
+import { Info, Eye, Bot } from 'lucide-react'
+import ScanInsightBadge from './ScanInsightBadge'
 import { formatTimestamp } from '../utils/date'
 import Button from './Button'
 
@@ -15,6 +16,7 @@ const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
             <th className="font-bold text-gray-200" data-testid="type-header">TYPE</th>
             <th className="font-bold text-gray-200" data-testid="hosts-header">HOSTS</th>
             <th className="font-bold text-gray-200" data-testid="vulns-header">VULNS</th>
+            <th className="font-bold text-gray-200" data-testid="ai-header">AI</th>
             <th className="font-bold text-gray-200" data-testid="actions-header">ACTIONS</th>
           </tr>
         </thead>
@@ -30,6 +32,7 @@ const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
               </td>
               <td data-testid="scan-hosts-count">{scan.hosts_count || 0}</td>
               <td data-testid="scan-vulns-count">{scan.vulns_count || 0}</td>
+              <td data-testid="scan-ai-cell"><ScanInsightBadge scan={scan} /></td>
               <td data-testid="scan-actions">
                 <Button 
                   variant="outline" 
@@ -62,6 +65,10 @@ const RecentScansTable = ({ recentScans, preferences, handleViewDetails }) => (
                 </span>
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-violet-300">
+            <Bot className="w-4 h-4" />
+            <ScanInsightBadge scan={scan} />
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm" data-testid="card-stats">
             <div data-testid="hosts-stat">

@@ -417,23 +417,34 @@ class InsightsGenerator:
 
 def generate_and_store_insights(scan_id: int) -> List[Dict[str, Any]]:
     """
-    Generate insights for a completed scan and store them in the scan record
-    
-    Args:
-        scan_id: ID of the completed scan
-        
-    Returns:
-        List of generated insights
+    Generate insights for a scan with parsed hosts and store on the scan record.
+    Called during postprocessing before status is set to complete.
     """
+    from . import scan_analysis
+
     scan = Scan.query.get(scan_id)
-    if not scan or scan.status != 'complete':
+    if not scan or not scan.hosts_json:
         return []
-    
-    generator = InsightsGenerator()
-    insights = generator.generate_insights(scan)
-    
-    # Store insights in the scan record
-    scan.insights_json = json.dumps(insights)
-    db.session.commit()
-    
-    return insights
+    if scan.status in ('failed', 'cancelled'):
+        return []
+
+    previous = InsightsGenerator()._get_previous_scan(scan)
+    try:
+        generator = InsightsGenerator()
+        insights = generator.generate_insights(scan)
+        scan.insights_json = json.dumps(insights)
+        db.session.commit()
+        scan_analysis.record_insights_generation(
+            scan_id,
+            count=len(insights),
+            previous_scan_id=previous.id if previous else None,
+        )
+        return insights
+    except Exception as exc:
+        scan_analysis.record_insights_generation(
+            scan_id,
+            count=0,
+            previous_scan_id=previous.id if previous else None,
+            error=str(exc),
+        )
+        raise

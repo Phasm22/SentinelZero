@@ -604,6 +604,15 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             # Generate insights unless discovery-only
             if scan_type_normalized == 'discovery scan':
                 emit_stage('postprocessing', 'Discovery complete – skipping insights...')
+                try:
+                    from . import scan_analysis
+                    scan_analysis.record_insights_generation(
+                        scan_id,
+                        count=0,
+                        skipped_reason='Discovery scan — insights not generated',
+                    )
+                except Exception:
+                    pass
             else:
                 emit_stage('postprocessing', 'Generating insights...')
                 try:

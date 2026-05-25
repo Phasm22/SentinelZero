@@ -43,7 +43,10 @@ def get_insights():
                         continue
                     if unread_only and insight.get('is_read', False):
                         continue
-                    if verdict_filter and insight.get('verdict') != verdict_filter:
+                    if verdict_filter == 'actionable':
+                        if insight.get('verdict') == 'dismiss':
+                            continue
+                    elif verdict_filter and insight.get('verdict') != verdict_filter:
                         continue
 
                     all_insights.append(insight)
@@ -160,17 +163,28 @@ def get_scan_insights(scan_id):
     try:
         scan = Scan.query.get_or_404(scan_id)
         
+        from ..services import scan_analysis
+
         if not scan.insights_json:
-            return jsonify({'insights': []})
-        
+            return jsonify({
+                'insights': [],
+                'scan_id': scan_id,
+                'analysis': scan_analysis.load_analysis(scan),
+                'summary': scan_analysis.insight_counts(scan),
+            })
+
         insights = json.loads(scan.insights_json)
-        
-        # Add scan metadata
+
         for insight in insights:
             insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
             insight['scan_type'] = scan.scan_type
-        
-        return jsonify({'insights': insights})
+
+        return jsonify({
+            'insights': insights,
+            'scan_id': scan_id,
+            'analysis': scan_analysis.load_analysis(scan),
+            'summary': scan_analysis.insight_counts(scan),
+        })
         
     except (json.JSONDecodeError, TypeError) as e:
         print(f"Error parsing insights for scan {scan_id}: {e}")

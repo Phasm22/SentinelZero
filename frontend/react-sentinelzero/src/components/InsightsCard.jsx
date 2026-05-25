@@ -49,7 +49,7 @@ const InsightsCard = () => {
   const [insights, setInsights]     = useState([])
   const [summary, setSummary]       = useState({})
   const [isLoading, setIsLoading]   = useState(true)
-  const [filter, setFilter]         = useState({ type: 'all', priority: 'all', verdict: 'all' })
+  const [filter, setFilter]         = useState({ type: 'all', priority: 'all', verdict: 'actionable' })
   const [showFilters, setShowFilters] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [verdictsTick, setVerdictsTick] = useState(0)
@@ -91,7 +91,7 @@ const InsightsCard = () => {
       if (filter.type !== 'all') params.type = filter.type
       if (filter.priority === 'high') params.priority_min = 80
       if (filter.priority === 'unread') params.unread_only = true
-      if (filter.verdict !== 'all') params.verdict = filter.verdict
+      if (filter.verdict && filter.verdict !== 'all') params.verdict = filter.verdict
 
       const data = await apiService.getInsights(params)
       setInsights(data.insights || [])
@@ -227,10 +227,11 @@ const InsightsCard = () => {
                 className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs sm:text-sm text-white"
                 data-testid="verdict-filter-select"
               >
-                <option value="all">All Verdicts</option>
-                <option value="escalate">Escalated</option>
-                <option value="explain">Explained</option>
+                <option value="actionable">Escalate & Explain</option>
+                <option value="escalate">Escalated only</option>
+                <option value="explain">Explained only</option>
                 <option value="dismiss">Dismissed</option>
+                <option value="all">All verdicts</option>
               </select>
             </div>
           </div>
