@@ -2,11 +2,33 @@
 Insights API routes
 """
 import json
+import os
 from flask import Blueprint, jsonify, request
 from ..models.scan import Scan
 from ..config.database import db
+from ..services import scan_analysis
+from ..services.scan_scope import effective_target_network, network_short_label
 
 insights_bp = Blueprint('insights', __name__)
+
+
+def _attach_scan_context(insight: dict, scan: Scan) -> dict:
+    insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
+    insight['scan_type'] = scan.scan_type
+    net = effective_target_network(scan)
+    insight['target_network'] = net
+    insight['network_label'] = network_short_label(net)
+    return insight
+
+SENSOR_API_KEY = os.environ.get("SENSOR_API_KEY", "")
+
+
+def _sensor_auth_failed():
+    if not SENSOR_API_KEY:
+        return None
+    if request.headers.get("X-Sensor-Key", "") != SENSOR_API_KEY:
+        return jsonify({"error": "unauthorized"}), 401
+    return None
 
 @insights_bp.route('/api/insights', methods=['GET'])
 def get_insights():
@@ -34,8 +56,8 @@ def get_insights():
                 insights = json.loads(scan.insights_json) if scan.insights_json else []
 
                 for insight in insights:
-                    insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
-                    insight['scan_type'] = scan.scan_type
+                    _attach_scan_context(insight, scan)
+                    scan_analysis.attach_verdict_status(insight, scan)
 
                     if filter_type and insight.get('type') != filter_type:
                         continue
@@ -45,6 +67,11 @@ def get_insights():
                         continue
                     if verdict_filter == 'actionable':
                         if insight.get('verdict') == 'dismiss':
+                            continue
+                        if (
+                            insight.get('type') == 'correlated'
+                            and insight.get('verdict') != 'escalate'
+                        ):
                             continue
                     elif verdict_filter and insight.get('verdict') != verdict_filter:
                         continue
@@ -94,8 +121,7 @@ def get_escalated_insights():
                 insights = json.loads(scan.insights_json) if scan.insights_json else []
                 for insight in insights:
                     if insight.get('verdict') == 'escalate':
-                        insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
-                        insight['scan_type'] = scan.scan_type
+                        _attach_scan_context(insight, scan)
                         escalated.append(insight)
             except (json.JSONDecodeError, TypeError):
                 continue
@@ -156,6 +182,60 @@ def get_port_history(ip, port):
         print(f"Error fetching port history: {e}")
         return jsonify({'error': 'Failed to fetch port history'}), 500
 
+@insights_bp.route('/api/scans/<int:scan_id>/analysis/scan-analyst', methods=['POST'])
+def post_scan_analyst(scan_id):
+    """Ingest scan-level analyst narrative (timer agent or CLI)."""
+    auth_err = _sensor_auth_failed()
+    if auth_err:
+        return auth_err
+
+    scan = Scan.query.get(scan_id)
+    if not scan:
+        return jsonify({"error": "Scan not found"}), 404
+
+    body = request.get_json(silent=True) or {}
+    scan_analysis.record_scan_analyst(
+        scan_id,
+        status="success",
+        source=body.get("source", "timer"),
+        verdict=body.get("verdict"),
+        summary=body.get("summary"),
+        findings=body.get("findings"),
+        reasoning=body.get("reasoning"),
+    )
+    return jsonify({"status": "ok", "scan_id": scan_id})
+
+
+@insights_bp.route('/api/scans/<int:scan_id>/host-context', methods=['GET'])
+def get_scan_host_context(scan_id):
+    """Per-scan host identification context (DHCP, ARP, registry, nmap, user labels)."""
+    from ..services.host_context import load_host_context, build_host_context
+
+    scan = Scan.query.get(scan_id)
+    if not scan:
+        return jsonify({"error": "Scan not found"}), 404
+    ctx = load_host_context(scan)
+    if not ctx and scan.hosts_json:
+        ctx = build_host_context(scan)
+    return jsonify({"scan_id": scan_id, "host_context": ctx})
+
+
+@insights_bp.route('/api/scans/<int:scan_id>/host-context/labels', methods=['PATCH'])
+def patch_scan_host_labels(scan_id):
+    """Set friendly names for hosts, e.g. room or device labels."""
+    scan = Scan.query.get(scan_id)
+    if not scan:
+        return jsonify({"error": "Scan not found"}), 404
+    body = request.get_json(silent=True) or {}
+    labels = body.get("labels") or body
+    if not isinstance(labels, dict):
+        return jsonify({"error": "Expected JSON object of {ip: label}"}), 400
+    from ..services.host_context import apply_user_labels
+
+    ctx = apply_user_labels(scan_id, labels)
+    return jsonify({"status": "ok", "scan_id": scan_id, "host_context": ctx})
+
+
 @insights_bp.route('/api/insights/scan/<int:scan_id>', methods=['GET'])
 def get_scan_insights(scan_id):
     """Get insights for a specific scan"""
@@ -176,14 +256,17 @@ def get_scan_insights(scan_id):
         insights = json.loads(scan.insights_json)
 
         for insight in insights:
-            insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
-            insight['scan_type'] = scan.scan_type
+            _attach_scan_context(insight, scan)
+            scan_analysis.attach_verdict_status(insight, scan)
+
+        from ..services.scan_scope import scan_scope_dict
 
         return jsonify({
             'insights': insights,
             'scan_id': scan_id,
             'analysis': scan_analysis.load_analysis(scan),
             'summary': scan_analysis.insight_counts(scan),
+            **scan_scope_dict(scan),
         })
         
     except (json.JSONDecodeError, TypeError) as e:

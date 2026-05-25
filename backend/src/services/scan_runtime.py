@@ -36,6 +36,7 @@ class ScanRuntime:
             'scan_id': scan.id,
             'id': scan.id,
             'scan_type': scan.scan_type,
+            'target_network': getattr(scan, 'target_network', None),
             'source': getattr(scan, 'source', 'manual') or 'manual',
             'initiated_by': getattr(scan, 'initiated_by', 'api') or 'api',
             'correlation_id': getattr(scan, 'correlation_id', None),
@@ -70,9 +71,20 @@ class ScanRuntime:
     def get_scan(self, scan_id):
         return self.db.session.get(Scan, scan_id)
 
-    def create_scan(self, scan_type, source='manual', initiated_by='api', state='queued', message='Queued scan request', execution_mode='normal', correlation_id=None):
+    def create_scan(
+        self,
+        scan_type,
+        source='manual',
+        initiated_by='api',
+        state='queued',
+        message='Queued scan request',
+        execution_mode='normal',
+        correlation_id=None,
+        target_network=None,
+    ):
         scan = Scan(
             scan_type=scan_type,
+            target_network=target_network,
             status=state,
             status_message=message,
             execution_mode=execution_mode,

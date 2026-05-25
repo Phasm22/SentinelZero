@@ -144,6 +144,14 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
         if not scan:
             raise LookupError(f'Scan {scan_id} not found')
 
+        from ..services.scan_scope import normalize_cidr
+        from ..config.database import db as _db
+
+        net = normalize_cidr(target_network)
+        if net:
+            scan.target_network = net
+            _db.session.commit()
+
         try:
             def emit_stage(status, message):
                 try:
@@ -158,8 +166,11 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     print(f"Database error in emit_progress: {db_error}")
                     db.session.rollback()
 
-            emit_stage('running', f'Started scan: {scan_type}')
-            msg = f'Thread started for scan: {scan_type} (scheduled={threading.current_thread().name.startswith("APScheduler")})'
+            emit_stage('running', f'Started {scan_type} on {net or target_network}')
+            msg = (
+                f'Thread started for scan: {scan_type} target={net or target_network} '
+                f'(scheduled={threading.current_thread().name.startswith("APScheduler")})'
+            )
             runtime.append_log(scan_id, msg)
             print(msg)
             
@@ -187,7 +198,13 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 try:
                     emit_stage('running', 'Pre-discovery: enumerating live hosts...')
                     pre_xml = f'scans/pre_discovery_{now}.xml'
-                    pre_cmd = ['nmap', '-sn', '-PE', '-PP', '-PM', '-PR', '-n', '--max-retries', '1', '-T4', target_network, '-oX', pre_xml]
+                    pre_cmd = [
+                        'nmap', '-sn',
+                        '-PE', '-PP', '-PM', '-PR',
+                        '-PS22,80,443,8080', '-PA80,443',
+                        '-n', '--max-retries', '2', '-T4',
+                        target_network, '-oX', pre_xml,
+                    ]
                     runtime.append_log(scan_id, f'Pre-discovery command: {" ".join(pre_cmd)}')
                     pre_proc = subprocess.run(pre_cmd, capture_output=True, text=True)
                     if pre_proc.returncode == 0 and os.path.exists(pre_xml):
@@ -208,7 +225,35 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                         emit_stage('running', f'Pre-discovery found {len(discovered_hosts)} hosts – targeting only live hosts')
                         runtime.append_log(scan_id, f'Pre-discovery found {len(discovered_hosts)} live hosts')
                     else:
-                        emit_stage('running', 'Pre-discovery found no hosts (falling back to full range)')
+                        emit_stage('running', 'Pre-discovery (ICMP/ARP) found no hosts — retrying with -Pn')
+                        runtime.append_log(scan_id, 'Pre-discovery retry: -Pn -sn')
+                        pre_cmd_pn = [
+                            'nmap', '-sn', '-Pn',
+                            '-PE', '-PP', '-PS22,80,443,8080', '-PA80,443',
+                            '-n', '--max-retries', '2', '-T4',
+                            target_network, '-oX', pre_xml,
+                        ]
+                        pre_proc2 = subprocess.run(pre_cmd_pn, capture_output=True, text=True)
+                        if pre_proc2.returncode == 0 and os.path.exists(pre_xml):
+                            try:
+                                pre_tree = ET.parse(pre_xml)
+                                for host in pre_tree.getroot().findall('host'):
+                                    status = host.find('status')
+                                    if status is not None and status.attrib.get('state') == 'up':
+                                        addr = host.find('address[@addrtype="ipv4"]')
+                                        if addr is not None:
+                                            ip = addr.attrib.get('addr')
+                                            if ip:
+                                                discovered_hosts.append(ip)
+                            except Exception as _e2:
+                                print(f'[WARN] Pre-discovery -Pn parse failed: {_e2}')
+                        if discovered_hosts:
+                            emit_stage(
+                                'running',
+                                f'Pre-discovery (-Pn) found {len(discovered_hosts)} hosts',
+                            )
+                        else:
+                            emit_stage('running', 'Pre-discovery found no hosts (falling back to full range)')
                 except Exception as _e:
                     print(f'[WARN] Pre-discovery step failed: {_e}')
             # Build nmap command (user-facing prior to privilege adjustments)
@@ -218,11 +263,21 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             else:
                 cmd = ['nmap', '-v', '-T4', '-Pn']  # retain -Pn for other scan types to skip unreliable ping on some Wi-Fi setups
             if scan_type_normalized == 'full tcp':
-                # Use very conservative parameters to prevent firewall state table overflow
+                # Balanced deep scan: broader ports + service/OS without full -p- (T2-class) sweep
+                port_spec = (
+                    'T:1-2048,3306,3389,5000,5353,5432,8006,8080,8443,8581,9000,1194,51820'
+                )
                 if _priv_fallback:
-                    cmd += ['-sT', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
+                    cmd += [
+                        '-sT', '-p', port_spec, '--open',
+                        '-T3', '--max-retries', '2', '--host-timeout', '8m',
+                    ]
                 else:
-                    cmd += ['-sS', '--top-ports', '100', '--open', '--max-retries', '1', '--max-scan-delay', '500ms', '--min-rate', '50', '--max-rate', '200', '--scan-delay', '100ms']
+                    cmd += [
+                        '-sS', '-p', port_spec, '--open',
+                        '-T3', '--max-retries', '2', '--host-timeout', '8m',
+                        '--min-rate', '150', '--max-rate', '600',
+                    ]
             elif scan_type_normalized == 'iot scan':
                 if _priv_fallback:
                     # Fallback removes UDP requirement (switch to TCP connect scan)
@@ -255,6 +310,8 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 cmd.append('-O')
             if scan_type_normalized != 'discovery scan' and security_settings.get('service_detection_enabled'):
                 cmd.append('-sV')
+                if scan_type_normalized == 'full tcp':
+                    cmd.extend(['--version-intensity', '5'])
             if scan_type_normalized == 'vuln scripts':
                 # Only run vulnerability scripts for explicit vulnerability scans
                 cmd.append('--script=vuln')
@@ -530,6 +587,11 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                             service_name = service_el.attrib.get('name') if service_el is not None else None
                             product = service_el.attrib.get('product') if service_el is not None and service_el.attrib.get('product') else None
                             version = service_el.attrib.get('version') if service_el is not None and service_el.attrib.get('version') else None
+                            extrainfo = (
+                                service_el.attrib.get('extrainfo')
+                                if service_el is not None and service_el.attrib.get('extrainfo')
+                                else None
+                            )
                             try:
                                 p_int = int(portid)
                             except Exception:
@@ -539,17 +601,74 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                             from ..utils.port_mapping import get_service_name
                             final_service_name = get_service_name(p_int or int(portid) if portid.isdigit() else 0, service_name)
                             
-                            open_ports.append({
+                            port_entry = {
                                 'port': p_int or portid,
                                 'protocol': proto,
                                 'service': final_service_name,
                                 'product': product,
-                                'version': version
-                            })
+                                'version': version,
+                            }
+                            if extrainfo:
+                                port_entry['extrainfo'] = extrainfo
+                            open_ports.append(port_entry)
+
+                            for script_el in port_el.findall('script'):
+                                script_id = script_el.attrib.get('id', '')
+                                if 'vuln' not in script_id:
+                                    continue
+                                if script_id == 'vulners' and script_el.attrib.get('output'):
+                                    host_ip = host_obj.get('ip')
+                                    cpe = None
+                                    cpe_match = re.search(
+                                        r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
+                                    )
+                                    if cpe_match:
+                                        cpe = cpe_match.group(1)
+                                    vulns.extend(
+                                        parse_vulners_output(
+                                            host_ip, cpe, script_el.attrib['output'],
+                                        )
+                                    )
+                                else:
+                                    vulns.append({
+                                        'id': script_id,
+                                        'output': script_el.attrib.get('output', ''),
+                                        'host': host_obj.get('ip'),
+                                        'port': p_int or portid,
+                                        'protocol': proto,
+                                    })
                     if open_ports:
                         open_ports.sort(key=lambda x: (x.get('port') or 0, x.get('protocol') or ''))
                         total_open_ports += len(open_ports)
                         host_obj['ports'] = open_ports
+
+                    host_ip = host_obj.get('ip')
+                    if host_ip:
+                        for script_el in host.findall('.//script'):
+                            script_id = script_el.attrib.get('id', '')
+                            if 'vuln' not in script_id:
+                                continue
+                            if script_id == 'vulners' and script_el.attrib.get('output'):
+                                cpe = None
+                                cpe_match = re.search(
+                                    r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
+                                )
+                                if cpe_match:
+                                    cpe = cpe_match.group(1)
+                                vulns.extend(
+                                    parse_vulners_output(
+                                        host_ip, cpe, script_el.attrib['output'],
+                                    )
+                                )
+                            elif script_id not in {v.get('id') for v in vulns if v.get('host') == host_ip}:
+                                vulns.append({
+                                    'id': script_id,
+                                    'output': script_el.attrib.get('output', ''),
+                                    'host': host_ip,
+                                    'port': None,
+                                    'protocol': None,
+                                })
+
                     hosts.append(host_obj)
                 # Update aggregate port counts on scan
                 try:
@@ -622,11 +741,11 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     try:
                         from . import agent_service
                         threading.Thread(
-                            target=agent_service.run_verdicts_for_scan,
+                            target=agent_service.run_ai_pipeline,
                             args=(scan_id, app, socketio),
                             daemon=True,
                         ).start()
-                        print(f'Spawned verdict agent thread for scan {scan_id}')
+                        print(f'Spawned AI pipeline thread for scan {scan_id}')
                     except Exception as _agent_err:
                         print(f'Failed to spawn verdict agent: {_agent_err}')
                 except Exception as e:

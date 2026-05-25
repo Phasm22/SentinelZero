@@ -1,32 +1,17 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { X } from 'lucide-react'
+import useModalEscape from '../hooks/useModalEscape'
 
-const Modal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
   size = 'md',
   showCloseButton = true,
-  closeOnOverlayClick = true 
+  closeOnOverlayClick = true,
 }) => {
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
+  useModalEscape(isOpen, onClose)
 
   if (!isOpen) return null
 
@@ -35,38 +20,49 @@ const Modal = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    full: 'max-w-full mx-4'
+    full: 'max-w-full mx-4',
   }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="modal-container">
-      {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
         onClick={closeOnOverlayClick ? onClose : undefined}
         data-testid="modal-backdrop"
+        aria-hidden="true"
       />
-      
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4" data-testid="modal-wrapper">
-        <div className={`relative w-full ${sizes[size]} transform rounded-lg bg-gray-800 border border-gray-700 shadow-2xl transition-all`} data-testid="modal-content">
-          {/* Header */}
+
+      <div
+        className="flex min-h-full items-center justify-center p-4"
+        data-testid="modal-wrapper"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
+      >
+        <div
+          className={`relative w-full ${sizes[size]} transform rounded-lg bg-gray-800 border border-gray-700 shadow-2xl transition-all`}
+          data-testid="modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
           {title && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700" data-testid="modal-header">
-              <h3 className="text-lg font-semibold text-gray-100" data-testid="modal-title">{title}</h3>
+              <h3 id="modal-title" className="text-lg font-semibold text-gray-100" data-testid="modal-title">
+                {title}
+              </h3>
               {showCloseButton && (
                 <button
+                  type="button"
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-300 transition-colors"
                   data-testid="modal-close-btn"
+                  aria-label="Close"
                 >
                   <X className="h-5 w-5" />
                 </button>
               )}
             </div>
           )}
-          
-          {/* Content */}
+
           <div className="px-6 py-4" data-testid="modal-body">
             {children}
           </div>
@@ -76,4 +72,4 @@ const Modal = ({
   )
 }
 
-export default Modal 
+export default Modal

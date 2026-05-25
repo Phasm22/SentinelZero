@@ -9,6 +9,7 @@ class Scan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
     scan_type = db.Column(db.String(32))
+    target_network = db.Column(db.String(64), nullable=True)  # CIDR scanned, e.g. 172.16.0.0/22
     hosts_json = db.Column(db.Text)
     diff_from_previous = db.Column(db.Text)
     vulns_json = db.Column(db.Text)
@@ -26,6 +27,7 @@ class Scan(db.Model):
     total_ports = db.Column(db.Integer, default=0)
     open_ports = db.Column(db.Integer, default=0)
     insights_json = db.Column(db.Text)
+    host_context_json = db.Column(db.Text)  # per-scan host IDs: DHCP, ARP, registry, nmap, user labels
     analysis_json = db.Column(db.Text)  # insights + verdict agent run history
     process_id = db.Column(db.Integer, nullable=True)
     
@@ -36,6 +38,7 @@ class Scan(db.Model):
             'created_at': self.created_at,
             'completed_at': self.completed_at,
             'scan_type': self.scan_type,
+            'target_network': getattr(self, 'target_network', None),
             'hosts_json': self.hosts_json,
             'diff_from_previous': self.diff_from_previous,
             'vulns_json': self.vulns_json,
@@ -54,5 +57,6 @@ class Scan(db.Model):
             'total_ports': self.total_ports,
             'open_ports': self.open_ports,
             'insights_json': self.insights_json,
+            'host_context_json': getattr(self, 'host_context_json', None),
             'analysis_json': self.analysis_json,
         }

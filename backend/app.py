@@ -87,6 +87,8 @@ def _ensure_database_schema(app, db):
             'initiated_by': "VARCHAR(64) DEFAULT 'api'",
             'correlation_id': "VARCHAR(64)",
             'analysis_json': 'TEXT',
+            'target_network': 'VARCHAR(64)',
+            'host_context_json': 'TEXT',
         }
 
         table_name = Scan.__table__.name
@@ -100,6 +102,24 @@ def _ensure_database_schema(app, db):
                     connection.exec_driver_sql(
                         f'ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}'
                     )
+
+        from src.services.scan_scope import infer_target_network_from_hosts
+        import json as _json
+
+        scans_missing = Scan.query.filter(
+            Scan.target_network.is_(None),
+            Scan.hosts_json.isnot(None),
+        ).all()
+        for scan in scans_missing:
+            try:
+                hosts = _json.loads(scan.hosts_json) if scan.hosts_json else []
+            except (_json.JSONDecodeError, TypeError):
+                continue
+            inferred = infer_target_network_from_hosts(hosts)
+            if inferred:
+                scan.target_network = inferred
+        if scans_missing:
+            db.session.commit()
 
 def create_app(test_config=None):
     """Application factory pattern."""

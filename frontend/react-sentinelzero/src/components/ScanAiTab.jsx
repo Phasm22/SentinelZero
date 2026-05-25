@@ -56,7 +56,13 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
 
   const ig = analysis.insights_generation || {}
   const va = analysis.verdict_agent || {}
-  const actionable = insights.filter(i => i.verdict === 'escalate' || i.verdict === 'explain' || !i.verdict)
+  const syn = analysis.synthesis_agent || {}
+  const sa = analysis.scan_analyst || {}
+  const actionable = insights.filter(i => {
+    if (i.verdict === 'dismiss') return false
+    if (i.type === 'correlated' && i.verdict !== 'escalate') return false
+    return i.verdict === 'escalate' || i.verdict === 'explain' || !i.verdict
+  })
 
   return (
     <div className="space-y-6" data-testid="scan-ai-tab">
@@ -64,6 +70,41 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
         <Bot className="w-5 h-5" />
         <h3 className="text-lg font-semibold text-gray-100">AI Analysis</h3>
       </div>
+
+      {sa.status && sa.status !== 'not_run' && (
+        <div className="rounded-lg border border-indigo-500/40 bg-indigo-900/15 p-4">
+          <h4 className="text-sm font-medium text-indigo-200 mb-2 flex items-center gap-2">
+            {statusIcon(sa.status)}
+            Scan analyst narrative
+            {sa.source && <span className="text-xs text-gray-500 font-normal">({sa.source})</span>}
+          </h4>
+          {sa.summary && (
+            <p className="text-sm text-gray-100 font-medium mb-2">{sa.summary}</p>
+          )}
+          {sa.verdict && (
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${VERDICT_STYLES[sa.verdict] || ''}`}>
+              {sa.verdict}
+            </span>
+          )}
+          {sa.reasoning && (
+            <p className="text-sm text-gray-300 mt-3 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+              {sa.reasoning}
+            </p>
+          )}
+          {sa.findings?.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-gray-400">
+              {sa.findings.slice(0, 8).map((f, idx) => (
+                <li key={idx}>
+                  <span className="text-gray-500">{f.verdict}:</span> {f.finding}
+                </li>
+              ))}
+            </ul>
+          )}
+          {sa.skipped_reason && (
+            <p className="text-xs text-yellow-300 mt-2">{sa.skipped_reason}</p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-violet-500/30 bg-violet-900/10 p-4">
@@ -104,6 +145,25 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
             )}
             {va.error && (
               <div className="mt-2 text-red-300 text-xs">{va.error}</div>
+            )}
+          </dl>
+        </div>
+
+        <div className="rounded-lg border border-violet-500/30 bg-violet-900/10 p-4">
+          <h4 className="text-sm font-medium text-violet-200 mb-2 flex items-center gap-2">
+            {statusIcon(syn.status || 'not_run')}
+            Synthesis agent
+          </h4>
+          <dl className="text-sm space-y-1 text-gray-300">
+            <div className="flex justify-between"><dt>Status</dt><dd className="capitalize">{syn.status || 'not_run'}</dd></div>
+            {syn.stories_added != null && (
+              <div className="flex justify-between"><dt>Stories added</dt><dd>{syn.stories_added}</dd></div>
+            )}
+            {syn.duration_ms != null && (
+              <div className="flex justify-between"><dt>Duration</dt><dd>{(syn.duration_ms / 1000).toFixed(1)}s</dd></div>
+            )}
+            {syn.skipped_reason && (
+              <div className="mt-2 text-yellow-300 text-xs">{syn.skipped_reason}</div>
             )}
           </dl>
         </div>

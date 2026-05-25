@@ -13,6 +13,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
   const sortableFields = {
     timestamp: { label: 'TIMESTAMP', type: 'date' },
     scan_type: { label: 'TYPE', type: 'string' },
+    network_label: { label: 'NETWORK', type: 'string' },
     hosts_count: { label: 'HOSTS', type: 'number' },
     vulns_count: { label: 'VULNS', type: 'number' },
     insights_count: { label: 'AI', type: 'number' },
@@ -33,6 +34,8 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
       // Search filter
       const matchesSearch = searchTerm === '' || 
         scan.scan_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (scan.network_label || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (scan.target_network || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         scan.id.toString().includes(searchTerm) ||
         (scan.status && scan.status.toLowerCase().includes(searchTerm.toLowerCase()))
       
@@ -162,6 +165,19 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
                       {scan.scan_type}
                     </span>
                   </td>
+                  <td>
+                    <span
+                      className="text-xs font-mono text-gray-300"
+                      title={scan.target_network || ''}
+                    >
+                      {scan.network_label || '—'}
+                      {scan.target_network && (
+                        <span className="block text-[10px] text-gray-500 truncate max-w-[120px]">
+                          {scan.target_network}
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   <td>{scan.hosts_count || 0}</td>
                   <td>{scan.vulns_count || 0}</td>
                   <td><ScanInsightBadge scan={scan} /></td>
@@ -218,6 +234,11 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
                   {scan.scan_type}
                 </span>
               </div>
+              {scan.target_network && (
+                <span className="text-xs font-mono text-gray-400" title={scan.target_network}>
+                  {scan.network_label} · {scan.target_network}
+                </span>
+              )}
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                 scan.status === 'complete' 
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'

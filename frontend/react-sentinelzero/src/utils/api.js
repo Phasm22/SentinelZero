@@ -191,4 +191,14 @@ export const apiService = {
     const response = await axios.get(`${API_BASE_URL}/sync-status`)
     return response.data
   },
+
+  getScanHostContext: async (scanId) => {
+    const response = await axios.get(`${API_BASE_URL}/scans/${scanId}/host-context`)
+    return response.data
+  },
+
+  patchScanHostLabels: async (scanId, labels) => {
+    const response = await axios.patch(`${API_BASE_URL}/scans/${scanId}/host-context/labels`, { labels })
+    return response.data
+  },
 } 

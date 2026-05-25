@@ -107,6 +107,8 @@ def create_api_blueprint(db):
             scans_data = []
             
             for scan in scans:
+                from ..services.scan_scope import scan_scope_dict
+
                 scan_dict = {
                     'id': scan.id,
                     'scan_type': scan.scan_type,
@@ -126,7 +128,8 @@ def create_api_blueprint(db):
                     'open_ports': scan.open_ports,
                 }
                 scan_dict.update(scan_analysis.public_summary(scan))
-                
+                scan_dict.update(scan_scope_dict(scan))
+
                 # Convert timestamp to Denver timezone
                 if scan_dict['timestamp']:
                     scan_dict['timestamp'] = scan_dict['timestamp'].astimezone(denver)
@@ -290,6 +293,8 @@ def create_api_blueprint(db):
                 return jsonify({'error': 'Scan not found'}), 404
             
             # Convert scan to dictionary
+            from ..services.scan_scope import scan_scope_dict
+
             analysis = scan_analysis.load_analysis(scan)
             scan_data = {
                 'id': scan.id,
@@ -314,12 +319,18 @@ def create_api_blueprint(db):
                 'analysis': analysis,
             }
             scan_data.update(scan_analysis.public_summary(scan))
-            
+            scan_data.update(scan_scope_dict(scan))
+
+            from ..services.host_context import load_host_context
+            hc = load_host_context(scan)
+            if hc:
+                scan_data['host_context'] = hc
+
             # Convert timestamp to ISO string in Denver timezone for frontend parsing
             if scan_data['timestamp']:
                 denver = pytz.timezone('America/Denver')
                 scan_data['timestamp'] = scan_data['timestamp'].astimezone(denver).isoformat()
-            
+
             # Add hosts and vulns count
             try:
                 hosts = json.loads(scan.hosts_json) if scan.hosts_json else []

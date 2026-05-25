@@ -141,7 +141,7 @@ def test_new_port_enrichment_endpoint_and_asset(app, monkeypatch):
     with app.app_context():
         monkeypatch.setattr(
             'src.services.insights.asset_registry.get_asset_context',
-            lambda ip: {
+            lambda ip, **kwargs: {
                 'name': 'proxBig.prox',
                 'role': 'proxmox-hypervisor',
                 'trust_zone': 'infrastructure',
@@ -150,7 +150,7 @@ def test_new_port_enrichment_endpoint_and_asset(app, monkeypatch):
         )
         monkeypatch.setattr(
             'src.services.insights.asset_registry.is_expected_port',
-            lambda ip, port: port in [22, 8006],
+            lambda ip, port, **kwargs: port in [22, 8006],
         )
 
         agent = SensorAgent(
@@ -206,3 +206,85 @@ def test_new_port_enrichment_endpoint_and_asset(app, monkeypatch):
         assert new_port['details']['asset_context']['role'] == 'proxmox-hypervisor'
         assert new_port['details']['sensor_context']['endpoint']['process_name'] == 'proxmox-backup-proxy'
         assert 'proxmox-backup-proxy' in new_port['message']
+
+
+def test_service_change_on_stable_port(app):
+    with app.app_context():
+        previous = _scan(
+            hosts=[{'ip': '10.0.0.5', 'ports': [{'port': 443, 'service': 'https', 'version': '1.0'}]}],
+            created_at=datetime.utcnow() - timedelta(hours=2),
+        )
+        current = _scan(
+            hosts=[{'ip': '10.0.0.5', 'ports': [{'port': 443, 'service': 'https', 'version': '2.0'}]}],
+            created_at=datetime.utcnow(),
+        )
+        db.session.add_all([previous, current])
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(current)
+        changes = [i for i in insights if i['type'] == 'service_change']
+        assert len(changes) == 1
+        assert changes[0]['details']['port'] == 443
+        assert changes[0]['details']['previous']['version'] == '1.0'
+        assert changes[0]['details']['current']['version'] == '2.0'
+
+
+def test_vuln_resolved_insight(app):
+    with app.app_context():
+        previous = _scan(
+            vulns=[{'id': 'CVE-OLD', 'host': '10.0.0.2', 'output': 'high severity'}],
+            created_at=datetime.utcnow() - timedelta(hours=2),
+        )
+        current = _scan(
+            vulns=[],
+            created_at=datetime.utcnow(),
+        )
+        db.session.add_all([previous, current])
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(current)
+        resolved = [i for i in insights if i['type'] == 'vuln_resolved']
+        assert len(resolved) == 1
+        assert resolved[0]['details']['vuln_id'] == 'CVE-OLD'
+
+
+def test_baseline_inventory_not_new_host_rollup(app, monkeypatch):
+    with app.app_context():
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.is_in_registry',
+            lambda ip: ip == '10.0.0.1',
+        )
+        scan = _scan(
+            hosts=[
+                {'ip': '10.0.0.1', 'ports': [{'port': 22}]},
+                {'ip': '10.0.0.99', 'ports': [{'port': 80}]},
+            ],
+        )
+        db.session.add(scan)
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(scan)
+        assert any(i['type'] == 'baseline_inventory' for i in insights)
+        assert any(i['type'] == 'registry_gap' for i in insights)
+        assert not any(
+            i['type'] == 'new_host' and 'hosts' in (i.get('host') or '')
+            for i in insights
+        )
+
+
+def test_home_baseline_skips_lab_registry_gap(app):
+    with app.app_context():
+        scan = _scan(
+            scan_type='Full TCP',
+            hosts=[
+                {'ip': '192.168.68.1', 'ports': [{'port': 80}]},
+                {'ip': '192.168.68.25', 'ports': [{'port': 443}]},
+            ],
+        )
+        scan.target_network = '192.168.68.0/22'
+        db.session.add(scan)
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(scan)
+        assert any(i['type'] == 'baseline_inventory' for i in insights)
+        assert not any(i['type'] == 'registry_gap' for i in insights)

@@ -42,3 +42,27 @@ def test_record_verdict_agent_persists_raw_response(app):
         loaded = scan_analysis.load_analysis(db.session.get(Scan, scan.id))
         assert loaded['verdict_agent']['status'] == 'success'
         assert loaded['verdict_agent']['raw_response']['verdicts'][0]['verdict'] == 'explain'
+
+
+def test_verdict_status_note_when_agent_skipped(app):
+    with app.app_context():
+        scan = Scan(
+            scan_type='Full TCP',
+            status='complete',
+            hosts_json='[]',
+            analysis_json=json.dumps({
+                'verdict_agent': {
+                    'status': 'skipped',
+                    'skipped_reason': 'OPENAI_API_KEY not set',
+                },
+            }),
+        )
+        db.session.add(scan)
+        db.session.commit()
+
+        note = scan_analysis.verdict_status_for_insight(
+            {'type': 'new_host', 'verdict': None},
+            scan,
+        )
+        assert note['verdict_agent_status'] == 'skipped'
+        assert 'OPENAI_API_KEY' in note['verdict_status_note']

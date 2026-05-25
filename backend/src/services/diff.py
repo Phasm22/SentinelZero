@@ -6,15 +6,11 @@ from __future__ import annotations
 import json
 from typing import Dict, Any, List, Optional
 from ..models.scan import Scan
+from .scan_scope import effective_target_network, find_previous_scan
 
 
 def _get_previous_scan(current: Scan) -> Optional[Scan]:
-    return (Scan.query
-            .filter(Scan.scan_type == current.scan_type,
-                    Scan.id != current.id,
-                    Scan.status == 'complete')
-            .order_by(Scan.created_at.desc())
-            .first())
+    return find_previous_scan(current)
 
 
 def _index_hosts(hosts: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -41,13 +37,16 @@ def _get_vuln_id(v: Dict[str, Any]) -> str:
     return v.get('id') or v.get('vuln_id') or v.get('plugin_id') or v.get('cve') or v.get('name') or ''
 
 
-def compute_scan_diff(scan_id: int) -> Dict[str, Any]:
+def compute_scan_diff(scan_id: int, *, require_complete: bool = True) -> Dict[str, Any]:
     """Compute a structured diff for the given scan id.
 
     Returns a dict with baseline flag when no previous scan exists.
+    Set require_complete=False when diff runs during postprocessing before status=complete.
     """
     scan = Scan.query.get(scan_id)
-    if not scan or scan.status != 'complete':
+    if not scan:
+        return {'error': 'Scan not found'}
+    if require_complete and scan.status != 'complete':
         return {'error': 'Scan not found or not complete'}
 
     try:
@@ -57,10 +56,13 @@ def compute_scan_diff(scan_id: int) -> Dict[str, Any]:
         current_hosts, current_vulns = [], []
 
     previous = _get_previous_scan(scan)
+    current_net = effective_target_network(scan)
+
     if not previous:
         return {
             'scan_id': scan.id,
             'previous_scan_id': None,
+            'target_network': current_net,
             'baseline': True,
             'summary': {
                 'new_hosts': len(current_hosts),
@@ -135,6 +137,8 @@ def compute_scan_diff(scan_id: int) -> Dict[str, Any]:
     diff = {
         'scan_id': scan.id,
         'previous_scan_id': previous.id,
+        'target_network': current_net,
+        'previous_target_network': effective_target_network(previous),
         'baseline': False,
         'summary': {
             'new_hosts': len(new_ips),

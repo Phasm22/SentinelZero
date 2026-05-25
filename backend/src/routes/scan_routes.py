@@ -96,11 +96,12 @@ def create_scan_blueprint(db, socketio):
         app = current_app._get_current_object()  # Get the actual app instance
         scan = runtime.create_scan(
             scan_type=scan_type,
+            target_network=target_network,
             source='manual',
             initiated_by='api',
             correlation_id=get_request_id(),
             state='queued',
-            message=f'Queued scan: {scan_type}',
+            message=f'Queued {scan_type} on {target_network}',
         )
         runtime.emit_scan_event('scan.started', scan)
         runtime.emit_snapshot(scan)
@@ -116,7 +117,8 @@ def create_scan_blueprint(db, socketio):
             'status': 'success',
             'scan_id': scan.id,
             'state': scan.status,
-            'message': f'{scan_type} scan started',
+            'message': f'{scan_type} scan started on {target_network}',
+            'target_network': target_network,
         })
 
     @bp.route('/kill-all-scans', methods=['POST'])
@@ -312,8 +314,10 @@ def create_scan_blueprint(db, socketio):
                 scan_data['vulns_count'] = 0
             
             from ..services import scan_analysis
+            from ..services.scan_scope import scan_scope_dict
             scan_data['analysis'] = scan_analysis.load_analysis(scan)
             scan_data.update(scan_analysis.public_summary(scan))
+            scan_data.update(scan_scope_dict(scan))
 
             return jsonify(scan_data)
         except Exception as e:

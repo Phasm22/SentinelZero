@@ -206,6 +206,8 @@ def parse_nmap_xml(xml_content, scan_id):
                                 detected_service = service.attrib.get('name')
                                 port_obj['product'] = service.attrib.get('product') if 'product' in service.attrib else None
                                 port_obj['version'] = service.attrib.get('version') if 'version' in service.attrib else None
+                                if service.attrib.get('extrainfo'):
+                                    port_obj['extrainfo'] = service.attrib.get('extrainfo')
                                 
                                 # Use common port mapping for better service identification
                                 from ..utils.port_mapping import get_service_name

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import useModalEscape from '../hooks/useModalEscape'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import { Menu, X } from 'lucide-react'
 import Sidebar from './Sidebar'
@@ -41,6 +42,8 @@ const ThemeControls = () => {
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+
+  useModalEscape(sidebarOpen, () => setSidebarOpen(false), { lockScroll: true })
 
   return (
     <div className="min-h-screen w-full" data-testid="layout-container">

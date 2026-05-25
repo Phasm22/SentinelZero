@@ -9,6 +9,12 @@ from ..models.scan import Scan
 from ..config.database import db
 from ..services import sensor_service
 from ..services import asset_registry
+from ..services.scan_scope import (
+    effective_target_network,
+    find_previous_scan,
+    network_short_label,
+    normalize_cidr,
+)
 
 
 class InsightsGenerator:
@@ -16,20 +22,25 @@ class InsightsGenerator:
     
     PRIORITY_WEIGHTS = {
         'new_vuln_critical': 100,
+        'correlated': 95,
         'new_vuln_high': 90,
         'missing_host': 80,
+        'registry_gap': 75,
         'new_vuln_medium': 70,
         'new_host': 60,
+        'sensor_gap': 55,
         'new_port': 50,
         'service_change': 40,
+        'vuln_resolved': 35,
         'new_vuln_low': 30,
         'port_closed': 20,
-        'scan_performance': 10
+        'baseline_inventory': 15,
+        'scan_performance': 10,
     }
-    
+
     INSIGHT_MESSAGES = {
         'new_vuln_critical': "🚨 Critical vulnerability discovered",
-        'new_vuln_high': "⚠️ High severity vulnerability found", 
+        'new_vuln_high': "⚠️ High severity vulnerability found",
         'new_vuln_medium': "⚠️ Medium severity vulnerability detected",
         'new_vuln_low': "ℹ️ Low severity vulnerability identified",
         'new_host': "🔍 New host discovered on network",
@@ -37,7 +48,12 @@ class InsightsGenerator:
         'new_port': "🔓 New open port detected",
         'port_closed': "🔒 Previously open port is now closed",
         'service_change': "🔄 Service version or type changed",
-        'scan_performance': "📊 Scan duration changed significantly"
+        'vuln_resolved': "✅ Vulnerability resolved since last scan",
+        'registry_gap': "📋 Hosts not in asset registry",
+        'sensor_gap': "📡 Hosts without endpoint sensor coverage",
+        'baseline_inventory': "📊 First-scan network inventory",
+        'correlated': "🔗 Correlated finding cluster",
+        'scan_performance': "📊 Scan duration changed significantly",
     }
     
     def __init__(self):
@@ -53,9 +69,12 @@ class InsightsGenerator:
         Returns:
             List of insight dictionaries
         """
+        self._target_network = effective_target_network(current_scan)
+        self._network_label = network_short_label(self._target_network)
+        self._scan_id = current_scan.id
         insights = []
         
-        # Find previous scan of same type
+        # Find previous scan of same type on the same target network (CIDR)
         previous_scan = self._get_previous_scan(current_scan)
         if not previous_scan:
             # First scan of this type - generate baseline insights
@@ -64,52 +83,111 @@ class InsightsGenerator:
             # Compare with previous scan
             insights = self._compare_scans(current_scan, previous_scan)
         
-        # Sort by priority and add timestamps
-        insights = self._finalize_insights(insights, current_scan.id)
+        # Sort by priority and add timestamps + network scope
+        insights = self._finalize_insights(insights, current_scan)
         
         return insights
     
     def _get_previous_scan(self, current_scan: Scan) -> Optional[Scan]:
-        """Find the most recent completed scan of the same type"""
-        return Scan.query.filter(
-            Scan.scan_type == current_scan.scan_type,
-            Scan.id != current_scan.id,
-            Scan.status == 'complete'
-        ).order_by(Scan.created_at.desc()).first()
+        """Find the most recent completed scan of the same type and target network."""
+        return find_previous_scan(current_scan)
     
     def _generate_baseline_insights(self, scan: Scan) -> List[Dict[str, Any]]:
-        """Generate insights for the first scan of this type"""
+        """First scan of this type: inventory + actionable backlog (registry/sensor/vulns)."""
         insights = []
-        
+
         try:
             hosts = json.loads(scan.hosts_json) if scan.hosts_json else []
             vulns = json.loads(scan.vulns_json) if scan.vulns_json else []
-            
-            # Baseline: New network discovery
+            ips = [h.get('ip') for h in hosts if h.get('ip')]
+
+            net = effective_target_network(scan) or 'unknown network'
+            net_label = network_short_label(net)
             if hosts:
                 insights.append({
-                    'type': 'new_host',
-                    'host': f"{len(hosts)} hosts",
-                    'message': f"Network baseline established: {len(hosts)} active hosts discovered",
-                    'priority': self.PRIORITY_WEIGHTS.get('new_host', 50),
-                    'details': {'host_count': len(hosts)}
+                    'type': 'baseline_inventory',
+                    'host': net,
+                    'message': (
+                        f"First {scan.scan_type} on {net_label} ({net}): "
+                        f"{len(hosts)} active hosts recorded"
+                    ),
+                    'priority': self.PRIORITY_WEIGHTS['baseline_inventory'],
+                    'details': {
+                        'host_count': len(hosts),
+                        'is_baseline': True,
+                        'scan_type': scan.scan_type,
+                        'target_network': net,
+                        'network_label': net_label,
+                    },
                 })
-            
-            # Baseline: Vulnerability summary
-            if vulns:
-                critical_vulns = [v for v in vulns if self._get_vuln_severity(v) == 'critical']
-                if critical_vulns:
-                    insights.append({
-                        'type': 'new_vuln_critical',
-                        'host': f"{len(critical_vulns)} hosts",
-                        'message': f"Security baseline: {len(critical_vulns)} critical vulnerabilities found",
-                        'priority': self.PRIORITY_WEIGHTS.get('new_vuln_critical', 100),
-                        'details': {'vuln_count': len(critical_vulns)}
-                    })
-            
+
+            unregistered = asset_registry.hosts_for_registry_gap(ips, net)
+            if unregistered:
+                preview = ', '.join(unregistered[:8])
+                if len(unregistered) > 8:
+                    preview += f", +{len(unregistered) - 8} more"
+                insights.append({
+                    'type': 'registry_gap',
+                    'host': f"{len(unregistered)} hosts",
+                    'message': (
+                        f"Register {len(unregistered)} lab hosts in asset registry: {preview}"
+                    ),
+                    'priority': self.PRIORITY_WEIGHTS['registry_gap'],
+                    'details': {
+                        'ips': unregistered,
+                        'is_baseline': True,
+                        'target_network': net,
+                        'network_label': net_label,
+                        'scope': 'lab_registry',
+                    },
+                })
+
+            no_sensor = asset_registry.hosts_for_sensor_gap(ips, net)
+            if no_sensor:
+                preview = ', '.join(no_sensor[:8])
+                if len(no_sensor) > 8:
+                    preview += f", +{len(no_sensor) - 8} more"
+                if net_label == 'Home':
+                    msg = (
+                        f"{len(no_sensor)} registered home host(s) lack endpoint sensor: {preview}"
+                    )
+                else:
+                    msg = f"Deploy endpoint sensor on {len(no_sensor)} hosts: {preview}"
+                insights.append({
+                    'type': 'sensor_gap',
+                    'host': f"{len(no_sensor)} hosts",
+                    'message': msg,
+                    'priority': self.PRIORITY_WEIGHTS['sensor_gap'],
+                    'details': {
+                        'ips': no_sensor,
+                        'is_baseline': True,
+                        'target_network': net,
+                        'network_label': net_label,
+                    },
+                })
+
+            for vuln in vulns:
+                severity = self._get_vuln_severity(vuln)
+                if severity not in ('critical', 'high'):
+                    continue
+                vuln_id = self._get_vuln_id(vuln)
+                host_ip = vuln.get('host', 'unknown')
+                insights.append({
+                    'type': f'new_vuln_{severity}',
+                    'host': host_ip,
+                    'message': f"Baseline {severity} vulnerability: {vuln_id} on {host_ip}",
+                    'priority': self.PRIORITY_WEIGHTS.get(f'new_vuln_{severity}', 50),
+                    'details': {
+                        'vuln_id': vuln_id,
+                        'severity': severity,
+                        'ip': host_ip,
+                        'is_baseline': True,
+                    },
+                })
+
         except (json.JSONDecodeError, TypeError) as e:
             print(f"Error parsing scan data for baseline insights: {e}")
-        
+
         return insights
     
     def _compare_scans(self, current: Scan, previous: Scan) -> List[Dict[str, Any]]:
@@ -211,21 +289,99 @@ class InsightsGenerator:
                 'priority': self.PRIORITY_WEIGHTS.get('port_closed', 20),
                 'details': {'port': port, 'ip': host_ip}
             })
-        
+
+        # Service fingerprint changes on ports that stayed open
+        stable_ports = current_ports & previous_ports
+        for port in stable_ports:
+            curr_info = next(
+                (p for p in current_host.get('ports', []) if p.get('port') == port), {}
+            )
+            prev_info = next(
+                (p for p in previous_host.get('ports', []) if p.get('port') == port), {}
+            )
+            if not self._port_service_changed(prev_info, curr_info):
+                continue
+            insight = {
+                'type': 'service_change',
+                'host': host_ip,
+                'message': self._service_change_message(host_ip, port, prev_info, curr_info),
+                'priority': self.PRIORITY_WEIGHTS['service_change'],
+                'details': {
+                    'ip': host_ip,
+                    'port': port,
+                    'previous': self._port_signature(prev_info),
+                    'current': self._port_signature(curr_info),
+                },
+            }
+            insight = self._attach_asset_context(insight, host_ip)
+            insights.append(insight)
+
         return insights
+
+    @staticmethod
+    def _port_signature(port_info: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'service': port_info.get('service') or '',
+            'product': port_info.get('product') or '',
+            'version': port_info.get('version') or '',
+        }
+
+    def _port_service_changed(self, prev_info: Dict, curr_info: Dict) -> bool:
+        return self._port_signature(prev_info) != self._port_signature(curr_info)
+
+    def _service_change_message(
+        self, host_ip: str, port: int, prev_info: Dict, curr_info: Dict
+    ) -> str:
+        prev = self._port_signature(prev_info)
+        curr = self._port_signature(curr_info)
+        prev_label = prev['service'] or 'unknown'
+        curr_label = curr['service'] or 'unknown'
+        if prev['version'] or curr['version']:
+            return (
+                f"Service on {host_ip}:{port} changed: "
+                f"{prev_label} {prev['version']} → {curr_label} {curr['version']}".strip()
+            )
+        if prev['product'] or curr['product']:
+            return (
+                f"Service on {host_ip}:{port} changed: "
+                f"{prev_label}/{prev['product']} → {curr_label}/{curr['product']}"
+            )
+        return f"Service on {host_ip}:{port} changed: {prev_label} → {curr_label}"
     
     def _attach_asset_context(self, insight: Dict[str, Any], host_ip: str) -> Dict[str, Any]:
         """Add asset registry role/trust/expected ports for host-scoped insights."""
         try:
-            asset = asset_registry.get_asset_context(host_ip)
-            insight.setdefault('details', {})['asset_context'] = asset
-            name = asset.get('name') or host_ip
+            net = getattr(self, '_target_network', None)
+            asset = asset_registry.get_asset_context(host_ip, network_cidr=net)
+            details = insight.setdefault('details', {})
+            details['asset_context'] = asset
+            from ..models.scan import Scan
+            from .host_context import get_host_entry
+
+            scan_id = insight.get('scan_id') or getattr(self, '_scan_id', None)
+            if scan_id:
+                scan_row = Scan.query.get(scan_id)
+                if scan_row:
+                    hc = get_host_entry(scan_row, host_ip)
+                    if hc:
+                        details['host_context'] = {
+                            'display_name': hc.get('display_name'),
+                            'summary_line': hc.get('summary_line'),
+                            'dhcp': hc.get('dhcp'),
+                            'arp': hc.get('arp'),
+                            'manufacturer': hc.get('manufacturer'),
+                            'user_label': hc.get('user_label'),
+                        }
+            hc = details.get('host_context') or {}
+            name = hc.get('display_name') or asset.get('name') or host_ip
             role = asset.get('role', 'unknown')
             if insight['type'] == 'new_host':
                 insight['message'] = f"New host discovered: {name} ({role}) — {host_ip}"
             port = insight.get('details', {}).get('port')
             if port is not None:
-                expected = asset_registry.is_expected_port(host_ip, int(port))
+                expected = asset_registry.is_expected_port(
+                    host_ip, int(port), network_cidr=net,
+                )
                 if expected is False:
                     insight['details']['unexpected_port'] = True
         except Exception as e:
@@ -343,15 +499,30 @@ class InsightsGenerator:
             if vuln:
                 severity = self._get_vuln_severity(vuln)
                 host_ip = vuln.get('host', 'unknown')
-                
+
                 insights.append({
                     'type': f'new_vuln_{severity}',
                     'host': host_ip,
                     'message': f"New {severity} vulnerability: {vuln_id} on {host_ip}",
                     'priority': self.PRIORITY_WEIGHTS.get(f'new_vuln_{severity}', 50),
-                    'details': {'vuln_id': vuln_id, 'severity': severity, 'ip': host_ip}
+                    'details': {'vuln_id': vuln_id, 'severity': severity, 'ip': host_ip},
                 })
-        
+
+        resolved_vuln_ids = previous_vuln_ids - current_vuln_ids
+        for vuln_id in resolved_vuln_ids:
+            vuln = next((v for v in previous_vulns if self._get_vuln_id(v) == vuln_id), None)
+            if not vuln:
+                continue
+            severity = self._get_vuln_severity(vuln)
+            host_ip = vuln.get('host', 'unknown')
+            insights.append({
+                'type': 'vuln_resolved',
+                'host': host_ip,
+                'message': f"Resolved {severity} vulnerability: {vuln_id} on {host_ip}",
+                'priority': self.PRIORITY_WEIGHTS['vuln_resolved'],
+                'details': {'vuln_id': vuln_id, 'severity': severity, 'ip': host_ip},
+            })
+
         return insights
     
     def _compare_performance(self, current: Scan, previous: Scan) -> List[Dict[str, Any]]:
@@ -397,16 +568,21 @@ class InsightsGenerator:
         else:
             return 'low'
     
-    def _finalize_insights(self, insights: List[Dict[str, Any]], scan_id: int) -> List[Dict[str, Any]]:
+    def _finalize_insights(self, insights: List[Dict[str, Any]], scan: Scan) -> List[Dict[str, Any]]:
         """Add final metadata to insights and sort by priority"""
         timestamp = datetime.now().isoformat()
+        net = getattr(self, '_target_network', None) or effective_target_network(scan)
+        net_label = getattr(self, '_network_label', None) or network_short_label(net)
         
         for insight in insights:
+            details = insight.setdefault('details', {})
+            details.setdefault('target_network', net)
+            details.setdefault('network_label', net_label)
             insight.update({
                 'id': str(uuid.uuid4()),
-                'scan_id': scan_id,
+                'scan_id': scan.id,
                 'timestamp': timestamp,
-                'is_read': False
+                'is_read': False,
             })
         
         # Sort by priority (highest first)
@@ -428,16 +604,36 @@ def generate_and_store_insights(scan_id: int) -> List[Dict[str, Any]]:
     if scan.status in ('failed', 'cancelled'):
         return []
 
+    from .host_context import store_host_context
+
+    try:
+        ctx = store_host_context(scan_id)
+        scan_analysis.record_host_context(
+            scan_id, host_count=ctx.get("host_count", 0),
+        )
+        scan = Scan.query.get(scan_id)
+    except Exception as ctx_exc:
+        print(f"[insights] host context enrichment failed for scan {scan_id}: {ctx_exc}")
+        scan_analysis.record_host_context(scan_id, error=str(ctx_exc))
+
     previous = InsightsGenerator()._get_previous_scan(scan)
     try:
+        from .diff import compute_scan_diff
+
         generator = InsightsGenerator()
         insights = generator.generate_insights(scan)
         scan.insights_json = json.dumps(insights)
+        try:
+            diff = compute_scan_diff(scan_id, require_complete=False)
+            scan.diff_from_previous = json.dumps(diff)
+        except Exception as diff_exc:
+            print(f"[insights] diff compute failed for scan {scan_id}: {diff_exc}")
         db.session.commit()
         scan_analysis.record_insights_generation(
             scan_id,
             count=len(insights),
             previous_scan_id=previous.id if previous else None,
+            target_network=effective_target_network(scan),
         )
         return insights
     except Exception as exc:

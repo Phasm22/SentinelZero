@@ -62,7 +62,12 @@ def create_schedule_blueprint(db, socketio, scheduler):
                         day_of_week=scan_config.get('dayOfWeek', '*')
                     )
                     
-                    def scheduled_scan_wrapper(scan_type=scan_config['scanType'], scheduled_network=scan_config.get('targetNetwork', '172.16.0.0/22')):
+                    def scheduled_scan_wrapper(
+                        scan_type=scan_config['scanType'],
+                        scheduled_network=scan_config.get('targetNetwork')
+                        or scan_config.get('target_network')
+                        or '172.16.0.0/22',
+                    ):
                         """Wrapper function for scheduled scans"""
                         with app.app_context():
                             security_settings = {
@@ -81,11 +86,12 @@ def create_schedule_blueprint(db, socketio, scheduler):
                             
                             scan = runtime.create_scan(
                                 scan_type=scan_type,
+                                target_network=scheduled_network,
                                 source='scheduled',
                                 initiated_by='scheduler',
                                 correlation_id=str(uuid.uuid4()),
                                 state='queued',
-                                message=f'Queued scheduled scan: {scan_type}',
+                                message=f'Queued scheduled {scan_type} on {scheduled_network}',
                             )
                             runtime.emit_scan_event('scan.started', scan)
                             runtime.emit_snapshot(scan)

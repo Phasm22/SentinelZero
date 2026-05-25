@@ -45,6 +45,26 @@ const formatSensorContext = (ctx) => {
   return lines.filter(Boolean).join('\n') || null
 }
 
+const VERDICT_STATUS_STYLES = {
+  pending: 'text-gray-400',
+  skipped: 'text-yellow-400',
+  failed: 'text-red-400',
+  timeout: 'text-red-400',
+  success: 'text-orange-300',
+  auto: 'text-gray-500',
+}
+
+const formatVerdictPending = (insight) => {
+  if (insight.verdict || insight.verdict_summary) return null
+  const note = insight.verdict_status_note
+  if (!note) return { text: 'No verdict yet', className: 'text-gray-500' }
+  const status = insight.verdict_agent_status || 'pending'
+  return {
+    text: note,
+    className: VERDICT_STATUS_STYLES[status] || 'text-gray-500',
+  }
+}
+
 const InsightsCard = () => {
   const [insights, setInsights]     = useState([])
   const [summary, setSummary]       = useState({})
@@ -80,6 +100,11 @@ const InsightsCard = () => {
     'new_port':          <PlusCircle className="w-5 h-5 text-green-400" />,
     'port_closed':       <X className="w-5 h-5 text-gray-400" />,
     'service_change':    <Clock className="w-5 h-5 text-cyan-400" />,
+    'vuln_resolved':     <CheckCircle className="w-5 h-5 text-green-400" />,
+    'registry_gap':      <AlertTriangle className="w-5 h-5 text-amber-400" />,
+    'sensor_gap':        <AlertTriangle className="w-5 h-5 text-amber-400" />,
+    'baseline_inventory': <Clock className="w-5 h-5 text-gray-400" />,
+    'correlated':        <AlertTriangle className="w-5 h-5 text-violet-400" />,
     'scan_performance':  <Clock className="w-5 h-5 text-gray-400" />,
   }
 
@@ -116,7 +141,11 @@ const InsightsCard = () => {
     if (!socket) return
     const handler = () => setVerdictsTick(t => t + 1)
     socket.on('insights.verdicts_ready', handler)
-    return () => socket.off('insights.verdicts_ready', handler)
+    socket.on('insights.synthesis_ready', handler)
+    return () => {
+      socket.off('insights.verdicts_ready', handler)
+      socket.off('insights.synthesis_ready', handler)
+    }
   }, [socket])
 
   const formatTime = (timestamp) => {
@@ -266,19 +295,36 @@ const InsightsCard = () => {
                         <span className="text-xs text-gray-400 truncate" data-testid="insight-host-time">
                           {insight.host} • {formatTime(insight.timestamp)}
                         </span>
+                        {insight.network_label && (
+                          <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0 bg-indigo-900/40 text-indigo-200 border border-indigo-500/30">
+                            {insight.network_label}
+                          </span>
+                        )}
                         {insight.scan_type && (
                           <span className="text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded flex-shrink-0" data-testid="insight-scan-type">
                             {insight.scan_type}
                           </span>
                         )}
-                        {insight.verdict && (
+                        {insight.verdict ? (
                           <span
                             className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${VERDICT_STYLES[insight.verdict] || ''}`}
                             data-testid={`verdict-badge-${insight.verdict}`}
                           >
                             {insight.verdict}
                           </span>
-                        )}
+                        ) : insight.verdict_agent_status && insight.verdict_agent_status !== 'complete' ? (
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 border border-dashed ${
+                              insight.verdict_agent_status === 'skipped' ? 'text-yellow-400 border-yellow-500/40' :
+                              insight.verdict_agent_status === 'pending' ? 'text-gray-400 border-gray-500/40' :
+                              'text-orange-300 border-orange-500/40'
+                            }`}
+                            data-testid={`verdict-status-${insight.verdict_agent_status}`}
+                            title={insight.verdict_status_note || ''}
+                          >
+                            {insight.verdict_agent_status}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
 
@@ -314,9 +360,20 @@ const InsightsCard = () => {
                   {insight.verdict_evidence && (
                     <p className="text-xs text-gray-400 font-mono leading-relaxed mt-1">{insight.verdict_evidence}</p>
                   )}
-                  {!insight.verdict && !insight.verdict_summary && (
-                    <p className="text-xs text-gray-500 italic mt-2">Verdict pending — agent is still running...</p>
-                  )}
+                  {(() => {
+                    const pending = formatVerdictPending(insight)
+                    if (!pending) return null
+                    return (
+                      <p className={`text-xs italic mt-2 ${pending.className}`} data-testid="verdict-status-note">
+                        {pending.text}
+                        {insight.scan_id && insight.verdict_agent_status === 'skipped' && (
+                          <span className="block text-gray-500 mt-1 not-italic">
+                            Scan #{insight.scan_id} → View details → AI tab
+                          </span>
+                        )}
+                      </p>
+                    )
+                  })()}
                 </div>
               )}
             </li>

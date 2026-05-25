@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import useModalEscape from '../hooks/useModalEscape'
 import { apiService } from '../utils/api'
 import { useToast } from '../contexts/ToastContext'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
@@ -17,6 +18,8 @@ import { formatTimestamp } from '../utils/date'
 import Button from './Button'
 
 const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
+  useModalEscape(isOpen, onClose)
+
   const [activeTab, setActiveTab] = useState('overview')
   const [hosts, setHosts] = useState([])
   const [vulns, setVulns] = useState([])
@@ -26,6 +29,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
   const [scanDetails, setScanDetails] = useState(scan)
   const [diffData, setDiffData] = useState(null)
   const [diffLoading, setDiffLoading] = useState(false)
+  const [hostContext, setHostContext] = useState(null)
   const { showToast } = useToast()
   const { preferences } = useUserPreferences()
 
@@ -82,10 +86,19 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
       // Fetch full scan details
       const scanData = await apiService.getScan(scan.id)
       setScanDetails(scanData)
+      setHostContext(scanData.host_context || null)
       const [hostsData, vulnsData] = await Promise.all([
         apiService.getScanHosts(scan.id),
         apiService.getScanVulns(scan.id)
       ])
+      if (!scanData.host_context) {
+        try {
+          const hc = await apiService.getScanHostContext(scan.id)
+          setHostContext(hc.host_context || null)
+        } catch {
+          setHostContext(null)
+        }
+      }
 
       setHosts(hostsData.hosts || [])
       setVulns(vulnsData.vulns || [])
@@ -167,16 +180,24 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="scan-details-modal">
-      {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-gray-500 bg-opacity-75 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         data-testid="modal-overlay"
+        aria-hidden="true"
       />
-      
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-4xl transform rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl transition-all" data-testid="modal-content">
+
+      <div
+        className="flex min-h-full items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Scan details — ${scanDetails.scan_type}`}
+      >
+        <div
+          className="relative w-full max-w-4xl transform rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl transition-all"
+          data-testid="modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
@@ -200,9 +221,11 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                   Download XML
                 </Button>
                 <button
+                  type="button"
                   onClick={onClose}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   data-testid="close-modal-btn"
+                  aria-label="Close"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -247,6 +270,17 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan Type</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">{scanDetails.scan_type}</div>
+                      </div>
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-500/20">
+                        <div className="text-sm font-medium text-indigo-400">Target network</div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {scanDetails.network_label || '—'}
+                        </div>
+                        {scanDetails.target_network && (
+                          <div className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+                            {scanDetails.target_network}
+                          </div>
+                        )}
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Hosts Found</div>
@@ -363,12 +397,29 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                           <span className="text-gray-500 dark:text-gray-400">Timestamp:</span>
                           <span className="text-gray-900 dark:text-white">{formatTimestamp(scanDetails.timestamp, preferences.use24Hour)}</span>
                         </div>
-                        {scanDetails.diff_from_previous && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">Changes from Previous:</span>
-                            <span className="text-gray-900 dark:text-white">{scanDetails.diff_from_previous}</span>
-                          </div>
-                        )}
+                        {(() => {
+                          const raw = scanDetails.diff_from_previous
+                          if (!raw) return null
+                          try {
+                            const diff = typeof raw === 'string' ? JSON.parse(raw) : raw
+                            const s = diff.summary || {}
+                            const parts = []
+                            if (diff.baseline) parts.push('baseline scan')
+                            if (s.new_hosts) parts.push(`${s.new_hosts} new hosts`)
+                            if (s.removed_hosts) parts.push(`${s.removed_hosts} removed`)
+                            if (s.new_ports) parts.push(`${s.new_ports} new ports`)
+                            if (s.closed_ports) parts.push(`${s.closed_ports} closed ports`)
+                            if (!parts.length) return null
+                            return (
+                              <div className="flex justify-between">
+                                <span className="text-gray-500 dark:text-gray-400">Changes from Previous:</span>
+                                <span className="text-gray-900 dark:text-white">{parts.join(' · ')}</span>
+                              </div>
+                            )
+                          } catch {
+                            return null
+                          }
+                        })()}
                         {scanDetails.raw_xml_path && (
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">XML File:</span>
@@ -401,12 +452,24 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                           const hasPorts = host.ports && host.ports.length > 0
                           const hasOS = host.os
                           const hasHostnames = host.hostnames && host.hostnames.length > 0
+                          const ctx = hostContext?.hosts?.[host.ip] || {}
+                          const displayName = ctx.display_name && ctx.display_name !== host.ip
+                            ? ctx.display_name
+                            : null
                           
                           return (
                             <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                               {/* Host Header */}
                               <div className="flex items-start justify-between mb-4">
                                 <div className="flex-1">
+                                  {displayName && (
+                                    <div className="text-base font-semibold text-indigo-700 dark:text-indigo-300 mb-1">
+                                      {displayName}
+                                      {ctx.user_label && (
+                                        <span className="ml-2 text-xs font-normal text-gray-500">(labeled)</span>
+                                      )}
+                                    </div>
+                                  )}
                                   <div className="flex items-center space-x-3 mb-2">
                                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
                                       {host.ip || 'Unknown IP'}
@@ -425,6 +488,30 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                                   {host.vendor && (
                                     <div className="text-sm text-gray-600 dark:text-gray-300">
                                       <span className="font-medium">Vendor:</span> {host.vendor}
+                                    </div>
+                                  )}
+                                  {ctx.summary_line && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                      {ctx.summary_line}
+                                    </div>
+                                  )}
+                                  {(ctx.role || ctx.dhcp || ctx.arp) && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-0.5">
+                                      {ctx.role && ctx.role !== 'unknown' && (
+                                        <div><span className="font-medium">Role:</span> {ctx.role}</div>
+                                      )}
+                                      {ctx.dhcp?.hostname && (
+                                        <div><span className="font-medium">DHCP:</span> {ctx.dhcp.hostname}{ctx.dhcp.description ? ` — ${ctx.dhcp.description}` : ''}</div>
+                                      )}
+                                      {ctx.arp?.hostname && !ctx.dhcp?.hostname && (
+                                        <div><span className="font-medium">ARP:</span> {ctx.arp.hostname}</div>
+                                      )}
+                                      {ctx.manufacturer && (
+                                        <div><span className="font-medium">Manufacturer:</span> {ctx.manufacturer}</div>
+                                      )}
+                                      {ctx.identification_sources?.length > 0 && (
+                                        <div><span className="font-medium">Sources:</span> {ctx.identification_sources.join(', ')}</div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -506,9 +593,9 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                                                 : (port.version || '-')}
                                             </td>
                                             <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                              {typeof port.service === 'object' && port.service?.extrainfo 
-                                                ? port.service.extrainfo 
-                                                : '-'}
+                                              {typeof port.service === 'object' && port.service?.extrainfo
+                                                ? port.service.extrainfo
+                                                : (port.extrainfo || '-')}
                                             </td>
                                           </tr>
                                         ))}

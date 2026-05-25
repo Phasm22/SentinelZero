@@ -30,3 +30,20 @@ def test_get_asset_context_known_ip(tmp_path, monkeypatch):
 
     unknown = asset_registry.get_asset_context("172.16.0.199")
     assert unknown["trust_zone"] == "unknown"
+
+    home_unknown = asset_registry.get_asset_context(
+        "192.168.68.50", network_cidr="192.168.68.0/22",
+    )
+    assert home_unknown["trust_zone"] == "home"
+    assert "lab asset registry" in home_unknown["note"].lower() or "lab registry" in home_unknown["note"].lower()
+
+    gaps = asset_registry.hosts_for_registry_gap(
+        ["192.168.68.1", "192.168.68.99"], "192.168.68.0/22",
+    )
+    assert gaps == []
+
+    lab_gaps = asset_registry.hosts_for_registry_gap(
+        ["172.16.0.10", "172.16.0.199"], "172.16.0.0/22",
+    )
+    assert "172.16.0.199" in lab_gaps
+    assert "172.16.0.10" not in lab_gaps

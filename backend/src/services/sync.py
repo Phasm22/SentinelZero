@@ -222,10 +222,7 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
         Dictionary with sync results
     """
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-    target_dir = os.path.join(base_dir, scans_dir)
-    
-    if not os.path.isdir(target_dir):
-        return {'error': f'Scans directory not found: {target_dir}'}
+    target_dir = _ensure_scans_dir(scans_dir)
     
     # Get existing database scans and normalize paths so relative/absolute don't duplicate
     scans_with_paths = [scan for scan in Scan.query.all() if scan.raw_xml_path]
@@ -313,6 +310,14 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
     }
 
 
+def _ensure_scans_dir(scans_dir: str = 'scans') -> str:
+    """Return absolute scans directory path, creating it if missing."""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+    target_dir = os.path.join(base_dir, scans_dir)
+    os.makedirs(target_dir, exist_ok=True)
+    return target_dir
+
+
 def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
     """
     Get synchronization status between database and filesystem
@@ -323,11 +328,8 @@ def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
     Returns:
         Dictionary with sync status information
     """
+    target_dir = _ensure_scans_dir(scans_dir)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-    target_dir = os.path.join(base_dir, scans_dir)
-    
-    if not os.path.isdir(target_dir):
-        return {'error': f'Scans directory not found: {target_dir}'}
     
     # Get database scans
     db_scans = Scan.query.all()
