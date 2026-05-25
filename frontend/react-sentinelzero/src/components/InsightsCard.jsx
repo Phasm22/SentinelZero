@@ -10,6 +10,41 @@ const VERDICT_STYLES = {
   dismiss:  'bg-gray-500/20 text-gray-400 border border-gray-500/40',
 }
 
+const ContextBlock = ({ title, children }) => (
+  <div className="mt-2">
+    <p className="text-xs text-gray-300 font-medium mb-1">{title}</p>
+    <pre className="text-xs text-gray-400 font-mono leading-relaxed whitespace-pre-wrap break-words">
+      {children}
+    </pre>
+  </div>
+)
+
+const formatSensorContext = (ctx) => {
+  if (!ctx) return null
+  const lines = []
+  if (ctx.endpoint) {
+    const e = ctx.endpoint
+    lines.push(
+      `Process: ${e.process_name || '?'} (PID ${e.pid ?? '?'})`,
+      e.minutes_before_scan != null ? `Started ~${e.minutes_before_scan} min before scan` : null,
+      e.cmdline ? `Cmd: ${e.cmdline}` : null,
+    )
+  }
+  if (ctx.network) {
+    const n = ctx.network
+    if (n.top_blocked?.length) {
+      lines.push('DNS blocked (segment): ' + n.top_blocked.map(b => b.domain || b[0]).join(', '))
+    }
+    if (n.alerted_flows?.length) {
+      lines.push(`ntopng alerts: ${n.alerted_flows.length} engaged`)
+    }
+    if (n.ids_alerts?.length) {
+      lines.push(`OPNsense IDS: ${n.ids_alerts.length} hits for host`)
+    }
+  }
+  return lines.filter(Boolean).join('\n') || null
+}
+
 const InsightsCard = () => {
   const [insights, setInsights]     = useState([])
   const [summary, setSummary]       = useState({})
@@ -259,22 +294,28 @@ const InsightsCard = () => {
                 </div>
               </div>
 
-              {expandedId === insight.id && (insight.verdict_evidence || insight.verdict_summary) && (
-                <div className="mt-2 pt-2 border-t border-white/10 ml-7 sm:ml-8" data-testid="insight-evidence">
+              {expandedId === insight.id && (
+                <div className="mt-2 pt-2 border-t border-white/10 ml-7 sm:ml-8" data-testid="insight-expanded">
+                  {insight.details?.asset_context && (
+                    <ContextBlock title="Asset">
+                      {`${insight.details.asset_context.name || insight.host} · ${insight.details.asset_context.role || 'unknown'} · zone ${insight.details.asset_context.trust_zone || '?'}`}
+                      {insight.details.unexpected_port ? '\n⚠ Port not in expected_ports' : ''}
+                    </ContextBlock>
+                  )}
+                  {formatSensorContext(insight.details?.sensor_context) && (
+                    <ContextBlock title="Sensor context">
+                      {formatSensorContext(insight.details.sensor_context)}
+                    </ContextBlock>
+                  )}
                   {insight.verdict_summary && (
-                    <p className="text-xs text-gray-200 mb-1 font-medium">{insight.verdict_summary}</p>
+                    <p className="text-xs text-gray-200 mt-2 font-medium">{insight.verdict_summary}</p>
                   )}
                   {insight.verdict_evidence && (
-                    <p className="text-xs text-gray-400 font-mono leading-relaxed">{insight.verdict_evidence}</p>
+                    <p className="text-xs text-gray-400 font-mono leading-relaxed mt-1">{insight.verdict_evidence}</p>
                   )}
-                  {!insight.verdict_evidence && !insight.verdict_summary && (
-                    <p className="text-xs text-gray-500 italic">Verdict pending...</p>
+                  {!insight.verdict && !insight.verdict_summary && (
+                    <p className="text-xs text-gray-500 italic mt-2">Verdict pending — agent is still running...</p>
                   )}
-                </div>
-              )}
-              {expandedId === insight.id && !insight.verdict && (
-                <div className="mt-2 pt-2 border-t border-white/10 ml-7 sm:ml-8" data-testid="insight-evidence-pending">
-                  <p className="text-xs text-gray-500 italic">Verdict pending — agent is still running...</p>
                 </div>
               )}
             </li>

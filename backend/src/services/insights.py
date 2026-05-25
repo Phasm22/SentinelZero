@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from ..models.scan import Scan
 from ..config.database import db
 from ..services import sensor_service
+from ..services import asset_registry
 
 
 class InsightsGenerator:
@@ -145,13 +146,14 @@ class InsightsGenerator:
         # New hosts
         new_ips = current_ips - previous_ips
         for ip in new_ips:
-            insights.append({
+            insight = {
                 'type': 'new_host',
                 'host': ip,
                 'message': f"New host discovered: {ip}",
                 'priority': self.PRIORITY_WEIGHTS.get('new_host', 60),
                 'details': {'ip': ip}
-            })
+            }
+            insights.append(self._attach_asset_context(insight, ip))
         
         # Missing hosts
         missing_ips = previous_ips - current_ips
@@ -212,50 +214,116 @@ class InsightsGenerator:
         
         return insights
     
-    def _enrich_new_port(self, insight: Dict[str, Any], port: int, host_ip: str) -> Dict[str, Any]:
-        """Annotate a new_port insight with sensor context when a sensor agent exists for the host."""
+    def _attach_asset_context(self, insight: Dict[str, Any], host_ip: str) -> Dict[str, Any]:
+        """Add asset registry role/trust/expected ports for host-scoped insights."""
         try:
+            asset = asset_registry.get_asset_context(host_ip)
+            insight.setdefault('details', {})['asset_context'] = asset
+            name = asset.get('name') or host_ip
+            role = asset.get('role', 'unknown')
+            if insight['type'] == 'new_host':
+                insight['message'] = f"New host discovered: {name} ({role}) — {host_ip}"
+            port = insight.get('details', {}).get('port')
+            if port is not None:
+                expected = asset_registry.is_expected_port(host_ip, int(port))
+                if expected is False:
+                    insight['details']['unexpected_port'] = True
+        except Exception as e:
+            print(f"[asset enrich] {host_ip} - {e}")
+        return insight
+
+    def _port_on_addrs(self, port: int, addrs: list) -> bool:
+        port_s = str(port)
+        for addr in addrs:
+            if not addr:
+                continue
+            part = str(addr).rsplit(':', 1)[-1]
+            if part == port_s:
+                return True
+        return False
+
+    def _endpoint_process_context(self, agent_id: str, port: int) -> Optional[Dict[str, Any]]:
+        """Match port to a process via start events, then latest snapshot."""
+        events = sensor_service.get_process_events(db, agent_id, minutes=120)
+        for event in reversed(events):
+            if event.get('event_type') != 'process_started':
+                continue
+            if self._port_on_addrs(port, event.get('listening_ports', [])):
+                proc = event['process']
+                started_at = datetime.fromisoformat(
+                    event['collected_at'].replace('Z', '')
+                )
+                minutes_ago = max(
+                    0,
+                    int((datetime.utcnow() - started_at.replace(tzinfo=None)).total_seconds() / 60),
+                )
+                cmdline = proc.get('cmdline', '')
+                if isinstance(cmdline, list):
+                    cmdline = ' '.join(cmdline)
+                return {
+                    'process_name': proc.get('name'),
+                    'pid': proc.get('pid'),
+                    'cmdline': cmdline,
+                    'started_at': event['collected_at'],
+                    'minutes_before_scan': minutes_ago,
+                    'source': 'process_timeline',
+                }
+
+        collectors = sensor_service.get_latest_collectors(db, agent_id)
+        conns = collectors.get('connections', [])
+        pid_ports: Dict[int, list] = {}
+        for c in conns:
+            if c.get('state') == 'LISTEN' and c.get('pid') and c.get('local_addr'):
+                pid_ports.setdefault(c['pid'], []).append(c['local_addr'])
+        for proc in collectors.get('processes', []):
+            pid = proc.get('pid')
+            if pid is None:
+                continue
+            addrs = pid_ports.get(pid, [])
+            if self._port_on_addrs(port, addrs):
+                cmdline = proc.get('cmdline', '')
+                if isinstance(cmdline, list):
+                    cmdline = ' '.join(cmdline)
+                return {
+                    'process_name': proc.get('name'),
+                    'pid': pid,
+                    'cmdline': cmdline,
+                    'listening_ports': addrs,
+                    'source': 'latest_snapshot',
+                }
+        return None
+
+    def _enrich_new_port(self, insight: Dict[str, Any], port: int, host_ip: str) -> Dict[str, Any]:
+        """Annotate new_port with endpoint process, network segment, and asset registry context."""
+        insight = self._attach_asset_context(insight, host_ip)
+        try:
+            sensor_ctx: Dict[str, Any] = {}
+
             agent = sensor_service.get_agent_by_ip(db, host_ip)
-            if not agent:
-                return insight
+            if agent:
+                tags = json.loads(agent.tags or '[]')
+                if 'category:network' not in tags:
+                    proc_ctx = self._endpoint_process_context(agent.agent_id, port)
+                    if proc_ctx:
+                        sensor_ctx['endpoint'] = proc_ctx
+                        pname = proc_ctx.get('process_name', 'unknown')
+                        mins = proc_ctx.get('minutes_before_scan')
+                        if mins is not None:
+                            insight['message'] = (
+                                f"New open port {port} on {host_ip} — "
+                                f"{pname} (PID {proc_ctx.get('pid')}) started {mins} min before scan"
+                            )
+                        else:
+                            insight['message'] = (
+                                f"New open port {port} on {host_ip} — {pname} (PID {proc_ctx.get('pid')}) listening"
+                            )
 
-            tags = json.loads(agent.tags or '[]')
-            is_network_sensor = 'category:network' in tags
+            net_ctx = sensor_service.get_network_sensor_context(db, host_ip)
+            if net_ctx:
+                sensor_ctx['network'] = net_ctx
 
-            if is_network_sensor:
-                rows = sensor_service.get_timeline(db, agent.agent_id, minutes=120)
-                if rows:
-                    collectors = json.loads(rows[-1].collectors_json or '{}')
-                    net_ctx: Dict[str, Any] = {}
-                    if 'source:pihole' in tags:
-                        raw = collectors.get('top_blocked', {})
-                        net_ctx['top_blocked'] = list(raw.items())[:5] if isinstance(raw, dict) else raw[:5]
-                    if 'source:ntopng' in tags:
-                        net_ctx['alerted_flows'] = collectors.get('alerts', {}).get('engaged', [])[:5]
-                    if net_ctx:
-                        insight['details']['sensor_context'] = net_ctx
-            else:
-                # Endpoint sensor: correlate the port with the process that opened it
-                events = sensor_service.get_process_events(db, agent.agent_id, minutes=120)
-                for event in reversed(events):
-                    if event['event_type'] != 'process_started':
-                        continue
-                    listening = event.get('listening_ports', [])
-                    if any(addr.split(':')[-1] == str(port) for addr in listening):
-                        proc = event['process']
-                        started_at = datetime.fromisoformat(event['collected_at'])
-                        minutes_ago = max(0, int((datetime.utcnow() - started_at).total_seconds() / 60))
-                        cmdline = proc.get('cmdline', '')
-                        if isinstance(cmdline, list):
-                            cmdline = ' '.join(cmdline)
-                        insight['details']['sensor_context'] = {
-                            'process_name': proc.get('name'),
-                            'pid': proc.get('pid'),
-                            'cmdline': cmdline,
-                            'started_at': event['collected_at'],
-                            'minutes_before_scan': minutes_ago,
-                        }
-                        break
+            if sensor_ctx:
+                insight.setdefault('details', {})['sensor_context'] = sensor_ctx
         except Exception as e:
             print(f"[sensor enrich] {host_ip}:{port} - {e}")
         return insight

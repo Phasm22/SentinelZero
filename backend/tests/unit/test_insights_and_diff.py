@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app import create_app, db
 from src.models import Scan
 from src.services.diff import compute_scan_diff
+from src.models.sensor import SensorAgent, SensorTelemetry
 from src.services.insights import InsightsGenerator, generate_and_store_insights
 
 
@@ -111,3 +112,74 @@ def test_insights_generator_compares_scans_and_persists(app):
         assert refreshed.insights_json is not None
         persisted = json.loads(refreshed.insights_json)
         assert len(persisted) == len(stored)
+
+
+def test_new_port_enrichment_endpoint_and_asset(app, monkeypatch):
+    with app.app_context():
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.get_asset_context',
+            lambda ip: {
+                'name': 'proxBig.prox',
+                'role': 'proxmox-hypervisor',
+                'trust_zone': 'infrastructure',
+                'expected_ports': [22, 8006],
+            },
+        )
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.is_expected_port',
+            lambda ip, port: port in [22, 8006],
+        )
+
+        agent = SensorAgent(
+            agent_id='proxbig',
+            host_ip='172.16.0.10',
+            hostname='proxBig.prox',
+            role='proxmox-node',
+            tags='["category:endpoint"]',
+        )
+        db.session.add(agent)
+
+        t0 = datetime.utcnow() - timedelta(minutes=30)
+        t1 = datetime.utcnow() - timedelta(minutes=5)
+        db.session.add(SensorTelemetry(
+            agent_id='proxbig',
+            collected_at=t0,
+            collectors_json=json.dumps({
+                'processes': [{'pid': 100, 'name': 'oldproc'}],
+                'connections': [],
+            }),
+        ))
+        db.session.add(SensorTelemetry(
+            agent_id='proxbig',
+            collected_at=t1,
+            collectors_json=json.dumps({
+                'processes': [
+                    {'pid': 100, 'name': 'oldproc'},
+                    {'pid': 9999, 'name': 'proxmox-backup-proxy', 'cmdline': '/usr/bin/proxmox-backup-proxy'},
+                ],
+                'connections': [
+                    {'pid': 9999, 'state': 'LISTEN', 'local_addr': '0.0.0.0:8443'},
+                ],
+            }),
+        ))
+
+        previous = _scan(
+            hosts=[{'ip': '172.16.0.10', 'ports': [{'port': 22, 'service': 'ssh'}]}],
+            created_at=datetime.utcnow() - timedelta(days=1),
+        )
+        current = _scan(
+            hosts=[{'ip': '172.16.0.10', 'ports': [
+                {'port': 22, 'service': 'ssh'},
+                {'port': 8443, 'service': 'https-alt'},
+            ]}],
+            created_at=datetime.utcnow(),
+        )
+        db.session.add_all([previous, current])
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(current)
+        new_port = next(i for i in insights if i['type'] == 'new_port')
+        assert new_port['details']['unexpected_port'] is True
+        assert new_port['details']['asset_context']['role'] == 'proxmox-hypervisor'
+        assert new_port['details']['sensor_context']['endpoint']['process_name'] == 'proxmox-backup-proxy'
+        assert 'proxmox-backup-proxy' in new_port['message']

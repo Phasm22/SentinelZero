@@ -20,24 +20,17 @@
 
 ## What's Brewing (Do This Next)
 
-### 1. InsightsGenerator Enrichment — `backend/src/services/insights.py`
-This is the critical path. Sensor data is collecting but not yet used in analysis.
+### 1. InsightsGenerator Enrichment — **done** (`insights.py`, `sensor_service.py`, `asset_registry.py`)
+- `new_port` / `new_host`: `details.asset_context` from `~/agent/context/assets.json` (`SENTINEL_ASSETS_PATH`)
+- `new_port`: `details.sensor_context.endpoint` via process timeline + latest snapshot; `sensor_context.network` from pihole + ntopng + OPNsense IDS for the host's segment
+- Message rewritten when a process match is found (e.g. `proxmox-backup-proxy (PID 9999) started 47 min before scan`)
+- Frontend InsightsCard expand row shows Asset + Sensor context blocks
 
-**What to do:** When a `new_port` insight is generated from an nmap diff, enrich it:
-- For **endpoint agents** (proxmox-nodes, linux-*): call `sensor_service.get_process_events(db, agent_id, minutes=120)` and match the process whose `listening_ports` contains the detected port. Add `sensor_context: {process_name, pid, started_at, minutes_before_scan}`.
-- For **network agents**: call `/api/sensor/latest/<agent_id>` and pull `top_blocked` from pihole and `alerted_flows` from ntopng for the same time window. Add as context.
+### 2. Asset Registry — **done** (`~/agent/context/assets.json`, 17 hosts)
+Backend reads the same file as `agent/agent.py`. Keep both in sync when adding hosts.
 
-**Result:** "New port 8443 detected" → "proxmox-backup-proxy (PID 9999) started 47 min before scan"
-
-### 2. Asset Registry — `agent/context/assets.json`
-A JSON file mapping each known IP to role, expected ports, and trust zone. Without it the LLM can't distinguish "RDP on the Windows VM (expected)" from "RDP on a Proxmox node (alarming)."
-
-Seed from `backend/src/services/whats_up.py` — the infra list is already there. Add `expected_ports` and `trust_zone` fields per host.
-
-### 3. LLM Reasoning Loop — `agent/agent.py` (partially done)
-`agent_service.run_verdicts_for_scan` calls `agent.py --insights` with batch payload. Agent tools: asset registry, process timeline, port history, OPNsense ARP/DHCP, network topology. Auto-dismisses `port_closed` / `scan_performance` without LLM.
-
-Remaining: enrich **generation** (step 1) so actionable insights ship sensor context before the agent runs.
+### 3. LLM Reasoning Loop — **done** (verdicts at scan complete)
+Optional next: pass pre-enriched `sensor_context` / `asset_context` into the agent batch payload to reduce tool calls.
 
 ---
 

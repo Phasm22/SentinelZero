@@ -199,7 +199,6 @@ def create_app(test_config=None):
                 minute=30,
                 id='sensor_telemetry_cleanup',
                 replace_existing=True,
-                kwargs={'db': db},
             )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')

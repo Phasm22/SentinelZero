@@ -15,6 +15,22 @@ def get_agent_by_id(db, agent_id: str) -> Optional[SensorAgent]:
     return SensorAgent.query.filter_by(agent_id=agent_id).first()
 
 
+def get_latest_collectors(db, agent_id: str) -> dict:
+    """Most recent telemetry payload for an agent, or empty dict."""
+    row = (
+        SensorTelemetry.query
+        .filter_by(agent_id=agent_id)
+        .order_by(SensorTelemetry.collected_at.desc())
+        .first()
+    )
+    if not row:
+        return {}
+    try:
+        return json.loads(row.collectors_json or '{}')
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
 def get_timeline(db, agent_id: str, minutes: int = 120) -> List[SensorTelemetry]:
     from_dt = datetime.utcnow() - timedelta(minutes=minutes)
     return (
@@ -104,7 +120,10 @@ def compute_agent_status(agent: SensorAgent) -> str:
     return 'offline'
 
 
-def prune_old_telemetry(db, days: int = 30) -> int:
+def prune_old_telemetry(days: int = 30) -> int:
+    """APScheduler entry point — uses the app db session."""
+    from ..config.database import db
+
     cutoff = datetime.utcnow() - timedelta(days=days)
     deleted = (
         SensorTelemetry.query
@@ -113,3 +132,52 @@ def prune_old_telemetry(db, days: int = 30) -> int:
     )
     db.session.commit()
     return deleted
+
+
+def network_segment_for_ip(ip: str) -> str:
+    """Map a host IP to lab or home for Pi-hole context selection."""
+    if ip.startswith(("172.16.", "10.")):
+        return "lab"
+    if ip.startswith(("192.168.68.", "192.168.71.")):
+        return "home"
+    return "lab"
+
+
+def get_network_sensor_context(db, host_ip: str) -> dict:
+    """
+    Pull recent DNS/flow context from network sensors for the host's segment.
+    Used when enriching host-level scan insights (not tied to the sensor agent IP).
+    """
+    segment = network_segment_for_ip(host_ip)
+    ctx: dict = {"segment": segment}
+
+    pihole_id = "pihole-lab" if segment == "lab" else "pihole-home"
+    pihole = get_latest_collectors(db, pihole_id)
+    if pihole:
+        blocked = pihole.get("top_blocked") or []
+        if isinstance(blocked, dict):
+            blocked = [{"domain": k, "count": v} for k, v in list(blocked.items())[:5]]
+        ctx["top_blocked"] = blocked[:5]
+        ctx["top_clients"] = (pihole.get("top_clients") or [])[:5]
+
+    ntop = get_latest_collectors(db, "opnsense-ntopng")
+    if ntop:
+        alerts = ntop.get("alerts") or []
+        if isinstance(alerts, dict):
+            alerts = alerts.get("engaged", alerts.get("items", []))
+        ctx["alerted_flows"] = alerts[:5]
+        flagged = [
+            h for h in (ntop.get("active_hosts") or [])
+            if h.get("ip") == host_ip or str(h.get("ip", "")).startswith(host_ip)
+        ]
+        if flagged:
+            ctx["host_flow_score"] = flagged[:3]
+
+    opn = get_latest_collectors(db, "opnsense")
+    if opn:
+        ids = opn.get("ids_alerts") or []
+        host_ids = [a for a in ids if host_ip in json.dumps(a)][:5]
+        if host_ids:
+            ctx["ids_alerts"] = host_ids
+
+    return {k: v for k, v in ctx.items() if v}
