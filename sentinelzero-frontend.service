@@ -1,0 +1,19 @@
+[Unit]
+Description=SentinelZero Frontend
+After=network.target sentinelzero.service
+Wants=sentinelzero.service
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+WorkingDirectory=/home/sentinel/SentinelZero/frontend/react-sentinelzero
+Environment=PATH=/home/sentinel/.nvm/versions/node/v22.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=VITE_BACKEND_URL=http://127.0.0.1:5000
+# Use vite.config.js port (3173); do not override with --port 5173
+ExecStart=/home/sentinel/.nvm/versions/node/v22.18.0/bin/npm run dev -- --host 0.0.0.0
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

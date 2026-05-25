@@ -193,12 +193,13 @@ def create_app(test_config=None):
                 replace_existing=True,
             )
             scheduler.add_job(
-                lambda: sensor_service.prune_old_telemetry(db),
+                sensor_service.prune_old_telemetry,
                 'cron',
                 hour=3,
                 minute=30,
                 id='sensor_telemetry_cleanup',
                 replace_existing=True,
+                kwargs={'db': db},
             )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')

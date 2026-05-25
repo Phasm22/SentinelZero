@@ -1,7 +1,20 @@
 # SentinelZero — Project Handoff
 
 **Last updated:** 2026-05-25
-**Status:** 7 sensors active, all collecting. Ready for InsightsGenerator enrichment.
+**Status:** 8 sensors active (incl. OPNsense REST), backend + frontend on 3173/5000, verdict pipeline live.
+
+### Live stack (2026-05-25)
+
+| Layer | Detail |
+|-------|--------|
+| Network sensors (60s, on SentinelZero) | `sentinel-ntopng`, `sentinel-pihole@lab`, `sentinel-pihole@home`, `sentinel-opnsense` |
+| Endpoint sensors (60s, remote hosts) | proxBig, yin, yang, palindrome, pihole-home (192.168.71.25) |
+| Analysis agent | `sentinel-agent.timer` — first run 5 min after boot, then every 30 min (`--latest`) |
+| Verdicts | Post-scan daemon → `agent.py --insights`; patches `insights_json`; emits `insights.verdicts_ready` |
+| Context | `~/agent/context/assets.json` (17 hosts), `network.json` |
+| Frontend | Vite on **3173** (proxies `/api`, `/socket.io` → 5000); InsightsCard shows verdict badges + evidence |
+
+**Note:** `sentinelzero-frontend.service` in `/etc/systemd` may still pass `--port 5173` — use repo unit `sentinelzero-frontend.service` (3173) after `sudo cp` + `daemon-reload`.
 
 ---
 
@@ -21,15 +34,10 @@ A JSON file mapping each known IP to role, expected ports, and trust zone. Witho
 
 Seed from `backend/src/services/whats_up.py` — the infra list is already there. Add `expected_ports` and `trust_zone` fields per host.
 
-### 3. LLM Reasoning Loop — `agent/agent.py`
-Build with Anthropic SDK + tool use. Tools needed:
-- `get_scan_diff(scan_id)` → `/api/scan-diff/<id>`
-- `get_sensor_timeline(ip, minutes)` → `/api/sensor/timeline/process-events`
-- `get_network_context(ip)` → `/api/sensor/latest/<pihole or ntopng agent>`
-- `get_asset_context(ip)` → reads asset registry JSON
-- `run_targeted_scan(ip)` → triggers focused nmap on one host
+### 3. LLM Reasoning Loop — `agent/agent.py` (partially done)
+`agent_service.run_verdicts_for_scan` calls `agent.py --insights` with batch payload. Agent tools: asset registry, process timeline, port history, OPNsense ARP/DHCP, network topology. Auto-dismisses `port_closed` / `scan_performance` without LLM.
 
-This is the "download a security analyst" piece — gets filtered signal, produces: *explain, escalate, or dismiss.*
+Remaining: enrich **generation** (step 1) so actionable insights ship sensor context before the agent runs.
 
 ---
 
