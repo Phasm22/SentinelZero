@@ -24,6 +24,44 @@ ACTIONABLE_TYPES = {
 AUTO_DISMISS_TYPES = {"port_closed", "scan_performance"}
 
 
+def _is_host_ip(value: str) -> bool:
+    if not value or " " in value:
+        return False
+    parts = value.split(".")
+    return len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts)
+
+
+def build_enrichment_digest(insights: list) -> dict:
+    """
+    Summarize backend pre-enrichment so the verdict agent can skip redundant tool calls.
+    Mirrors details.asset_context / details.sensor_context already on each insight.
+    """
+    hosts: dict = {}
+    for ins in insights:
+        details = ins.get("details") or {}
+        ip = details.get("ip") or ins.get("host", "")
+        if not _is_host_ip(ip):
+            continue
+        entry = hosts.setdefault(ip, {"insight_types": [], "asset": None, "sensor": None})
+        entry["insight_types"].append(ins.get("type"))
+        if details.get("asset_context"):
+            entry["asset"] = details["asset_context"]
+        if details.get("sensor_context"):
+            entry["sensor"] = details["sensor_context"]
+        if details.get("unexpected_port"):
+            entry["unexpected_port"] = True
+        if details.get("port") is not None:
+            entry["port"] = details["port"]
+
+    return {
+        "hosts": hosts,
+        "notes": (
+            "Backend attached asset_context and sensor_context during insight generation. "
+            "Use this digest first; only call tools for missing fields."
+        ),
+    }
+
+
 def run_verdicts_for_scan(scan_id: int, app, socketio) -> None:
     """
     Daemon thread entry point. Never raises — failures are logged and swallowed
@@ -90,7 +128,13 @@ def _run(scan_id: int, socketio) -> None:
         except (json.JSONDecodeError, TypeError):
             pass
 
-    payload = json.dumps({"scan_id": scan_id, "insights": actionable, "diff": diff})
+    enrichment = build_enrichment_digest(actionable)
+    payload = json.dumps({
+        "scan_id": scan_id,
+        "insights": actionable,
+        "diff": diff,
+        "enrichment": enrichment,
+    })
 
     logger.info(
         "agent_service: calling agent for scan %s with %d actionable insights",

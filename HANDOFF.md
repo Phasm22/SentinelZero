@@ -29,8 +29,8 @@
 ### 2. Asset Registry — **done** (`~/agent/context/assets.json`, 17 hosts)
 Backend reads the same file as `agent/agent.py`. Keep both in sync when adding hosts.
 
-### 3. LLM Reasoning Loop — **done** (verdicts at scan complete)
-Optional next: pass pre-enriched `sensor_context` / `asset_context` into the agent batch payload to reduce tool calls.
+### 3. LLM Reasoning Loop — **done** (verdicts + pre-enriched batch)
+`agent_service` sends `enrichment` digest with each `--insights` payload; `agent.py` uses it first and omits redundant tools (`get_asset_context`, `get_process_timeline`, `get_network_context`) when data is already present.
 
 ---
 
