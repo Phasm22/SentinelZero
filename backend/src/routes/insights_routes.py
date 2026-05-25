@@ -11,77 +11,147 @@ insights_bp = Blueprint('insights', __name__)
 @insights_bp.route('/api/insights', methods=['GET'])
 def get_insights():
     """Get insights across all scans with filtering and pagination"""
-    
+
     # Query parameters
-    limit = request.args.get('limit', 20, type=int)
-    insight_type = request.args.get('type', None)
+    limit        = request.args.get('limit', 20, type=int)
+    filter_type  = request.args.get('type', None)
     priority_min = request.args.get('priority_min', 0, type=int)
-    unread_only = request.args.get('unread_only', 'false').lower() == 'true'
-    
-    # Limit to reasonable bounds
+    unread_only  = request.args.get('unread_only', 'false').lower() == 'true'
+    verdict_filter = request.args.get('verdict', None)
+
     limit = min(limit, 100)
-    
+
     try:
-        # Get scans with insights, ordered by most recent
         scans = Scan.query.filter(
             Scan.insights_json.isnot(None),
             Scan.status == 'complete'
-        ).order_by(Scan.created_at.desc()).limit(50).all()  # Look at last 50 scans
-        
+        ).order_by(Scan.created_at.desc()).limit(50).all()
+
         all_insights = []
-        
+
         for scan in scans:
             try:
                 insights = json.loads(scan.insights_json) if scan.insights_json else []
-                
+
                 for insight in insights:
-                    # Add scan timestamp to insight
                     insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
                     insight['scan_type'] = scan.scan_type
-                    
-                    # Apply filters
-                    if insight_type and insight.get('type') != insight_type:
+
+                    if filter_type and insight.get('type') != filter_type:
                         continue
-                    
                     if insight.get('priority', 0) < priority_min:
                         continue
-                    
                     if unread_only and insight.get('is_read', False):
                         continue
-                    
+                    if verdict_filter and insight.get('verdict') != verdict_filter:
+                        continue
+
                     all_insights.append(insight)
-                    
+
             except (json.JSONDecodeError, TypeError) as e:
                 print(f"Error parsing insights for scan {scan.id}: {e}")
                 continue
-        
-        # Sort by priority and timestamp
+
         all_insights.sort(key=lambda x: (x.get('priority', 0), x.get('timestamp', '')), reverse=True)
-        
-        # Apply limit
         limited_insights = all_insights[:limit]
-        
-        # Generate summary
+
         summary = {
-            'total': len(all_insights),
-            'unread': len([i for i in all_insights if not i.get('is_read', False)]),
-            'critical': len([i for i in all_insights if i.get('priority', 0) >= 80]),
-            'by_type': {}
+            'total':     len(all_insights),
+            'unread':    len([i for i in all_insights if not i.get('is_read', False)]),
+            'critical':  len([i for i in all_insights if i.get('priority', 0) >= 80]),
+            'escalated': len([i for i in all_insights if i.get('verdict') == 'escalate']),
+            'by_type':   {},
         }
-        
-        # Count by type
         for insight in all_insights:
-            insight_type = insight.get('type', 'unknown')
-            summary['by_type'][insight_type] = summary['by_type'].get(insight_type, 0) + 1
-        
-        return jsonify({
-            'insights': limited_insights,
-            'summary': summary
-        })
-        
+            t = insight.get('type', 'unknown')
+            summary['by_type'][t] = summary['by_type'].get(t, 0) + 1
+
+        return jsonify({'insights': limited_insights, 'summary': summary})
+
     except Exception as e:
         print(f"Error fetching insights: {e}")
         return jsonify({'error': 'Failed to fetch insights'}), 500
+
+
+@insights_bp.route('/api/insights/escalated', methods=['GET'])
+def get_escalated_insights():
+    """Return only escalated insights, highest priority first"""
+    limit = request.args.get('limit', 50, type=int)
+    limit = min(limit, 200)
+
+    try:
+        scans = Scan.query.filter(
+            Scan.insights_json.isnot(None),
+            Scan.status == 'complete'
+        ).order_by(Scan.created_at.desc()).limit(50).all()
+
+        escalated = []
+        for scan in scans:
+            try:
+                insights = json.loads(scan.insights_json) if scan.insights_json else []
+                for insight in insights:
+                    if insight.get('verdict') == 'escalate':
+                        insight['scan_timestamp'] = scan.created_at.isoformat() if scan.created_at else None
+                        insight['scan_type'] = scan.scan_type
+                        escalated.append(insight)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+        escalated.sort(key=lambda x: (x.get('priority', 0), x.get('timestamp', '')), reverse=True)
+        return jsonify({'insights': escalated[:limit], 'total': len(escalated)})
+
+    except Exception as e:
+        print(f"Error fetching escalated insights: {e}")
+        return jsonify({'error': 'Failed to fetch escalated insights'}), 500
+
+
+@insights_bp.route('/api/port-history/<ip>/<int:port>', methods=['GET'])
+def get_port_history(ip, port):
+    """Return per-scan presence history for a specific port on a host"""
+    limit = request.args.get('limit', 10, type=int)
+    limit = min(limit, 50)
+
+    try:
+        scans = Scan.query.filter(
+            Scan.hosts_json.isnot(None),
+            Scan.status == 'complete'
+        ).order_by(Scan.created_at.desc()).limit(limit).all()
+
+        history = []
+        for scan in scans:
+            try:
+                hosts = json.loads(scan.hosts_json)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            host_seen = False
+            port_seen = False
+            for host in hosts:
+                if host.get('ip') == ip:
+                    host_seen = True
+                    port_seen = any(p.get('port') == port for p in host.get('ports', []))
+                    break
+
+            history.append({
+                'scan_id':   scan.id,
+                'scan_type': scan.scan_type,
+                'timestamp': scan.created_at.isoformat() if scan.created_at else None,
+                'host_seen': host_seen,
+                'port_seen': port_seen,
+            })
+
+        seen_count = sum(1 for h in history if h['port_seen'])
+        return jsonify({
+            'ip':          ip,
+            'port':        port,
+            'history':     history,
+            'seen_in':     seen_count,
+            'total_scans': len(history),
+        })
+
+    except Exception as e:
+        print(f"Error fetching port history: {e}")
+        return jsonify({'error': 'Failed to fetch port history'}), 500
 
 @insights_bp.route('/api/insights/scan/<int:scan_id>', methods=['GET'])
 def get_scan_insights(scan_id):

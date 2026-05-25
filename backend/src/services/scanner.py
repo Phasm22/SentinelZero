@@ -609,6 +609,17 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 try:
                     insights = generate_and_store_insights(scan_id)
                     print(f'Generated {len(insights) if insights else 0} insights for scan {scan_id}')
+                    # Spawn verdict agent in background — never blocks scan completion
+                    try:
+                        from . import agent_service
+                        threading.Thread(
+                            target=agent_service.run_verdicts_for_scan,
+                            args=(scan_id, app, socketio),
+                            daemon=True,
+                        ).start()
+                        print(f'Spawned verdict agent thread for scan {scan_id}')
+                    except Exception as _agent_err:
+                        print(f'Failed to spawn verdict agent: {_agent_err}')
                 except Exception as e:
                     print(f'Error generating insights: {str(e)}')
             # Finalize

@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from ..models.scan import Scan
 from ..config.database import db
+from ..services import sensor_service
 
 
 class InsightsGenerator:
@@ -188,13 +189,15 @@ class InsightsGenerator:
         for port in new_ports:
             port_info = next((p for p in current_host.get('ports', []) if p.get('port') == port), {})
             service = port_info.get('service', 'unknown')
-            insights.append({
+            insight = {
                 'type': 'new_port',
                 'host': host_ip,
                 'message': f"New open port {port}/{service} on {host_ip}",
                 'priority': self.PRIORITY_WEIGHTS.get('new_port', 50),
                 'details': {'port': port, 'service': service, 'ip': host_ip}
-            })
+            }
+            insight = self._enrich_new_port(insight, port, host_ip)
+            insights.append(insight)
         
         # Closed ports
         closed_ports = previous_ports - current_ports
@@ -209,6 +212,54 @@ class InsightsGenerator:
         
         return insights
     
+    def _enrich_new_port(self, insight: Dict[str, Any], port: int, host_ip: str) -> Dict[str, Any]:
+        """Annotate a new_port insight with sensor context when a sensor agent exists for the host."""
+        try:
+            agent = sensor_service.get_agent_by_ip(db, host_ip)
+            if not agent:
+                return insight
+
+            tags = json.loads(agent.tags or '[]')
+            is_network_sensor = 'category:network' in tags
+
+            if is_network_sensor:
+                rows = sensor_service.get_timeline(db, agent.agent_id, minutes=120)
+                if rows:
+                    collectors = json.loads(rows[-1].collectors_json or '{}')
+                    net_ctx: Dict[str, Any] = {}
+                    if 'source:pihole' in tags:
+                        raw = collectors.get('top_blocked', {})
+                        net_ctx['top_blocked'] = list(raw.items())[:5] if isinstance(raw, dict) else raw[:5]
+                    if 'source:ntopng' in tags:
+                        net_ctx['alerted_flows'] = collectors.get('alerts', {}).get('engaged', [])[:5]
+                    if net_ctx:
+                        insight['details']['sensor_context'] = net_ctx
+            else:
+                # Endpoint sensor: correlate the port with the process that opened it
+                events = sensor_service.get_process_events(db, agent.agent_id, minutes=120)
+                for event in reversed(events):
+                    if event['event_type'] != 'process_started':
+                        continue
+                    listening = event.get('listening_ports', [])
+                    if any(addr.split(':')[-1] == str(port) for addr in listening):
+                        proc = event['process']
+                        started_at = datetime.fromisoformat(event['collected_at'])
+                        minutes_ago = max(0, int((datetime.utcnow() - started_at).total_seconds() / 60))
+                        cmdline = proc.get('cmdline', '')
+                        if isinstance(cmdline, list):
+                            cmdline = ' '.join(cmdline)
+                        insight['details']['sensor_context'] = {
+                            'process_name': proc.get('name'),
+                            'pid': proc.get('pid'),
+                            'cmdline': cmdline,
+                            'started_at': event['collected_at'],
+                            'minutes_before_scan': minutes_ago,
+                        }
+                        break
+        except Exception as e:
+            print(f"[sensor enrich] {host_ip}:{port} - {e}")
+        return insight
+
     def _compare_vulnerabilities(self, current_vulns: List[Dict], previous_vulns: List[Dict]) -> List[Dict[str, Any]]:
         """Compare vulnerabilities between scans"""
         insights = []

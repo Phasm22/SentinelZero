@@ -145,12 +145,13 @@ export const apiService = {
   // Insights operations
   getInsights: async (params = {}) => {
     const queryParams = new URLSearchParams()
-    
+
     if (params.limit) queryParams.append('limit', params.limit)
     if (params.type) queryParams.append('type', params.type)
     if (params.priority_min) queryParams.append('priority_min', params.priority_min)
     if (params.unread_only) queryParams.append('unread_only', params.unread_only)
-    
+    if (params.verdict) queryParams.append('verdict', params.verdict)
+
     const response = await axios.get(`${API_BASE_URL}/insights?${queryParams}`)
     return response.data
   },
