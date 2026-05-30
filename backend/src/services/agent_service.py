@@ -27,11 +27,11 @@ _AGENT_PYTHON = os.path.join(_AGENT_DIR, ".venv", "bin", "python")
 ACTIONABLE_TYPES = {
     "new_port", "new_host", "missing_host", "service_change",
     "new_vuln_critical", "new_vuln_high", "new_vuln_medium", "new_vuln_low",
-    "registry_gap", "sensor_gap",
+    "registry_gap", "inventory_gap", "sensor_gap",
 }
 AUTO_DISMISS_TYPES = {"port_closed", "scan_performance", "baseline_inventory"}
 AUTO_EXPLAIN_TYPES = {"vuln_resolved"}
-AUTO_ESCALATE_TYPES = {"registry_gap", "sensor_gap"}  # lab only; home gaps auto-explained
+AUTO_ESCALATE_TYPES = {"registry_gap", "inventory_gap", "sensor_gap"}  # lab only; home gaps auto-explained
 SYNTHESIS_SKIP_BASELINE_ONLY = True
 
 
@@ -207,6 +207,16 @@ def _apply_auto_verdicts(insights: list, now: str) -> None:
                     )
                     insight["verdict_evidence"] = (
                         f"{len(ips)} lab IP(s) lack registry entries: "
+                        + ", ".join(ips[:12])
+                        + ("…" if len(ips) > 12 else "")
+                    )
+                elif itype == "inventory_gap":
+                    ips = (insight.get("details") or {}).get("ips", [])
+                    insight["verdict_summary"] = (
+                        "Registered hosts were not reachable during scan"
+                    )
+                    insight["verdict_evidence"] = (
+                        f"{len(ips)} registry host(s) absent from scan results: "
                         + ", ".join(ips[:12])
                         + ("…" if len(ips) > 12 else "")
                     )

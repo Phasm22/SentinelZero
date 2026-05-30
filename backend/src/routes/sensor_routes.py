@@ -21,6 +21,46 @@ def _auth_check():
     return None
 
 
+def _upsert_sensor_agent(db, payload: dict) -> tuple[SensorAgent, bool]:
+    """Create or refresh a sensor agent row. Returns (agent, created)."""
+    agent_id = (payload.get('agent_id') or '').strip()
+    if not agent_id:
+        raise ValueError('agent_id required')
+
+    tags_raw = payload.get('tags', [])
+    if isinstance(tags_raw, str):
+        tags_json = tags_raw
+    else:
+        tags_json = json.dumps(tags_raw or [])
+
+    existing = SensorAgent.query.filter_by(agent_id=agent_id).first()
+    if existing:
+        if payload.get('hostname'):
+            existing.hostname = payload['hostname']
+        if payload.get('host_ip'):
+            existing.host_ip = payload['host_ip']
+        if payload.get('role'):
+            existing.role = payload['role']
+        if payload.get('agent_version'):
+            existing.agent_version = payload['agent_version']
+        if payload.get('tags') is not None:
+            existing.tags = tags_json
+        existing.last_seen_at = datetime.utcnow()
+        return existing, False
+
+    agent = SensorAgent(
+        agent_id=agent_id,
+        hostname=payload.get('hostname'),
+        host_ip=payload.get('host_ip'),
+        role=payload.get('role', 'linux-server'),
+        agent_version=payload.get('agent_version'),
+        last_seen_at=datetime.utcnow(),
+        tags=tags_json,
+    )
+    db.session.add(agent)
+    return agent, True
+
+
 def create_sensor_blueprint(db):
     bp = Blueprint('sensor', __name__)
 
@@ -39,31 +79,14 @@ def create_sensor_blueprint(db):
             return jsonify({'error': 'agent_id required'}), 400
 
         try:
-            existing = SensorAgent.query.filter_by(agent_id=agent_id).first()
-            if existing:
-                # Idempotent update — allow IP/version changes (e.g. DHCP)
-                existing.hostname = payload.get('hostname', existing.hostname)
-                existing.host_ip = payload.get('host_ip', existing.host_ip)
-                existing.role = payload.get('role', existing.role)
-                existing.agent_version = payload.get('agent_version', existing.agent_version)
-                existing.tags = json.dumps(payload.get('tags', json.loads(existing.tags or '[]')))
-                existing.last_seen_at = datetime.utcnow()
-                db.session.commit()
-                return jsonify({'status': 'updated', 'agent_id': agent_id})
-
-            agent = SensorAgent(
-                agent_id=agent_id,
-                hostname=payload.get('hostname'),
-                host_ip=payload.get('host_ip'),
-                role=payload.get('role', 'linux-server'),
-                agent_version=payload.get('agent_version'),
-                last_seen_at=datetime.utcnow(),
-                tags=json.dumps(payload.get('tags', [])),
-            )
-            db.session.add(agent)
+            agent, created = _upsert_sensor_agent(db, payload)
             db.session.commit()
-            return jsonify({'status': 'registered', 'agent_id': agent_id}), 201
+            if created:
+                return jsonify({'status': 'registered', 'agent_id': agent_id}), 201
+            return jsonify({'status': 'updated', 'agent_id': agent_id})
 
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
         except Exception as e:
             db.session.rollback()
             print(f'[DEBUG] sensor register error: {e}')
@@ -85,7 +108,14 @@ def create_sensor_blueprint(db):
 
         agent = SensorAgent.query.filter_by(agent_id=agent_id).first()
         if not agent:
-            return jsonify({'error': 'agent not registered'}), 404
+            # Self-heal after DB reset: first ingest (re)creates the agent row.
+            try:
+                agent, created = _upsert_sensor_agent(db, payload)
+                db.session.flush()
+                if created:
+                    print(f'[sensor] auto-registered {agent_id} on ingest')
+            except ValueError as e:
+                return jsonify({'error': str(e)}), 400
 
         try:
             ts_str = payload.get('ts', '')

@@ -26,6 +26,7 @@ class InsightsGenerator:
         'new_vuln_high': 90,
         'missing_host': 80,
         'registry_gap': 75,
+        'inventory_gap': 72,
         'new_vuln_medium': 70,
         'new_host': 60,
         'sensor_gap': 55,
@@ -50,6 +51,7 @@ class InsightsGenerator:
         'service_change': "🔄 Service version or type changed",
         'vuln_resolved': "✅ Vulnerability resolved since last scan",
         'registry_gap': "📋 Hosts not in asset registry",
+        'inventory_gap': "📋 Registered hosts missing from scan",
         'sensor_gap': "📡 Hosts without endpoint sensor coverage",
         'baseline_inventory': "📊 First-scan network inventory",
         'correlated': "🔗 Correlated finding cluster",
@@ -143,6 +145,31 @@ class InsightsGenerator:
                         'target_network': net,
                         'network_label': net_label,
                         'scope': 'lab_registry',
+                    },
+                })
+
+            absent = asset_registry.hosts_for_inventory_gap(ips, net)
+            if absent:
+                names = []
+                for ip in absent[:8]:
+                    ctx = asset_registry.get_asset_context(ip, network_cidr=net)
+                    names.append(ctx.get('name') or ip)
+                preview = ', '.join(f"{ip} ({names[i]})" for i, ip in enumerate(absent[:8]))
+                if len(absent) > 8:
+                    preview += f", +{len(absent) - 8} more"
+                insights.append({
+                    'type': 'inventory_gap',
+                    'host': f"{len(absent)} hosts",
+                    'message': (
+                        f"{len(absent)} registered lab host(s) not seen in scan: {preview}"
+                    ),
+                    'priority': self.PRIORITY_WEIGHTS['inventory_gap'],
+                    'details': {
+                        'ips': absent,
+                        'is_baseline': True,
+                        'target_network': net,
+                        'network_label': net_label,
+                        'scope': 'registry_absence',
                     },
                 })
 

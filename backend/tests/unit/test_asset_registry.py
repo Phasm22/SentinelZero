@@ -47,3 +47,22 @@ def test_get_asset_context_known_ip(tmp_path, monkeypatch):
     )
     assert "172.16.0.199" in lab_gaps
     assert "172.16.0.10" not in lab_gaps
+
+    inventory = asset_registry.hosts_for_inventory_gap(
+        ["172.16.0.10", "172.16.0.13"], "172.16.0.0/22",
+    )
+    assert "172.16.0.10" not in inventory
+    assert inventory == []
+
+    registry["172.16.0.100"] = {
+        "name": "winvm.prox",
+        "role": "windows-vm",
+        "trust_zone": "lab",
+        "expected_ports": [3389],
+    }
+    path.write_text(json.dumps(registry))
+    asset_registry._load_registry.cache_clear()
+    inventory = asset_registry.hosts_for_inventory_gap(
+        ["172.16.0.10", "172.16.0.13"], "172.16.0.0/22",
+    )
+    assert inventory == ["172.16.0.100"]

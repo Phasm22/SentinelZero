@@ -121,6 +121,21 @@ def hosts_for_registry_gap(ips: List[str], network_cidr: Optional[str]) -> List[
     return [ip for ip in ips if ip_matches_network(ip, network_cidr) and not is_in_registry(ip)]
 
 
+def hosts_for_inventory_gap(
+    discovered_ips: List[str], network_cidr: Optional[str],
+) -> List[str]:
+    """Registered hosts in scope that did not appear in this scan."""
+    if is_home_network(network_cidr):
+        return []
+    seen = set(discovered_ips)
+    registry = _load_registry()
+    missing = [
+        ip for ip in registry
+        if ip_matches_network(ip, network_cidr) and ip not in seen
+    ]
+    return sorted(missing, key=lambda x: tuple(int(p) for p in x.split('.')))
+
+
 def hosts_for_sensor_gap(ips: List[str], network_cidr: Optional[str]) -> List[str]:
     """
     IPs lacking endpoint sensor coverage that matter for this network.

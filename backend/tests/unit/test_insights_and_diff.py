@@ -272,6 +272,32 @@ def test_baseline_inventory_not_new_host_rollup(app, monkeypatch):
         )
 
 
+def test_baseline_inventory_gap_for_missing_registry_hosts(app, monkeypatch):
+    with app.app_context():
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.is_in_registry',
+            lambda ip: True,
+        )
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.hosts_for_inventory_gap',
+            lambda ips, net: ['172.16.0.100', '172.16.0.106'],
+        )
+        monkeypatch.setattr(
+            'src.services.insights.asset_registry.get_asset_context',
+            lambda ip, **kw: {'name': f'host-{ip}'},
+        )
+        scan = _scan(
+            hosts=[{'ip': '172.16.0.10', 'ports': [{'port': 22}]}],
+        )
+        db.session.add(scan)
+        db.session.commit()
+
+        insights = InsightsGenerator().generate_insights(scan)
+        gap = [i for i in insights if i['type'] == 'inventory_gap']
+        assert len(gap) == 1
+        assert '172.16.0.100' in gap[0]['details']['ips']
+
+
 def test_home_baseline_skips_lab_registry_gap(app):
     with app.app_context():
         scan = _scan(

@@ -61,10 +61,10 @@ def _host_discovery_probes(on_link):
     """Host-discovery probe set tuned to whether the target is on-link or routed."""
     if on_link:
         # Local segment: ARP is fastest/most reliable; ICMP echo/timestamp/netmask back it up.
-        return ['-PE', '-PP', '-PM', '-PR', '-PS22,80,443,8080', '-PA80,443']
+        return ['-PE', '-PP', '-PM', '-PR', '-PS22,80,443,3389,8080', '-PA80,443']
     # Routed: ARP (-PR) and address-mask (-PM) can't cross the gateway. Lean on routable
     # ICMP echo/timestamp plus TCP SYN/ACK probes that actually traverse the firewall.
-    return ['-PE', '-PP', '-PS22,80,443,8080', '-PA80,443']
+    return ['-PE', '-PP', '-PS22,80,443,3389,8080', '-PA80,443']
 
 
 def _get_scan_timeout_seconds():
@@ -284,7 +284,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                         runtime.append_log(scan_id, 'Pre-discovery retry: -Pn -sn')
                         pre_cmd_pn = [
                             'nmap', '-sn', '-Pn',
-                            '-PE', '-PP', '-PS22,80,443,8080', '-PA80,443',
+                            '-PE', '-PP', '-PS22,80,443,3389,8080', '-PA80,443',
                             '-n', '--max-retries', '2', '-T4',
                             target_network, '-oX', pre_xml,
                         ]
