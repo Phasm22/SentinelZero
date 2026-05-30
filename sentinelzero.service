@@ -16,6 +16,8 @@ Environment=SENTINEL_BIND_HOST=0.0.0.0
 Environment=SENTINEL_BIND_PORT=5000
 Environment=SENTINEL_ALLOWED_ORIGINS=http://localhost:3173,http://127.0.0.1:3173,http://localhost:5000,http://127.0.0.1:5000,http://sentinelzero.prox:3173,http://sentinelzero.prox:5000,http://sentinelzero.prox,https://sentinelzero.prox
 Environment=SCAN_TIMEOUT_SECONDS=1800
+Environment=SCAN_TIMEOUT_HOME_SECONDS=5400
+Environment=SCAN_TIMEOUT_IOT_HOME_SECONDS=7200
 Environment=SCAN_XML_PARSE_RETRIES=3
 Environment=SCAN_XML_PARSE_RETRY_DELAY_SECONDS=1
 ExecStart=/home/sentinel/SentinelZero/backend/run-app.sh

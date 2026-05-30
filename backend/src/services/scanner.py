@@ -67,13 +67,44 @@ def _host_discovery_probes(on_link):
     return ['-PE', '-PP', '-PS22,80,443,3389,8080', '-PA80,443']
 
 
-def _get_scan_timeout_seconds():
-    raw_value = os.environ.get('SCAN_TIMEOUT_SECONDS', '1800')
+def _parse_timeout_env(name, default):
+    raw_value = os.environ.get(name, str(default))
     try:
         timeout_value = int(raw_value)
     except (TypeError, ValueError):
-        timeout_value = 1800
+        timeout_value = default
     return max(timeout_value, 5)
+
+
+def _get_scan_timeout_seconds(scan_type_normalized=None, target_network=None, on_link=True):
+    """Watchdog budget: routed/home and IoT scans need more time than on-link lab scans."""
+    from .scan_scope import is_home_network
+
+    net = target_network or ''
+    home = is_home_network(net) or not on_link
+    if scan_type_normalized == 'iot scan' and home:
+        return _parse_timeout_env('SCAN_TIMEOUT_IOT_HOME_SECONDS', 7200)
+    if home:
+        return _parse_timeout_env('SCAN_TIMEOUT_HOME_SECONDS', 5400)
+    return _parse_timeout_env('SCAN_TIMEOUT_SECONDS', 1800)
+
+
+def _should_run_pre_discovery(scan_type_normalized, target_network, on_link, pre_discovery_requested):
+    """Pre-discover live hosts before heavy port scans on routed or large subnets."""
+    if scan_type_normalized in ('discovery scan',):
+        return False
+    if pre_discovery_requested:
+        return True
+    if scan_type_normalized not in ('iot scan', 'full tcp', 'vuln scripts'):
+        return False
+    if not on_link:
+        return True
+    try:
+        import ipaddress
+        net = ipaddress.ip_network(target_network, strict=False)
+        return net.num_addresses > 512
+    except Exception:
+        return False
 
 
 def _get_xml_parse_retry_policy():
@@ -250,7 +281,18 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             
             # Optional pre-discovery phase for heavy scans (not for explicit discovery scan)
             discovered_hosts = []
-            if pre_discovery and scan_type_normalized not in ('discovery scan',):
+            use_pre_discovery = _should_run_pre_discovery(
+                scan_type_normalized,
+                net or target_network,
+                on_link,
+                pre_discovery,
+            )
+            if use_pre_discovery and not pre_discovery:
+                runtime.append_log(
+                    scan_id,
+                    'Auto pre-discovery enabled (routed or large target for heavy scan type)',
+                )
+            if use_pre_discovery and scan_type_normalized not in ('discovery scan',):
                 try:
                     emit_stage('running', 'Pre-discovery: enumerating live hosts...')
                     pre_xml = f'scans/pre_discovery_{now}.xml'
@@ -312,11 +354,15 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 except Exception as _e:
                     print(f'[WARN] Pre-discovery step failed: {_e}')
             # Build nmap command (user-facing prior to privilege adjustments)
-            # NOTE: We intentionally omit -Pn for discovery scans so nmap actually performs host discovery
+            # NOTE: We intentionally omit -Pn for discovery scans so nmap actually performs host discovery.
+            # When pre-discovery yields a live host list, skip -Pn — probing 1024 addresses with -Pn is
+            # what caused home IoT scans to stall in service detection until the watchdog fired.
             if scan_type_normalized == 'discovery scan':
                 cmd = ['nmap', '-v', '-T4']  # no -Pn here; allow ARP/ICMP
+            elif discovered_hosts:
+                cmd = ['nmap', '-v', '-T4']
             else:
-                cmd = ['nmap', '-v', '-T4', '-Pn']  # retain -Pn for other scan types to skip unreliable ping on some Wi-Fi setups
+                cmd = ['nmap', '-v', '-T4', '-Pn']
             if scan_type_normalized == 'full tcp':
                 # Balanced deep scan: broader ports + service/OS without full -p- (T2-class) sweep
                 port_spec = (
@@ -334,11 +380,15 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                         '--min-rate', '150', '--max-rate', '600',
                     ]
             elif scan_type_normalized == 'iot scan':
+                iot_ports = '53,67,68,80,443,1900,5353,554,8080'
                 if _priv_fallback:
                     # Fallback removes UDP requirement (switch to TCP connect scan)
-                    cmd += ['-sT', '-p', '53,67,68,80,443,1900,5353,554,8080']
+                    cmd += ['-sT', '-p', iot_ports]
                 else:
-                    cmd += ['-sU', '-p', '53,67,68,80,443,1900,5353,554,8080']
+                    cmd += ['-sU', '-p', iot_ports]
+                # Routed home IoT: cap per-host work so -sV across the /22 cannot run for hours.
+                if not on_link or discovered_hosts:
+                    cmd += ['--max-retries', '2', '--host-timeout', '4m']
             elif scan_type_normalized == 'discovery scan':
                 # Fast host discovery (-sn, no port scan). Probes adapt to on-link vs routed
                 # below; ARP is used on-link only (needs privs), TCP/ICMP fallback when routed.
@@ -362,12 +412,28 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             
             # Apply security settings
             # Discovery scan does not use OS/service/vuln phases to stay lightweight
-            if scan_type_normalized != 'discovery scan' and security_settings.get('os_detection_enabled'):
+            skip_os = (
+                scan_type_normalized == 'iot scan'
+                and not on_link
+                and security_settings.get('os_detection_enabled')
+            )
+            if skip_os:
+                runtime.append_log(
+                    scan_id,
+                    'Skipping OS detection for routed IoT scan (slow/unreliable across gateway)',
+                )
+            if (
+                scan_type_normalized != 'discovery scan'
+                and security_settings.get('os_detection_enabled')
+                and not skip_os
+            ):
                 cmd.append('-O')
             if scan_type_normalized != 'discovery scan' and security_settings.get('service_detection_enabled'):
                 cmd.append('-sV')
                 if scan_type_normalized == 'full tcp':
                     cmd.extend(['--version-intensity', '5'])
+                elif scan_type_normalized == 'iot scan':
+                    cmd.extend(['--version-intensity', '3'])
             if scan_type_normalized == 'vuln scripts':
                 # Only run vulnerability scripts for explicit vulnerability scans
                 cmd.append('--script=vuln')
@@ -418,7 +484,11 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             msg = f'Nmap process started (PID: {proc.pid})...'
             runtime.append_log(scan_id, msg)
             print(msg)
-            scan_timeout_seconds = _get_scan_timeout_seconds()
+            scan_timeout_seconds = _get_scan_timeout_seconds(
+                scan_type_normalized,
+                net or target_network,
+                on_link,
+            )
             runtime.append_log(scan_id, f'Watchdog timeout set to {scan_timeout_seconds}s')
             
             # Cleanup function for interrupted scans

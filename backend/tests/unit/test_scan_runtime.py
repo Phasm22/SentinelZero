@@ -61,6 +61,21 @@ class _PopenFactory:
         return self._processes.pop(0)
 
 
+class _CompletedRun:
+    returncode = 1
+    stdout = ''
+    stderr = ''
+
+
+def _stub_pre_discovery_run(monkeypatch):
+    """Pre-discovery uses subprocess.run; keep unit tests on the main Popen path only."""
+    monkeypatch.setattr(
+        scanner_module.subprocess,
+        'run',
+        lambda *args, **kwargs: _CompletedRun(),
+    )
+
+
 def _sample_xml_tree():
     xml = """
     <nmaprun>
@@ -113,6 +128,7 @@ def test_run_nmap_scan_completes_existing_scan_record(app, monkeypatch):
 
         popen = _PopenFactory([_FakeProcess(['About 42.50% done\n', 'done\n'], returncode=0, pid=9001)])
         monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+        _stub_pre_discovery_run(monkeypatch)
 
         scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
         scanner_module.run_nmap_scan(
@@ -156,6 +172,7 @@ def test_run_nmap_scan_retries_in_degraded_mode_without_new_scan(app, monkeypatc
         second = _FakeProcess(['About 88.00% done\n', 'done\n'], returncode=0, pid=2222)
         popen = _PopenFactory([first, second])
         monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+        _stub_pre_discovery_run(monkeypatch)
 
         scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
         scanner_module.run_nmap_scan(
@@ -205,6 +222,7 @@ def test_run_nmap_scan_retries_transient_xml_parse_error(app, monkeypatch):
 
         popen = _PopenFactory([_FakeProcess(['About 99.00% done\n', 'done\n'], returncode=0, pid=3001)])
         monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+        _stub_pre_discovery_run(monkeypatch)
 
         scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
         scanner_module.run_nmap_scan(
@@ -265,10 +283,13 @@ def test_run_nmap_scan_fails_when_watchdog_timeout_reached(app, monkeypatch):
         monkeypatch.setattr(scanner_module.os, 'makedirs', lambda *args, **kwargs: None)
         monkeypatch.setattr(scanner_module.os.path, 'exists', lambda path: False)
         monkeypatch.setenv('SCAN_TIMEOUT_SECONDS', '5')
+        monkeypatch.setenv('SCAN_TIMEOUT_HOME_SECONDS', '5')
+        monkeypatch.setenv('SCAN_TIMEOUT_IOT_HOME_SECONDS', '5')
         monotonic_values = iter([0.0, 6.0, 6.0, 6.0])
         monkeypatch.setattr(scanner_module.time, 'monotonic', lambda: next(monotonic_values, 6.0))
         popen = _PopenFactory([_LongRunningProcess()])
         monkeypatch.setattr(scanner_module.subprocess, 'Popen', popen)
+        _stub_pre_discovery_run(monkeypatch)
 
         scan = runtime.create_scan('Full TCP', state='queued', message='Queued')
         scanner_module.run_nmap_scan(
