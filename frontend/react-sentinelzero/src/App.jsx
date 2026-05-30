@@ -5,6 +5,7 @@ import { ToastProvider } from './contexts/ToastContext'
 // Lazy route chunks
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ScanHistory = lazy(() => import('./pages/ScanHistory'))
+const HunterRuns = lazy(() => import('./pages/HunterRuns'))
 const LabStatus = lazy(() => import('./pages/LabStatus'))
 const Settings = lazy(() => import('./pages/Settings'))
 const ThemeTest = lazy(() => import('./pages/ThemeTest'))
@@ -24,6 +25,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/scan-history" element={<ScanHistory />} />
+                <Route path="/hunter-runs" element={<HunterRuns />} />
                 <Route path="/lab-status" element={<LabStatus />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/theme-test" element={<ThemeTest />} />

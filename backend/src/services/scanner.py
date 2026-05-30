@@ -121,6 +121,13 @@ def _get_xml_parse_retry_policy():
     return max(attempts, 1), max(delay, 0.0)
 
 
+def _is_reportable_port_state(protocol, state):
+    """Scanner keeps TCP strict while preserving IoT-relevant UDP open|filtered."""
+    proto = str(protocol or '').lower()
+    state_value = str(state or '').lower()
+    return state_value == 'open' or (proto == 'udp' and state_value == 'open|filtered')
+
+
 def _terminate_process(proc):
     try:
         proc.terminate()
@@ -705,10 +712,13 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     if ports_block is not None:
                         for port_el in ports_block.findall('port'):
                             state_el = port_el.find('state')
-                            if state_el is None or state_el.attrib.get('state') != 'open':
+                            if state_el is None:
+                                continue
+                            state_value = state_el.attrib.get('state')
+                            proto = port_el.attrib.get('protocol')
+                            if not _is_reportable_port_state(proto, state_value):
                                 continue
                             portid = port_el.attrib.get('portid')
-                            proto = port_el.attrib.get('protocol')
                             service_el = port_el.find('service')
                             service_name = service_el.attrib.get('name') if service_el is not None else None
                             product = service_el.attrib.get('product') if service_el is not None and service_el.attrib.get('product') else None

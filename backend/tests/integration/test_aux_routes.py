@@ -193,3 +193,40 @@ def test_scheduled_scan_route_registers_job_and_executes_wrapper(tmp_path):
             mock_run.assert_called_once()
             assert mock_run.call_args.args[0] == created.id
             assert mock_run.call_args.args[1] == 'Discovery Scan'
+
+
+def test_hunter_overview_route_returns_normalized_payload(client, tmp_path, monkeypatch):
+    reports_dir = tmp_path / "reports"
+    state_dir = tmp_path / "state"
+    reports_dir.mkdir()
+    state_dir.mkdir()
+    (reports_dir / "hunt-home_assess-test.json").write_text(json.dumps({
+        "mission_id": "home_assess",
+        "target_network": "192.168.68.0/22",
+        "completed_at": "2026-05-30T21:01:28Z",
+        "findings": [{"ip": "192.168.68.55", "type": "new_udp_port", "description": "new udp"}],
+        "hosts_recommended_for_scan": ["192.168.68.55"],
+        "hosts_recommended_total": 1,
+        "scan_triggered": {"status": "skipped", "reason": "no-trigger-scan set"},
+    }), encoding="utf-8")
+    (state_dir / "iot_fingerprints.json").write_text(
+        json.dumps({"schema_version": 1, "fingerprints": {"192.168.68.55": {"ip": "192.168.68.55"}}}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
+    monkeypatch.setenv("HUNTER_BASELINE_PATH", str(state_dir / "iot_fingerprints.json"))
+
+    response = client.get("/api/hunter/overview?limit=5")
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["meta"]["run_count"] == 1
+    assert payload["meta"]["baseline_fingerprint_hosts"] == 1
+    assert payload["latest"]["huntRun"]["missionId"] == "home_assess"
+    assert payload["latest"]["whatChanged"]["eventHistogram"]["new_udp_port"] == 1
+
+
+def test_hunter_latest_route_404_without_reports(client, monkeypatch):
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", "/tmp/does-not-exist-hunter-reports")
+    response = client.get("/api/hunter/runs/latest")
+    assert response.status_code == 404

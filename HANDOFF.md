@@ -3,8 +3,8 @@
 **Last updated:** 2026-05-30
 **Status:** 8 sensors active (incl. OPNsense REST), backend + frontend on 3173/5000, verdict pipeline live.
 LLM pipeline upgraded to full-telemetry analyst (Phases 1–7) with working local Ollama mode.
-Scan/sensor discrepancy fixes committed (`f1d339e`). **Next initiative:** Hunter agent — see
-`docs/HUNTER-PREPLAN.md`.
+Scan/sensor discrepancy fixes committed (`f1d339e`). Hunter Phase 2 (IoT UDP baselines + continuity) is
+implemented and validated on `sentinel-hunter`.
 
 ### Live stack (2026-05-25)
 
@@ -18,6 +18,37 @@ Scan/sensor discrepancy fixes committed (`f1d339e`). **Next initiative:** Hunter
 | Frontend | Vite on **3173** (proxies `/api`, `/socket.io` → 5000); InsightsCard shows verdict badges + evidence |
 
 **Note:** `sentinelzero-frontend.service` in `/etc/systemd` may still pass `--port 5173` — use repo unit `sentinelzero-frontend.service` (3173) after `sudo cp` + `daemon-reload`.
+
+---
+
+## 2026-05-30 Session — Hunter Phase 2 implemented (IoT UDP baselines + continuity)
+
+### What shipped
+
+| Area | Outcome |
+|------|---------|
+| Hunter state continuity | Persistent baseline at `HUNTER_STATE_DIR/iot_fingerprints.json` with atomic writes |
+| Assess pipeline | Deterministic `home_assess` pre-loop: `port_scan_iot` -> fingerprint diff -> findings before LLM narrative |
+| Fingerprint intelligence | Rules-first events: `new_device`, `new_udp_port`, `lost_udp_port`, `expected_udp_violation` |
+| Device identity | Merged context from assets + Pi-hole + baseline; exposed to hunter tools and payloads |
+| Report schema | Added `fingerprints`, `fingerprint_diffs`, `baseline_updated`, `device_context_summary` |
+| Blue pipeline compatibility | Scanner UDP parser now keeps `open|filtered` for UDP (TCP remains strict `open`) |
+| Scheduling/deploy | `sentinel-hunter@home_assess.timer` added and enabled; state dir + env + nmap privileges configured |
+
+### Validation results
+
+- Hunter tests: **23 passed, 2 skipped**
+- Backend scanner tests: **10 passed**
+- Live home tests (`HUNTER_LIVE_HOME=1` on hunter): **2 passed**
+- `home_assess --no-trigger-scan` run twice:
+  - Run 1 bootstrapped baseline
+  - Run 2 showed continuity on overlapping anchors (no false `new_device` for re-probed stable IPs)
+
+### Home Pi-hole sensor status (`192.168.71.25`)
+
+- `sentinel-pihole@home` already configured and active
+- `GET /api/sensor/latest/pihole-home` returns fresh `summary`, `top_domains`, `top_blocked`, `top_clients`
+- Hunter home missions are consuming `pihole-home` context for seed/device ranking
 
 ---
 
@@ -146,14 +177,14 @@ Red-team-style **hunter** feeds blue SentinelZero — does **not** replace `agen
 | Component | Host | Role |
 |-----------|------|------|
 | Ollama | **palindrome** `192.168.68.202:11434` | LLM only (GPU, ufw open to lab) |
-| Hunter controller + lab nmap | **sentinelzero** | Mission loop, local probes on `172.16.0.0/22` |
-| Home probes | **SSH → ubuntu-server** `192.168.71.30` | Wired home executor **from day one** — not palindrome Wi‑Fi |
+| Hunter controller + probes | **sentinel-hunter** `172.16.0.180` / `192.168.68.53` | Mission loop + local probes on lab/home |
+| SentinelZero backend | **sentinelzero** `172.16.0.254` | Receives scan triggers + runs blue verdict pipeline |
 
-**Why:** palindrome Wi‑Fi is fine for Ollama but bad for authoritative discovery (flapping hosts, double-hop).
-Mythos-inspired scaffold: mission YAML → seed (ARP/DHCP/DNS/assets/scan diff) → rank → parallel workers
-→ verifier → JSON report + optional `POST /api/scan` → existing blue pipeline on scan complete.
+Mythos-inspired scaffold is now in place: mission YAML -> seed (ARP/DHCP/DNS/assets/scan diff) -> rank ->
+deterministic assess probes + tool loop -> verifier -> JSON report + optional `POST /api/scan` -> existing
+blue pipeline on scan complete.
 
-**Not built yet.** Phase 1 = seed + tools + loop + handoff file + SSH home executor.
+**Current state:** Phase 2 continuity implemented (IoT UDP fingerprint baselines and cross-run diffs).
 
 ---
 

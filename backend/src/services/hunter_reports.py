@@ -1,0 +1,432 @@
+"""Normalize Hunter report artifacts for SentinelZero UI consumption."""
+from __future__ import annotations
+
+import json
+import os
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+DEFAULT_REPORT_DIRS = (
+    "/home/hunter/agent/reports",
+    "/home/sentinel/agent/reports",
+)
+
+DEFAULT_BASELINE_PATHS = (
+    "/home/hunter/agent/state/iot_fingerprints.json",
+    "/home/sentinel/agent/state/iot_fingerprints.json",
+)
+
+NOVELTY_WEIGHTS = {
+    "new_device": 6,
+    "new_udp_port": 4,
+    "expected_udp_violation": 4,
+    "new_host": 3,
+}
+
+DRIFT_WEIGHTS = {
+    "lost_udp_port": 3,
+    "expected_udp_violation": 2,
+    "service_change": 2,
+}
+
+NOW_TYPES = {"new_device", "new_udp_port", "expected_udp_violation"}
+OBSERVE_TYPES = {"lost_udp_port", "iot_observation"}
+
+
+def _safe_int(value: Any, fallback: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _env_list(name: str) -> list[str]:
+    raw = os.environ.get(name, "")
+    if not raw.strip():
+        return []
+    return [item.strip() for item in raw.split(":") if item.strip()]
+
+
+def report_dirs() -> list[Path]:
+    configured = _env_list("HUNTER_REPORTS_DIRS")
+    single = os.environ.get("HUNTER_REPORTS_DIR")
+    if single:
+        configured.append(single.strip())
+    if not configured:
+        configured = list(DEFAULT_REPORT_DIRS)
+    return [Path(item) for item in configured]
+
+
+def baseline_paths() -> list[Path]:
+    configured = _env_list("HUNTER_BASELINE_PATHS")
+    single = os.environ.get("HUNTER_BASELINE_PATH")
+    if single:
+        configured.append(single.strip())
+    if not configured:
+        configured = list(DEFAULT_BASELINE_PATHS)
+    return [Path(item) for item in configured]
+
+
+def _read_json_file(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _load_baseline_state() -> dict[str, Any]:
+    for path in baseline_paths():
+        if path.exists():
+            payload = _read_json_file(path)
+            if payload is not None:
+                payload["_baseline_path"] = str(path)
+                return payload
+    return {"schema_version": 1, "fingerprints": {}}
+
+
+def _iter_report_files(limit: int = 50) -> list[Path]:
+    files: list[Path] = []
+    for root in report_dirs():
+        if not root.exists() or not root.is_dir():
+            continue
+        files.extend(root.glob("hunt-*.json"))
+    files = sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[: max(limit, 1)]
+
+
+def _scan_trigger_status(scan_triggered: Any) -> str:
+    if not isinstance(scan_triggered, dict):
+        return "none"
+    if scan_triggered.get("status") == "skipped":
+        return "skipped"
+    if scan_triggered.get("error"):
+        return "failed"
+    if scan_triggered.get("scan_id") or scan_triggered.get("status") == "success":
+        return "triggered"
+    return "none"
+
+
+def _event_severity(event_type: str) -> str:
+    if event_type in {"expected_udp_violation", "new_device"}:
+        return "high"
+    if event_type in {"new_udp_port", "new_host"}:
+        return "medium"
+    if event_type in {"lost_udp_port", "iot_observation"}:
+        return "low"
+    return "info"
+
+
+def _default_action_for_type(event_type: str) -> str:
+    if event_type in NOW_TYPES:
+        return "now"
+    if event_type in OBSERVE_TYPES:
+        return "observe"
+    return "next_scan"
+
+
+def _build_events(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    findings = raw.get("findings") or []
+    diffs = raw.get("fingerprint_diffs") or []
+    events: list[dict[str, Any]] = []
+    idx = 0
+    for source_field, items in (("findings", findings), ("fingerprint_diffs", diffs)):
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            ip = str(item.get("ip") or "").strip()
+            event_type = str(item.get("type") or "unknown").strip() or "unknown"
+            events.append({
+                "event_id": f"{source_field}:{idx}",
+                "ip": ip,
+                "type": event_type,
+                "severity": _event_severity(event_type),
+                "description": str(item.get("description") or "").strip(),
+                "recommended_action": str(item.get("recommended_action") or "").strip() or _default_action_for_type(event_type),
+                "source_field": source_field,
+                "raw_index": idx,
+                "open_ports": item.get("open_ports") if isinstance(item.get("open_ports"), list) else [],
+                "udp_ports": item.get("udp_ports") if isinstance(item.get("udp_ports"), list) else [],
+                "device_hint": str(item.get("device_hint") or "").strip() or None,
+                "confidence": str(item.get("confidence") or "").strip() or None,
+            })
+            idx += 1
+    return events
+
+
+def _host_rollups(
+    raw: dict[str, Any],
+    events: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    recommended = [str(ip).strip() for ip in (raw.get("hosts_recommended_for_scan") or []) if str(ip).strip()]
+    recommended_set = set(recommended)
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in events:
+        if event["ip"]:
+            grouped[event["ip"]].append(event)
+
+    # Ensure all recommended hosts have rows, even without events.
+    for ip in recommended:
+        grouped.setdefault(ip, [])
+
+    hosts: list[dict[str, Any]] = []
+    recommendations: list[dict[str, Any]] = []
+    for ip, host_events in grouped.items():
+        novelty = sum(NOVELTY_WEIGHTS.get(ev["type"], 0) for ev in host_events)
+        drift = sum(DRIFT_WEIGHTS.get(ev["type"], 0) for ev in host_events)
+        evidence = min(10, len(host_events) + (2 if ip in recommended_set else 0))
+        action = "observe"
+        explicit_actions = {ev["recommended_action"] for ev in host_events if ev.get("recommended_action")}
+        if "none_until_online" in explicit_actions:
+            action = "none_until_online"
+        elif any(ev["type"] in NOW_TYPES for ev in host_events):
+            action = "now"
+        elif ip in recommended_set:
+            action = "next_scan"
+        elif any(ev["type"] in OBSERVE_TYPES for ev in host_events):
+            action = "observe"
+        elif host_events:
+            action = "next_scan"
+
+        hosts.append({
+            "ip": ip,
+            "event_count": len(host_events),
+            "noveltyScore": novelty,
+            "driftScore": drift,
+            "evidenceStrength": evidence,
+            "actionPriority": action,
+            "recommendedForScan": ip in recommended_set,
+            "events": host_events,
+            "topEventTypes": dict(Counter(ev["type"] for ev in host_events).most_common(4)),
+        })
+        recommendations.append({
+            "ip": ip,
+            "actionPriority": action,
+            "noveltyScore": novelty,
+            "driftScore": drift,
+            "eventCount": len(host_events),
+            "recommendedForScan": ip in recommended_set,
+        })
+
+    priority_rank = {"now": 0, "next_scan": 1, "observe": 2, "none_until_online": 3}
+    hosts.sort(
+        key=lambda host: (
+            priority_rank.get(host["actionPriority"], 4),
+            -host["noveltyScore"],
+            -host["driftScore"],
+            -host["evidenceStrength"],
+            host["ip"],
+        )
+    )
+    recommendations.sort(
+        key=lambda row: (
+            priority_rank.get(row["actionPriority"], 4),
+            -row["noveltyScore"],
+            -row["driftScore"],
+            -row["eventCount"],
+            row["ip"],
+        )
+    )
+    return hosts, recommendations
+
+
+def _build_histogram(events: list[dict[str, Any]]) -> dict[str, int]:
+    histogram = Counter(event["type"] for event in events)
+    return {key: histogram[key] for key in sorted(histogram.keys())}
+
+
+def _build_deterministic_bullets(run: dict[str, Any]) -> list[str]:
+    bullets: list[str] = []
+    scan_status = run["huntRun"]["scanTriggerStatus"]
+    if scan_status == "triggered":
+        bullets.append("Hunter triggered a follow-up scan handoff for this run.")
+    elif scan_status == "skipped":
+        bullets.append("Hunter did not trigger a follow-up scan in this run.")
+
+    events = run["huntEvent"]
+    if events:
+        histogram = _build_histogram(events)
+        top = ", ".join(f"{k}:{v}" for k, v in list(histogram.items())[:4])
+        bullets.append(f"Observed {len(events)} evidence events ({top}).")
+    else:
+        bullets.append("No structured hunt events were recorded in this run.")
+
+    top_hosts = run["huntRecommendation"][:3]
+    if top_hosts:
+        rendered = ", ".join(f"{item['ip']} ({item['actionPriority']})" for item in top_hosts)
+        bullets.append(f"Top action targets: {rendered}.")
+    return bullets
+
+
+def build_llm_context_pack(run: dict[str, Any], top_n_hosts: int = 5, events_per_host: int = 3) -> dict[str, Any]:
+    hunt_run = run["huntRun"]
+    hosts = run["huntHost"][: max(top_n_hosts, 1)]
+    host_snippets: list[dict[str, Any]] = []
+    for host in hosts:
+        snippets = []
+        for event in host["events"][: max(events_per_host, 1)]:
+            snippets.append({
+                "type": event["type"],
+                "description": event["description"],
+                "recommended_action": event["recommended_action"],
+            })
+        host_snippets.append({
+            "ip": host["ip"],
+            "actionPriority": host["actionPriority"],
+            "noveltyScore": host["noveltyScore"],
+            "driftScore": host["driftScore"],
+            "evidenceStrength": host["evidenceStrength"],
+            "evidence": snippets,
+        })
+
+    must_mention = [
+        f"scan_trigger_status={hunt_run['scanTriggerStatus']}",
+        f"event_total={hunt_run['eventCount']}",
+    ]
+    if host_snippets:
+        must_mention.append(f"top_host={host_snippets[0]['ip']}")
+    histogram = run["whatChanged"]["eventHistogram"]
+    if histogram:
+        first_type = next(iter(histogram))
+        must_mention.append(f"top_event_type={first_type}")
+
+    return {
+        "run_summary": {
+            "run_id": hunt_run["runId"],
+            "mission_id": hunt_run["missionId"],
+            "target_network": hunt_run["targetNetwork"],
+            "completed_at": hunt_run["completedAt"],
+            "seed_summary": hunt_run["seedSummary"],
+            "scan_trigger_status": hunt_run["scanTriggerStatus"],
+        },
+        "event_histogram": histogram,
+        "top_hosts": host_snippets,
+        "caveats": {
+            "recommendations_capped": hunt_run["hostsRecommendedCapped"],
+            "worker_summaries": hunt_run["workerSummaries"][:6],
+        },
+        "must_mention_facts": must_mention,
+        "prompt_contract": {
+            "system": (
+                "Summarize this hunter run for operators. Do not invent facts. "
+                "Use only provided fields and preserve action priorities."
+            ),
+            "acceptance_checks": [
+                "Includes scan trigger status",
+                "Includes top prioritized host and action",
+                "Includes one key event type with count",
+            ],
+        },
+    }
+
+
+def normalize_report(raw: dict[str, Any], *, report_name: str) -> dict[str, Any]:
+    events = _build_events(raw)
+    hosts, recommendations = _host_rollups(raw, events)
+    histogram = _build_histogram(events)
+    hunt_run = {
+        "runId": report_name,
+        "missionId": str(raw.get("mission_id") or ""),
+        "targetNetwork": str(raw.get("target_network") or ""),
+        "executor": str(raw.get("executor") or ""),
+        "iface": str(raw.get("iface") or ""),
+        "completedAt": raw.get("completed_at"),
+        "seedSummary": raw.get("seed_summary") if isinstance(raw.get("seed_summary"), dict) else {},
+        "scanTriggered": raw.get("scan_triggered"),
+        "scanTriggerStatus": _scan_trigger_status(raw.get("scan_triggered")),
+        "hostsRecommendedTotal": _safe_int(raw.get("hosts_recommended_total"), len(raw.get("hosts_recommended_for_scan") or [])),
+        "hostsRecommendedCapped": bool(raw.get("hosts_recommended_capped")),
+        "baselineUpdated": raw.get("baseline_updated") if isinstance(raw.get("baseline_updated"), dict) else None,
+        "deviceContextSummary": raw.get("device_context_summary") if isinstance(raw.get("device_context_summary"), dict) else None,
+        "workerSummaries": raw.get("worker_summaries") if isinstance(raw.get("worker_summaries"), list) else [],
+        "eventCount": len(events),
+        "hostCount": len(hosts),
+    }
+    normalized = {
+        "huntRun": hunt_run,
+        "huntHost": hosts,
+        "huntEvent": events,
+        "huntRecommendation": recommendations,
+        "whatChanged": {
+            "eventHistogram": histogram,
+            "eventTotal": len(events),
+            "hostTotal": len(hosts),
+        },
+    }
+    normalized["deterministicNarrative"] = _build_deterministic_bullets(normalized)
+    normalized["llmContextPack"] = build_llm_context_pack(normalized)
+    return normalized
+
+
+def list_normalized_runs(limit: int = 20) -> list[dict[str, Any]]:
+    runs: list[dict[str, Any]] = []
+    for path in _iter_report_files(limit=limit):
+        payload = _read_json_file(path)
+        if payload is None:
+            continue
+        runs.append(normalize_report(payload, report_name=path.name))
+    runs.sort(
+        key=lambda run: _parse_iso(run["huntRun"].get("completedAt")) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    return runs
+
+
+def latest_normalized_run() -> dict[str, Any] | None:
+    runs = list_normalized_runs(limit=1)
+    if not runs:
+        return None
+    return runs[0]
+
+
+def normalized_run_by_id(run_id: str) -> dict[str, Any] | None:
+    cleaned = str(run_id or "").strip()
+    if not cleaned:
+        return None
+    for path in _iter_report_files(limit=500):
+        if path.name != cleaned:
+            continue
+        payload = _read_json_file(path)
+        if payload is None:
+            return None
+        return normalize_report(payload, report_name=path.name)
+    return None
+
+
+def hunter_overview(limit: int = 20) -> dict[str, Any]:
+    runs = list_normalized_runs(limit=limit)
+    latest = runs[0] if runs else None
+    baseline = _load_baseline_state()
+    fingerprints = baseline.get("fingerprints") if isinstance(baseline.get("fingerprints"), dict) else {}
+    fingerprint_hosts = len(fingerprints)
+    overview = {
+        "runs": runs,
+        "latest": latest,
+        "meta": {
+            "report_dirs": [str(p) for p in report_dirs()],
+            "run_count": len(runs),
+            "baseline_path": baseline.get("_baseline_path"),
+            "baseline_schema_version": baseline.get("schema_version"),
+            "baseline_fingerprint_hosts": fingerprint_hosts,
+        },
+    }
+    return overview

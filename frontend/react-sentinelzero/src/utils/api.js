@@ -201,4 +201,25 @@ export const apiService = {
     const response = await axios.patch(`${API_BASE_URL}/scans/${scanId}/host-context/labels`, { labels })
     return response.data
   },
+
+  // Hunter runs
+  getHunterRuns: async (limit = 20) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/runs?limit=${encodeURIComponent(limit)}`)
+    return response.data
+  },
+
+  getLatestHunterRun: async () => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/runs/latest`)
+    return response.data
+  },
+
+  getHunterRunById: async (runId) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/runs/${encodeURIComponent(runId)}`)
+    return response.data
+  },
+
+  getHunterOverview: async (limit = 20) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/overview?limit=${encodeURIComponent(limit)}`)
+    return response.data
+  },
 } 

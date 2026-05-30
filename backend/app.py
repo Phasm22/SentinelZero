@@ -28,6 +28,7 @@ from src.routes.insights_routes import insights_bp
 from src.routes.diff_routes import diff_bp
 from src.routes.sensor_routes import create_sensor_blueprint
 from src.routes.incident_routes import create_incident_blueprint
+from src.routes.hunter_routes import create_hunter_blueprint
 from src.services.whats_up import whats_up_monitor
 from src.services.whats_up import get_monitor as get_whats_up_monitor
 from src.services.cleanup import scheduled_cleanup_job
@@ -258,6 +259,7 @@ def create_app(test_config=None):
     app.register_blueprint(diff_bp, url_prefix='/')      # /api/scan-diff/<id>
     app.register_blueprint(create_sensor_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_incident_blueprint(db), url_prefix='/api')
+    app.register_blueprint(create_hunter_blueprint(), url_prefix='/api')
 
     
     # Legacy routes for compatibility with Vite proxy
