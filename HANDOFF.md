@@ -3,6 +3,8 @@
 **Last updated:** 2026-05-30
 **Status:** 8 sensors active (incl. OPNsense REST), backend + frontend on 3173/5000, verdict pipeline live.
 LLM pipeline upgraded to full-telemetry analyst (Phases 1–7) with working local Ollama mode.
+Scan/sensor discrepancy fixes committed (`f1d339e`). **Next initiative:** Hunter agent — see
+`docs/HUNTER-PREPLAN.md`.
 
 ### Live stack (2026-05-25)
 
@@ -21,9 +23,9 @@ LLM pipeline upgraded to full-telemetry analyst (Phases 1–7) with working loca
 
 ## 2026-05-30 Session — LLM pipeline overhaul + local mode + scanner/UI fixes
 
-Two repos touched: **`/home/sentinel/SentinelZero`** (this git repo) and the **analysis agent**
-`/home/sentinel/agent/agent.py` (separate codebase, venv at `/home/sentinel/agent/.venv`).
-All changes are **uncommitted** in both working trees.
+Two repos touched: **`/home/sentinel/SentinelZero`** (this git repo, commits pushed) and the **analysis
+agent** `/home/sentinel/agent/agent.py` (separate codebase, venv at `/home/sentinel/agent/.venv` — sensor
+reporter changes on disk, not yet versioned in git).
 
 ### LLM pipeline: Phases 1–7 (plan: `~/.claude/plans/you-ve-built-a-strong-agile-zebra.md`)
 
@@ -72,18 +74,90 @@ mocks + live Ollama. **Pre-existing flaky:** `test_scan_runtime.py::test_run_nma
 (fixture state-bleed under suite ordering; fails identically on untouched baseline). Run focused
 tests with `-o addopts=""` to bypass the 38% coverage gate.
 
-### Open items
-1. `network_settings.json` `default_target_network` is still the generic `192.168.1.0/24` — set to
+### Open items (LLM session)
+1. `network_settings.json` `default_target_network` may still be generic `192.168.1.0/24` — set to
    `172.16.0.0/22` (Lab). Pending user confirm.
 2. Box is **single-homed** (only `enp6s18` on Lab). Home is scanned routed via OPNsense; Home scan
    depth + Ollama both ride the same inter-VLAN rules. Real fix = a Home-side NIC/VLAN.
 3. Dead but harmless: backend `GET /api/network-interfaces` + `api.js getNetworkInterfaces` now have
    no callers.
-4. **Commit** both working trees; the agent repo is versioned separately.
+4. Version the **agent repo** (`/home/sentinel/agent/`) — sensor reporter + wait-for-backend changes
+   live on disk only.
 
 ---
 
-## What's Brewing (Do This Next)
+## 2026-05-30 Session — Scan/sensor discrepancy + Hunter planning
+
+### Host count investigation (Lab)
+
+| Source | Count | Notes |
+|--------|-------|-------|
+| Scan #1 (Full TCP, pre-discovery ON) | **9** | Pre-discovery XML at 00:47 also had 9 |
+| Live `nmap -sn` on lab /22 | **10** | Included `172.16.0.100` (winvm) |
+| Asset registry | **12** lab IPs | `.106`, `.107` often offline by design |
+| Discovery Scan #2 (after fixes) | **10** | winvm present |
+
+**Root cause:** With `pre_discovery_enabled: true`, Full TCP only scanned the pre-discovered host list.
+winvm was likely **down during pre-discovery** (~00:47); several hosts rebooted ~00:49. Not an ARP bug
+on lab (on-link ARP is correct there).
+
+**Shipped in `f1d339e`:**
+
+- `pre_discovery_enabled: false` in `network_settings.json`
+- RDP **3389** added to host-discovery probes (`scanner.py`)
+- **`inventory_gap`** insight + `hosts_for_inventory_gap()` in `asset_registry.py` / `insights.py`
+- Sensor **auto-register on ingest** (`_upsert_sensor_agent` in `sensor_routes.py`)
+
+**Agent-side (not in SentinelZero git):** shared `sensor_reporter.py` (retry register on 404,
+periodic re-register), `wait-for-backend.sh`, systemd `ExecStartPre` on network sensor units.
+
+### Sensor gap (ingest 404)
+
+After DB reset, `sensor_agent` was empty while sensors still ran → ingest **404 "agent not registered"**
+and dropped telemetry. Backend auto-register + reporter fixes restored **8 sensors up** after restarts.
+
+### Home / IoT scan notes
+
+- **No ARP on Home scans is intentional** — lab is not L2-adjacent to `192.168.68.0/22`.
+- IoT pain points: `-Pn` full /22 sweeps, discovery probes missing IoT UDP ports, XML parser keeps
+  `open` not `open|filtered`, OPNsense LAN→WAN rules for routed scans from `172.16.0.198` / `.254`.
+
+### OPNsense logging cheat sheet (during scans)
+
+| Traffic | What to watch |
+|---------|-----------------|
+| Lab east-west | Often **no firewall log** (L2); IDS on `vtnet0` for SYN sweeps to `.1` |
+| Home (routed from lab) | LAN **in** + WAN **out** from scanner IPs to `192.168.68.0/22` |
+| SSH scan noise | Suricata SID **2003068** — whitelist scanner IPs (`172.16.0.198`) |
+
+### Scan #1 LLM pipeline note
+
+2 insights (`baseline_inventory`, `sensor_gap` escalate); verdict agent skipped auto-verdicts;
+**scan_analyst timeout** (180s) on that run.
+
+---
+
+## What's Next — Hunter Agent
+
+**Pre-plan (full context):** [`docs/HUNTER-PREPLAN.md`](docs/HUNTER-PREPLAN.md)
+
+Red-team-style **hunter** feeds blue SentinelZero — does **not** replace `agent.py` verdicts.
+
+| Component | Host | Role |
+|-----------|------|------|
+| Ollama | **palindrome** `192.168.68.202:11434` | LLM only (GPU, ufw open to lab) |
+| Hunter controller + lab nmap | **sentinelzero** | Mission loop, local probes on `172.16.0.0/22` |
+| Home probes | **SSH → ubuntu-server** `192.168.71.30` | Wired home executor **from day one** — not palindrome Wi‑Fi |
+
+**Why:** palindrome Wi‑Fi is fine for Ollama but bad for authoritative discovery (flapping hosts, double-hop).
+Mythos-inspired scaffold: mission YAML → seed (ARP/DHCP/DNS/assets/scan diff) → rank → parallel workers
+→ verifier → JSON report + optional `POST /api/scan` → existing blue pipeline on scan complete.
+
+**Not built yet.** Phase 1 = seed + tools + loop + handoff file + SSH home executor.
+
+---
+
+## What's Brewing (Completed / Reference)
 
 ### 1. InsightsGenerator Enrichment — **done** (`insights.py`, `sensor_service.py`, `asset_registry.py`)
 - `new_port` / `new_host`: `details.asset_context` from `~/agent/context/assets.json` (`SENTINEL_ASSETS_PATH`)
@@ -110,12 +184,15 @@ Backend reads the same file as `agent/agent.py`. Keep both in sync when adding h
 | piholelab | 172.16.0.13 | DNS / Pi-hole (lab network) | `pihole-lab` |
 | OPNsense | 172.16.0.1 | Firewall / gateway + ntopng | `opnsense-ntopng` |
 | code-server.prox | 172.16.0.106 | Code server VM | not yet deployed |
-| palindrome | 192.168.68.202 | Dev PC (Ubuntu 24.04) | `palindrome` |
+| palindrome | 192.168.68.202 | Dev PC (Ubuntu 24.04, Wi‑Fi) | `palindrome` |
 | pihole-home | 192.168.71.25 | DNS / Pi-hole (home network) | `pihole-home` |
+| ubuntu-server | 192.168.71.30 | Wired home Linux (hunter SSH executor) | — |
 | winvm.prox | 172.16.0.100 | Windows lab VM | not deployed (Windows) |
 | Gateway | 172.16.0.1 | Network gateway | — |
 
-Networks: `172.16.0.0/22` (lab), `192.168.68.0/24` and `192.168.71.0/24` (home)
+Networks: `172.16.0.0/22` (lab), `192.168.68.0/22` (home, incl. `192.168.71.0/24` segment)
+
+Scanner sources: `172.16.0.198` (DHCP), `172.16.0.254` (dummy0 VIP on sentinelzero)
 
 ---
 
@@ -235,7 +312,12 @@ curl -s http://localhost:5000/api/sensor/agents | python3 -m json.tool
 | Sensor models | `backend/src/models/sensor.py` |
 | Sensor query helpers | `backend/src/services/sensor_service.py` |
 | Sensor API routes | `backend/src/routes/sensor_routes.py` |
-| InsightsGenerator (enrich next) | `backend/src/services/insights.py` |
+| InsightsGenerator | `backend/src/services/insights.py` |
+| Asset registry / inventory gap | `backend/src/services/asset_registry.py` |
+| Scanner (on-link vs routed probes) | `backend/src/services/scanner.py` |
+| Hunter pre-plan | `docs/HUNTER-PREPLAN.md` |
+| Blue analysis agent | `/home/sentinel/agent/agent.py` |
+| Agent context | `/home/sentinel/agent/context/assets.json`, `network.json` |
 | WhatsUp infra list (asset registry seed) | `backend/src/services/whats_up.py` |
 
 ---
