@@ -1,0 +1,52 @@
+[Unit]
+Description=SentinelZero Analysis Agent
+Documentation=https://github.com/tjdjj12/SentinelZero
+After=network-online.target sentinelzero.service
+Wants=network-online.target
+# Do not run if sentinelzero backend is not up
+Requires=sentinelzero.service
+
+[Service]
+Type=oneshot
+User=sentinel
+Group=sentinel
+WorkingDirectory=/home/sentinel/agent
+EnvironmentFile=/etc/sentinel-agent/agent.env
+ExecStart=/home/sentinel/agent/.venv/bin/python /home/sentinel/agent/agent.py --latest
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-agent
+
+# ── Hardening ──────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+
+# Filesystem isolation — ProtectHome=read-only so agent can read context/assets.json
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateDevices=true
+
+# Kernel protections
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+
+# Privilege restrictions
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Syscall and namespace filtering
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

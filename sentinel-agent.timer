@@ -1,0 +1,14 @@
+[Unit]
+Description=SentinelZero Analysis Agent — periodic scan analysis
+After=sentinelzero.service
+
+[Timer]
+# Run 5 minutes after boot (let the backend settle), then every 30 minutes
+OnBootSec=5min
+OnUnitActiveSec=30min
+# Also fire 2 minutes after each scan completes (via systemd-notify or manual trigger)
+Unit=sentinel-agent.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

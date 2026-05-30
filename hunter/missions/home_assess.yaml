@@ -1,0 +1,20 @@
+id: home_assess
+objective: >
+  Perform constrained follow-up probing on already flagged home hosts only.
+  Use assess profile tools for additional IoT UDP evidence without broad sweeps.
+target_network: 192.168.68.0/22
+profile: assess
+executor: local
+iface: enp6s19
+max_turns: 40
+parallel_workers: 1
+handoff:
+  trigger_discovery_scan: false
+  scan_type: "Discovery Scan"
+  min_new_hosts: 1
+  max_recommended_hosts: 10
+scope:
+  allowed_cidrs:
+    - 192.168.68.0/22
+    - 192.168.71.0/24
+
