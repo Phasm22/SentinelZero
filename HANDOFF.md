@@ -1,7 +1,8 @@
 # SentinelZero — Project Handoff
 
-**Last updated:** 2026-05-25
+**Last updated:** 2026-05-30
 **Status:** 8 sensors active (incl. OPNsense REST), backend + frontend on 3173/5000, verdict pipeline live.
+LLM pipeline upgraded to full-telemetry analyst (Phases 1–7) with working local Ollama mode.
 
 ### Live stack (2026-05-25)
 
@@ -15,6 +16,70 @@
 | Frontend | Vite on **3173** (proxies `/api`, `/socket.io` → 5000); InsightsCard shows verdict badges + evidence |
 
 **Note:** `sentinelzero-frontend.service` in `/etc/systemd` may still pass `--port 5173` — use repo unit `sentinelzero-frontend.service` (3173) after `sudo cp` + `daemon-reload`.
+
+---
+
+## 2026-05-30 Session — LLM pipeline overhaul + local mode + scanner/UI fixes
+
+Two repos touched: **`/home/sentinel/SentinelZero`** (this git repo) and the **analysis agent**
+`/home/sentinel/agent/agent.py` (separate codebase, venv at `/home/sentinel/agent/.venv`).
+All changes are **uncommitted** in both working trees.
+
+### LLM pipeline: Phases 1–7 (plan: `~/.claude/plans/you-ve-built-a-strong-agile-zebra.md`)
+
+| Phase | What | Key locations |
+|-------|------|---------------|
+| 1 | Provider seam + local-mode toggle | `agent.py` `_make_client()`/`_model_for(role)`; `config_service.py` (new); `agent_service._agent_env()`; `Settings.jsx` "Local AI" card |
+| 2 | Time-windowed sensor queries (anchored to `scan.completed_at` ±15 min) | `sensor_service.get_telemetry_window()`; `insights.py` |
+| 3 | Endpoint sensor tools (auth/services/connections/proxmox) exposed to LLM | `sensor_service.py`, `sensor_routes.py`, `agent.py` tools + schemas |
+| 4 | Inject `network.json` known_unknowns + cluster notes into every payload | `host_context.institutional_memory_for_hosts()`; `agent_service.build_enrichment_digest` |
+| 5 | Synthesis given read-only tools (was zero-tool) | `agent.py` `analyze_synthesis` bounded tool loop (`max_turns=4`) |
+| 6 | Structured JSON outputs + model tiering | `agent.py` `_chat_create()` (response_format + fallback), `_run_insight_triage()` (cheap pass → strong re-triage of escalations) |
+| 7 | Historical memory (embeddings + `find_similar_incidents`) | new `incident.py`, `incident_memory.py`, `incident_routes.py`; agent `_embed`/`_store_incident`/`_find_similar_incidents`, `--backfill-incidents` |
+
+**New files:** `backend/src/models/incident.py`, `backend/src/services/incident_memory.py`,
+`backend/src/routes/incident_routes.py`, `backend/src/services/config_service.py`,
+`backend/tests/unit/test_incident_memory.py`.
+
+### Local Ollama mode — VALIDATED
+`192.168.68.202:11434` reachable (earlier block was a **ufw** rule). Verified end-to-end via the
+agent's own code: embeddings (`nomic-embed-text`, 768-dim), JSON-mode chat and tool-calling
+(`qwen2.5:14b`). **Use `qwen2.5:14b` for all tool passes + `nomic-embed-text` for embeddings; leave
+`OLLAMA_MODEL_STRONG` unset** (phi4/llama3.1 tool-calling is unreliable; the strong-tier rerun then
+no-ops harmlessly). Toggle: Settings → Local AI → `network_settings.json`
+(`local_mode_enabled`/`ollama_base_url`/`ollama_model`).
+
+### Scanner adapter fix — `backend/src/services/scanner.py`
+Host-discovery probes adapt to on-link vs routed targets. `_target_is_on_link(cidr)` inspects local
+interface CIDRs (ignores `/32` VIPs like `dummy0 192.168.68.254/32`). On-link (Lab) keeps ARP
+(`-PR`)/netmask (`-PM`); routed (Home) drops them (can't cross the gateway) and leans on TCP
+SYN/ACK + routable ICMP. Frees ~1000 wasted ARP rounds per Home /22 sweep. Each scan logs its mode.
+
+### Frontend network selector — `Settings.jsx`
+"Default Target Network" dropdown now lists only **Lab — 172.16.0.0/22**, **Home —
+192.168.68.0/22**, and **Custom Network…**. Removed auto-detected interface rows (the `/32
+(-1 hosts)` junk) + generic "Common Networks" presets and the dead `networkInterfaces` fetch.
+Off-list saved values open pre-filled in the manual field.
+
+### Host / systemd
+Installed `/etc/sudoers.d/sentinel-systemctl` (NOPASSWD, scoped to `sentinelzero*.service` +
+`sentinel-agent`) → the `sentinel` account can restart units unattended. Backend restarted onto new
+code; `incident_embedding` table auto-created on boot via `db.create_all()`.
+
+### Test status
+Backend **31 unit + 53 integration pass** (incl. new `test_incident_memory.py`). Agent validated via
+mocks + live Ollama. **Pre-existing flaky:** `test_scan_runtime.py::test_run_nmap_scan_retries_in_degraded_mode_without_new_scan`
+(fixture state-bleed under suite ordering; fails identically on untouched baseline). Run focused
+tests with `-o addopts=""` to bypass the 38% coverage gate.
+
+### Open items
+1. `network_settings.json` `default_target_network` is still the generic `192.168.1.0/24` — set to
+   `172.16.0.0/22` (Lab). Pending user confirm.
+2. Box is **single-homed** (only `enp6s18` on Lab). Home is scanned routed via OPNsense; Home scan
+   depth + Ollama both ride the same inter-VLAN rules. Real fix = a Home-side NIC/VLAN.
+3. Dead but harmless: backend `GET /api/network-interfaces` + `api.js getNetworkInterfaces` now have
+   no callers.
+4. **Commit** both working trees; the agent repo is versioned separately.
 
 ---
 

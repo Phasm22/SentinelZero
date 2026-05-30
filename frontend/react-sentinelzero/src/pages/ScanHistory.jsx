@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
 import ScanDetailsModal from '../components/ScanDetailsModal'
-import { Info, Eye, History, RefreshCw, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
-import { formatTimestamp } from '../utils/date'
 import ScanHistoryTable from '../components/ScanHistoryTable'
-import Button from '../components/Button'
 
 const ScanHistory = () => {
   const { preferences } = useUserPreferences()
@@ -104,57 +102,22 @@ const ScanHistory = () => {
   }
 
   return (
-    <div className="space-y-10 w-full">
-      {/* Sync Status and Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <History className="h-6 w-6 text-primary-500" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Scan History</h2>
-          </div>
-          <div className="flex items-center space-x-3">
-            {syncStatus && !syncStatus.in_sync && (
-              <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">
-                  {syncStatus.missing_in_database} scans not synced
-                </span>
-              </div>
-            )}
-            <Button
-              onClick={handleSyncScans}
-              disabled={isSyncing}
-              variant="primary"
-              size="sm"
-              className="flex items-center space-x-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing...' : 'Sync Scans'}</span>
-            </Button>
-            <select
-              value={syncMode}
-              onChange={(e) => setSyncMode(e.target.value)}
-              className="px-3 py-2 rounded-md bg-gray-900/50 border border-gray-600 text-sm text-gray-200"
-            >
-              <option value="import_missing">Import Missing Files</option>
-              <option value="reconcile_db">Import + Prune Missing DB Rows</option>
-            </select>
-          </div>
+    <div className="space-y-4 w-full">
+      {syncStatus && !syncStatus.in_sync && (
+        <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-900/20 border border-amber-700/40 rounded-md px-4 py-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{syncStatus.missing_in_database} scan file{syncStatus.missing_in_database !== 1 ? 's' : ''} not indexed in database</span>
         </div>
-        
-        {syncStatus && (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Database: {syncStatus.database_scans} scans | 
-            Filesystem: {syncStatus.filesystem_files} files | 
-            Status: {syncStatus.in_sync ? 'In sync' : 'Out of sync'}
-          </div>
-        )}
-      </div>
+      )}
 
       <ScanHistoryTable
         scans={scans}
         preferences={preferences}
         handleViewDetails={handleViewDetails}
+        onSync={handleSyncScans}
+        isSyncing={isSyncing}
+        syncMode={syncMode}
+        onSyncModeChange={setSyncMode}
       />
       <ScanDetailsModal
         scan={selectedScan}

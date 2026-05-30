@@ -12,12 +12,20 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Cpu
 } from 'lucide-react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import Toggle from '../components/Toggle'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
+
+// The only two networks SentinelZero scans (mirrors backend scan_scope.py
+// DEFAULT_LAB_CIDR / DEFAULT_HOME_CIDR). Anything else is entered manually.
+const SCAN_NETWORKS = [
+  { cidr: '172.16.0.0/22', label: 'Lab — 172.16.0.0/22' },
+  { cidr: '192.168.68.0/22', label: 'Home — 192.168.68.0/22' },
+]
 
 // Helper functions for network calculations
 const netmaskToCidr = (netmask) => {
@@ -50,7 +58,6 @@ const Settings = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
-  const [networkInterfaces, setNetworkInterfaces] = useState({ interfaces: [] })
   const [originalSettings, setOriginalSettings] = useState(null)
   const [showCustomNetworkInput, setShowCustomNetworkInput] = useState(false)
   const [customNetworkValue, setCustomNetworkValue] = useState('')
@@ -77,7 +84,10 @@ const Settings = () => {
       maxHosts: 1000,
       scanTimeout: 300,
   concurrentScans: 1,
-  preDiscoveryEnabled: false
+  preDiscoveryEnabled: false,
+  localModeEnabled: false,
+  ollamaBaseUrl: 'http://192.168.68.202:11434/v1',
+  ollamaModel: 'qwen2.5:14b'
     },
     security: {
       vulnScanningEnabled: true,
@@ -90,13 +100,9 @@ const Settings = () => {
   const loadSettings = async () => {
     try {
       setIsLoading(true)
-      const [data, interfacesResponse] = await Promise.all([
-        apiService.getSettings(),
-        apiService.getNetworkInterfaces()
-      ])
+      const data = await apiService.getSettings()
       console.log('Loaded settings from API:', data)
-      console.log('Loaded network interfaces from API:', interfacesResponse)
-      
+
       // Always ensure we have a complete settings object, even if API call fails
       const mergedSettings = {
         scheduledScans: {
@@ -120,6 +126,9 @@ const Settings = () => {
           scanTimeout: 300,
           concurrentScans: 1,
           preDiscoveryEnabled: false,
+          localModeEnabled: false,
+          ollamaBaseUrl: 'http://192.168.68.202:11434/v1',
+          ollamaModel: 'qwen2.5:14b',
           ...(data?.networkSettings || {})
         },
         security: {
@@ -132,16 +141,17 @@ const Settings = () => {
       }
       
       setSettings(mergedSettings)
+      // If the saved network isn't one of the two known ones, treat it as a manual entry.
+      const savedNet = mergedSettings?.network?.defaultTargetNetwork
+      if (savedNet && !SCAN_NETWORKS.some((n) => n.cidr === savedNet)) {
+        setShowCustomNetworkInput(true)
+        setCustomNetworkValue(savedNet)
+      }
       // If backend didn't provide pushoverConfigured but we can infer from enabled + absence of error later, set true
   // Do not auto-set pushoverConfigured; rely on backend derived value
       const settingsStr = JSON.stringify(mergedSettings)
       console.log('Setting originalSettings to:', settingsStr)
       setOriginalSettings(settingsStr)
-      
-      // Extract the network interfaces response object
-      console.log('Network interfaces API response:', interfacesResponse)
-      setNetworkInterfaces(interfacesResponse || { interfaces: [] })
-      console.log('Available network interfaces:', interfacesResponse?.interfaces?.length || 0)
       setIsLoading(false)
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -167,7 +177,10 @@ const Settings = () => {
           maxHosts: 1000,
           scanTimeout: 300,
           concurrentScans: 1,
-          preDiscoveryEnabled: false
+          preDiscoveryEnabled: false,
+          localModeEnabled: false,
+          ollamaBaseUrl: 'http://192.168.68.202:11434/v1',
+          ollamaModel: 'qwen2.5:14b'
         },
         security: {
           vulnScanningEnabled: true,
@@ -176,10 +189,9 @@ const Settings = () => {
           aggressiveScanning: false
         }
       }
-      
+
       setSettings(defaultSettings)
       setOriginalSettings(JSON.stringify(defaultSettings))
-      setNetworkInterfaces({ interfaces: [] })
       setError('Failed to load settings')
       setIsLoading(false)
     }
@@ -579,22 +591,11 @@ const Settings = () => {
                   onChange={(e) => handleSettingChange('network', 'defaultTargetNetwork', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
                 >
-                  <optgroup label="Network Interfaces">
-                    {(networkInterfaces?.interfaces || []).map((iface, index) => (
-                      <option key={`interface-${index}`} value={iface.cidr}>
-                        {iface.display}
-                      </option>
-                    ))}
-                  </optgroup>
-                  {networkInterfaces.common_networks && networkInterfaces.common_networks.length > 0 && (
-                    <optgroup label="Common Networks">
-                      {networkInterfaces.common_networks.map((network, index) => (
-                        <option key={`common-${index}`} value={network.cidr}>
-                          {network.display}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {SCAN_NETWORKS.map((network) => (
+                    <option key={network.cidr} value={network.cidr}>
+                      {network.label}
+                    </option>
+                  ))}
                   <option value="custom">Custom Network...</option>
                 </select>
               ) : (
@@ -703,33 +704,51 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* System Information */}
+      {/* AI Analysis Settings */}
       <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
           <div className="flex items-center space-x-2">
-            <RefreshCw className="h-5 w-5 text-purple-500" />
-            <h2 className="text-xl font-title font-bold text-gray-100">System Information</h2>
+            <Cpu className="h-5 w-5 text-purple-400" />
+            <h2 className="text-xl font-title font-bold text-gray-100">AI Analysis</h2>
           </div>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-400 font-medium">Application Version:</span>
-              <span className="text-gray-100 ml-2">1.0.0</span>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex flex-col items-start text-left w-full">
+              <label className="text-sm font-medium text-gray-300 text-left">Local AI (Ollama)</label>
+              <p className="text-sm text-gray-400 mb-0 text-left">Route all LLM and embedding calls to a local Ollama server instead of OpenAI</p>
             </div>
-            <div>
-              <span className="text-gray-400 font-medium">Database:</span>
-              <span className="text-gray-100 ml-2">SQLite</span>
-            </div>
-            <div>
-              <span className="text-gray-400 font-medium">Backend:</span>
-              <span className="text-gray-100 ml-2">Flask + SocketIO</span>
-            </div>
-            <div>
-              <span className="text-gray-400 font-medium">Frontend:</span>
-              <span className="text-gray-100 ml-2">React + Vite</span>
-            </div>
+            <Toggle
+              checked={settings.network.localModeEnabled}
+              onChange={(checked) => handleSettingChange('network', 'localModeEnabled', checked)}
+            />
           </div>
+          {settings.network.localModeEnabled && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Ollama Base URL</label>
+                <input
+                  type="text"
+                  value={settings.network.ollamaBaseUrl}
+                  onChange={(e) => handleSettingChange('network', 'ollamaBaseUrl', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
+                  placeholder="http://192.168.68.202:11434/v1"
+                />
+                <p className="text-xs text-gray-400 mt-1">OpenAI-compatible endpoint (note the /v1 suffix)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Ollama Model</label>
+                <input
+                  type="text"
+                  value={settings.network.ollamaModel}
+                  onChange={(e) => handleSettingChange('network', 'ollamaModel', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
+                  placeholder="qwen2.5:14b"
+                />
+                <p className="text-xs text-gray-400 mt-1">Use a tool-calling model (qwen2.5:14b recommended)</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

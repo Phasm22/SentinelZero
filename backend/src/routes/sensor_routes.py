@@ -243,6 +243,67 @@ def create_sensor_blueprint(db):
             'event_count': len(events),
         })
 
+    def _agent_for_ip():
+        ip = request.args.get('ip', '').strip()
+        if not ip:
+            return None, ip, (jsonify({'error': 'ip parameter required'}), 400)
+        agent = SensorAgent.query.filter_by(host_ip=ip).first()
+        if not agent:
+            return None, ip, (jsonify({'error': 'no agent for that ip'}), 404)
+        return agent, ip, None
+
+    # ------------------------------------------------------------------
+    # GET /api/sensor/auth-events?ip=&minutes=
+    # ------------------------------------------------------------------
+    @bp.route('/sensor/auth-events', methods=['GET'])
+    def get_auth_events():
+        agent, ip, err = _agent_for_ip()
+        if err:
+            return err
+        minutes = min(int(request.args.get('minutes', 120)), 1440)
+        events = sensor_service.get_auth_events(db, agent.agent_id, minutes=minutes)
+        return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'minutes': minutes,
+                        'events': events, 'event_count': len(events)})
+
+    # ------------------------------------------------------------------
+    # GET /api/sensor/failed-services?ip=&minutes=
+    # ------------------------------------------------------------------
+    @bp.route('/sensor/failed-services', methods=['GET'])
+    def get_failed_services():
+        agent, ip, err = _agent_for_ip()
+        if err:
+            return err
+        minutes = min(int(request.args.get('minutes', 120)), 1440)
+        services = sensor_service.get_failed_services(db, agent.agent_id, minutes=minutes)
+        return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'minutes': minutes,
+                        'failed_services': services, 'count': len(services)})
+
+    # ------------------------------------------------------------------
+    # GET /api/sensor/connections?ip=&minutes=
+    # ------------------------------------------------------------------
+    @bp.route('/sensor/connections', methods=['GET'])
+    def get_connections():
+        agent, ip, err = _agent_for_ip()
+        if err:
+            return err
+        minutes = min(int(request.args.get('minutes', 120)), 1440)
+        ctx = sensor_service.get_connections_at(db, agent.agent_id, minutes=minutes)
+        return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'minutes': minutes, **ctx})
+
+    # ------------------------------------------------------------------
+    # GET /api/sensor/proxmox?ip=&minutes=
+    # ------------------------------------------------------------------
+    @bp.route('/sensor/proxmox', methods=['GET'])
+    def get_proxmox():
+        agent, ip, err = _agent_for_ip()
+        if err:
+            return err
+        minutes = min(int(request.args.get('minutes', 120)), 1440)
+        ctx = sensor_service.get_proxmox_context(db, agent.agent_id, minutes=minutes)
+        if not ctx:
+            return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'error': 'no proxmox telemetry'}), 404
+        return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'minutes': minutes, 'proxmox': ctx})
+
     # ------------------------------------------------------------------
     # DELETE /api/sensor/agents/<agent_id>
     # ------------------------------------------------------------------

@@ -72,6 +72,10 @@ class InsightsGenerator:
         self._target_network = effective_target_network(current_scan)
         self._network_label = network_short_label(self._target_network)
         self._scan_id = current_scan.id
+        # Anchor sensor correlation to the scan's own clock. completed_at is often
+        # still unset at insight-generation time (runs before status=complete), so
+        # fall back to created_at.
+        self._scan_anchor = current_scan.completed_at or current_scan.created_at
         insights = []
         
         # Find previous scan of same type on the same target network (CIDR)
@@ -400,7 +404,11 @@ class InsightsGenerator:
 
     def _endpoint_process_context(self, agent_id: str, port: int) -> Optional[Dict[str, Any]]:
         """Match port to a process via start events, then latest snapshot."""
-        events = sensor_service.get_process_events(db, agent_id, minutes=120)
+        anchor = getattr(self, '_scan_anchor', None)
+        events = sensor_service.get_process_events(
+            db, agent_id, minutes=120, anchor_ts=anchor,
+        )
+        ref_ts = anchor or datetime.utcnow()
         for event in reversed(events):
             if event.get('event_type') != 'process_started':
                 continue
@@ -411,7 +419,7 @@ class InsightsGenerator:
                 )
                 minutes_ago = max(
                     0,
-                    int((datetime.utcnow() - started_at.replace(tzinfo=None)).total_seconds() / 60),
+                    int((ref_ts - started_at.replace(tzinfo=None)).total_seconds() / 60),
                 )
                 cmdline = proc.get('cmdline', '')
                 if isinstance(cmdline, list):
@@ -473,6 +481,12 @@ class InsightsGenerator:
                             insight['message'] = (
                                 f"New open port {port} on {host_ip} — {pname} (PID {proc_ctx.get('pid')}) listening"
                             )
+                    sec_ctx = sensor_service.get_endpoint_security_context(
+                        db, agent.agent_id,
+                        anchor_ts=getattr(self, '_scan_anchor', None),
+                    )
+                    if sec_ctx:
+                        sensor_ctx['endpoint_security'] = sec_ctx
 
             net_ctx = sensor_service.get_network_sensor_context(db, host_ip)
             if net_ctx:

@@ -644,7 +644,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                           <StatBox label="Resolved Vulns" value={diffData.summary?.resolved_vulns} />
                         </div>
                         {diffData.baseline && (
-                          <div className="p-3 bg-blue-900/20 border border-blue-700/40 rounded text-xs text-blue-300">
+                          <div className="p-3 bg-gray-700/40 border border-gray-600 rounded text-xs text-gray-400">
                             Baseline scan for type – no previous scan to diff against.
                           </div>
                         )}

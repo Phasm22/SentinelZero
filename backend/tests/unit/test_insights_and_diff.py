@@ -288,3 +288,50 @@ def test_home_baseline_skips_lab_registry_gap(app):
         insights = InsightsGenerator().generate_insights(scan)
         assert any(i['type'] == 'baseline_inventory' for i in insights)
         assert not any(i['type'] == 'registry_gap' for i in insights)
+
+
+def test_endpoint_security_context_auth_and_services(app):
+    from src.services import sensor_service
+
+    with app.app_context():
+        db.session.add(SensorAgent(
+            agent_id='sec1', host_ip='172.16.0.50', hostname='sec1',
+            role='linux-server', tags='["category:endpoint"]',
+        ))
+        anchor = datetime.utcnow()
+        # Two overlapping rows carry duplicate auth tails — must dedup.
+        for offset in (8, 2):
+            db.session.add(SensorTelemetry(
+                agent_id='sec1',
+                collected_at=anchor - timedelta(minutes=offset),
+                collectors_json=json.dumps({
+                    'auth': [
+                        {'event': 'ssh_login_fail', 'method': 'password',
+                         'user': 'root', 'source': '10.0.0.9', 'ts': 'May 29 10:00:00'},
+                        {'event': 'sudo_command', 'user': 'tj',
+                         'command': 'systemctl restart x', 'ts': 'May 29 10:01:00'},
+                    ],
+                    'services': [
+                        {'name': 'nginx', 'state': 'active', 'sub_state': 'running'},
+                        {'name': 'fail2ban', 'state': 'failed', 'sub_state': 'dead'},
+                    ],
+                    'connections': [
+                        {'local_addr': '0.0.0.0:443', 'remote_addr': None,
+                         'state': 'LISTEN', 'pid': 10, 'process': 'nginx'},
+                        {'local_addr': '172.16.0.50:443', 'remote_addr': '8.8.8.8:51000',
+                         'state': 'ESTABLISHED', 'pid': 10, 'process': 'nginx'},
+                    ],
+                }),
+            ))
+        db.session.commit()
+
+        ctx = sensor_service.get_endpoint_security_context(db, 'sec1', anchor_ts=anchor)
+        # Deduped: one failure, not two
+        assert ctx['ssh_failures']['total'] == 1
+        assert ctx['ssh_failures']['by_source'] == {'10.0.0.9': 1}
+        assert ctx['failed_services'] == ['fail2ban']
+        assert any(a['event'] == 'sudo_command' for a in ctx['auth_changes'])
+
+        conns = sensor_service.get_connections_at(db, 'sec1', anchor_ts=anchor)
+        assert conns['established_count'] == 1
+        assert conns['listen_count'] == 1

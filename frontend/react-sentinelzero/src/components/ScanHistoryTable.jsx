@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react'
-import { Info, Eye, ChevronUp, ChevronDown, ChevronsUpDown, Search, Filter, Bot } from 'lucide-react'
+import { Info, Eye, ChevronUp, ChevronDown, ChevronsUpDown, Search, Filter, Bot, RefreshCw } from 'lucide-react'
 import ScanInsightBadge from './ScanInsightBadge'
 import { formatTimestamp } from '../utils/date'
 import Button from './Button'
 
-const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
+const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyncing, syncMode, onSyncModeChange }) => {
   const [sortField, setSortField] = useState('timestamp')
   const [sortDirection, setSortDirection] = useState('desc')
   const [searchTerm, setSearchTerm] = useState('')
@@ -89,10 +89,33 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
         <div className="flex items-center">
           <Info className="w-7 h-7 text-blue-400 mr-3" />
           <h3 className="text-2xl font-title font-bold text-gray-100">All Scans</h3>
-          <span className="ml-3 px-2 py-1 bg-blue-600/30 text-blue-100 text-sm rounded-full">
+          <span className="ml-3 px-2 py-1 bg-blue-900/40 text-blue-300 text-sm rounded-full border border-blue-700/40">
             {filteredAndSortedScans.length} of {scans.length}
           </span>
         </div>
+        {onSync && (
+          <div className="flex items-center gap-2">
+            {onSyncModeChange && (
+              <select
+                value={syncMode}
+                onChange={(e) => onSyncModeChange(e.target.value)}
+                className="px-2 py-1.5 rounded-md bg-gray-900/50 border border-gray-700 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="import_missing">Import missing</option>
+                <option value="reconcile_db">Import + prune</option>
+              </select>
+            )}
+            <button
+              onClick={onSync}
+              disabled={isSyncing}
+              title="Sync scan files with database"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-gray-300 hover:text-white bg-gray-800/60 hover:bg-gray-700/60 border border-gray-700 hover:border-gray-600 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing…' : 'Sync'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search and Filter Controls */}
@@ -160,8 +183,8 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
                 <tr key={scan.id} className="hover:bg-gray-800/60 transition-colors group" data-testid={`history-scan-row-${scan.id}`}>
                   <td>{formatTimestamp(scan.timestamp, preferences.use24Hour)}</td>
                   <td>
-                    <span className="inline-flex items-center gap-1 badge badge-primary bg-blue-600/30 text-blue-100 border border-blue-500/30 px-2 py-1 rounded-md font-medium">
-                      <Info className="w-4 h-4 text-blue-300" />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-blue-900/50 text-blue-300 border border-blue-600/50">
+                      <Info className="w-3 h-3" />
                       {scan.scan_type}
                     </span>
                   </td>
@@ -228,9 +251,9 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails }) => {
           filteredAndSortedScans.map((scan) => (
           <div key={scan.id} className="bg-white/10 dark:bg-gray-900/30 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4 space-y-3" data-testid={`history-scan-card-${scan.id}`}>
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <Info className="w-5 h-5 text-blue-400 mr-2" />
-                <span className="badge badge-primary bg-blue-600/30 text-blue-100 border border-blue-500/30 px-2 py-1 rounded-md font-medium">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-blue-900/50 text-blue-300 border border-blue-600/50">
+                  <Info className="w-3 h-3" />
                   {scan.scan_type}
                 </span>
               </div>

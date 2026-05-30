@@ -1,7 +1,10 @@
 {
-    "default_target_network": "192.168.68.0/22",
+    "default_target_network": "172.16.0.0/22",
     "max_hosts": 500,
     "scan_timeout": 300,
     "concurrent_scans": 2,
-    "pre_discovery_enabled": true
+    "pre_discovery_enabled": true,
+    "local_mode_enabled": false,
+    "ollama_base_url": "http://192.168.68.202:11434/v1",
+    "ollama_model": "qwen2.5:14b"
 }

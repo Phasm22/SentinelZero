@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from ..models.scan import Scan
 from ..config.database import db
 from . import scan_analysis
+from . import config_service
 from .diff import compute_scan_diff
 from .asset_registry import is_home_network
 from .scan_scope import network_short_label
@@ -136,6 +137,14 @@ def build_enrichment_digest(
             digest["host_context"] = digest_for_agent(scan)
         except Exception as exc:
             logger.warning("host_context digest failed: %s", exc)
+    try:
+        from .host_context import institutional_memory_for_hosts
+
+        memory = institutional_memory_for_hosts(hosts.keys())
+        if memory:
+            digest["institutional_memory"] = memory
+    except Exception as exc:
+        logger.warning("institutional_memory digest failed: %s", exc)
     return digest
 
 
@@ -220,10 +229,24 @@ def _apply_auto_verdicts(insights: list, now: str) -> None:
 
 
 def _agent_env() -> dict:
-    return {**os.environ, "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", "")}
+    env = {**os.environ, "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", "")}
+    local = config_service.get_local_mode()
+    if local["enabled"]:
+        env["OLLAMA_BASE_URL"] = local["base_url"]
+        env["OLLAMA_MODEL"] = local["model"]
+    else:
+        # Ensure a stale local-mode env from the parent process never leaks in.
+        env.pop("OLLAMA_BASE_URL", None)
+        env.pop("OLLAMA_MODEL", None)
+    return env
 
 
 def _can_call_agent() -> tuple[bool, str | None]:
+    if config_service.get_local_mode()["enabled"]:
+        # Local mode talks to Ollama; no OpenAI key required.
+        if not os.path.exists(_AGENT_PYTHON):
+            return False, f"Agent venv not found: {_AGENT_PYTHON}"
+        return True, None
     if not os.environ.get("OPENAI_API_KEY"):
         return False, "OPENAI_API_KEY not set"
     if not os.path.exists(_AGENT_PYTHON):

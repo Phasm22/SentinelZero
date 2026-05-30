@@ -68,6 +68,41 @@ def _subnet_context(cidr: Optional[str]) -> Dict[str, Any]:
     return out
 
 
+def institutional_memory_for_hosts(host_ips) -> Dict[str, Any]:
+    """network.json known_unknowns + Proxmox cluster/standalone notes that match the
+    given host IPs. Injected into agent payloads so the model always sees this context
+    instead of having to choose to call get_network_topology."""
+    ips = {ip for ip in (host_ips or []) if ip}
+    if not ips:
+        return {}
+    topo = _load_network_topology()
+    out: Dict[str, Any] = {}
+
+    known = topo.get("known_unknowns") or {}
+    matched_unknowns = {ip: known[ip] for ip in ips if ip in known}
+    if matched_unknowns:
+        out["known_unknowns"] = matched_unknowns
+
+    proxmox = topo.get("proxmox") or {}
+    standalone = proxmox.get("standalone") or {}
+    matched_standalone = {
+        name: meta for name, meta in standalone.items()
+        if isinstance(meta, dict) and meta.get("ip") in ips
+    }
+    if matched_standalone:
+        out["proxmox_standalone"] = matched_standalone
+
+    cluster = proxmox.get("cluster_yin_yang") or {}
+    members = set(cluster.get("members") or [])
+    if members & ips:
+        out["proxmox_cluster"] = {
+            "members": cluster.get("members"),
+            "note": cluster.get("note"),
+            "matched_members": sorted(members & ips),
+        }
+    return out
+
+
 def _index_opnsense_by_ip(collectors: dict) -> Dict[str, Dict[str, Any]]:
     """Map IP → latest DHCP / ARP fields from OPNsense sensor telemetry."""
     by_ip: Dict[str, Dict[str, Any]] = {}

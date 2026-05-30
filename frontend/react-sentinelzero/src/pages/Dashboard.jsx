@@ -6,10 +6,10 @@ const ScanDetailsModal = lazy(() => import('@/components/ScanDetailsModal'))
 import AnimatedValue from '@/components/AnimatedValue'
 import StatCard from '@/components/StatCard'
 import Button from '@/components/Button'
-import { 
-  Server, 
-  Shield, 
-  AlertTriangle, 
+import {
+  Server,
+  Shield,
+  AlertTriangle,
   Clock,
   Play,
   RefreshCw,
@@ -20,7 +20,9 @@ import {
   Bug,
   ShieldCheck,
   Info,
-  Loader2
+  Loader2,
+  ChevronDown,
+  Activity
 } from 'lucide-react'
 import { useUserPreferences } from '@/contexts/UserPreferencesContext'
 import { formatTimestamp } from '@/utils/date'
@@ -48,6 +50,7 @@ const Dashboard = () => {
   const { showToast } = useToast()
   const [pollInterval, setPollInterval] = useState(null)
   const [showScanConfirm, setShowScanConfirm] = useState(false)
+  const [showDataMenu, setShowDataMenu] = useState(false)
   const [pendingScanType, setPendingScanType] = useState(null)
   const [security, setSecurity] = useState({
     vulnScanningEnabled: true,
@@ -387,56 +390,52 @@ const Dashboard = () => {
       {/* Header with shimmer/progress bar */}
       <div className="relative" data-testid="dashboard-header">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4" data-testid="dashboard-actions">
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-        <Button
-          onClick={clearAllData}
-          variant="error"
-          size="sm"
-          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
-          title="This will wipe all scan history. Are you sure?"
-          className="text-xs sm:text-sm"
-          data-testid="clear-all-data-btn"
-        >
-          <span className="hidden sm:inline">Clear All Data</span>
-          <span className="sm:hidden">Clear Data</span>
-        </Button>
-        <Button
-          onClick={() => deleteAllScans(false)}
-          variant="danger"
-          size="sm"
-          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
-          title="Delete all scans from the database."
-          className="text-xs sm:text-sm"
-          data-testid="delete-all-scans-btn"
-        >
-          <span className="hidden sm:inline">Delete Scans (DB)</span>
-          <span className="sm:hidden">Delete Scans</span>
-        </Button>
-        <Button
-          onClick={() => deleteAllScans(true)}
-          variant="warning"
-          size="sm"
-          icon={<Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />}
-          title="Delete all scans and stored XML files."
-          className="text-xs sm:text-sm"
-          data-testid="delete-all-scans-files-btn"
-        >
-          <span className="hidden sm:inline">Delete Scans + Files</span>
-          <span className="sm:hidden">Delete + Files</span>
-        </Button>
-        <Button
-          onClick={testConnection}
-          variant="info"
-          size="sm"
-          title="Test API and Socket.IO connection"
-          className="text-xs sm:text-sm"
-          data-testid="test-connection-btn"
-        >
-          <span className="hidden sm:inline">Test Connection</span>
-          <span className="sm:hidden">Test</span>
-        </Button>
-      </div>
+          <div className="flex items-center gap-2" data-testid="dashboard-actions">
+            <div className="relative">
+              <button
+                onClick={() => setShowDataMenu(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 bg-gray-800/60 hover:bg-gray-700/60 border border-gray-700 hover:border-gray-600 transition-colors"
+                data-testid="manage-data-btn"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Manage Data</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showDataMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showDataMenu && (
+                <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-700 bg-gray-900 shadow-xl py-1">
+                  <button
+                    onClick={() => { deleteAllScans(false); setShowDataMenu(false) }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white flex items-center gap-2 transition-colors"
+                    data-testid="delete-all-scans-btn"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" /> Delete Scans (DB only)
+                  </button>
+                  <button
+                    onClick={() => { deleteAllScans(true); setShowDataMenu(false) }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white flex items-center gap-2 transition-colors"
+                    data-testid="delete-all-scans-files-btn"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-orange-400" /> Delete Scans + Files
+                  </button>
+                  <div className="my-1 border-t border-gray-700" />
+                  <button
+                    onClick={() => { clearAllData(); setShowDataMenu(false) }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center gap-2 transition-colors"
+                    data-testid="clear-all-data-btn"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Full Reset (all data)
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={testConnection}
+              title="Test API and Socket.IO connection"
+              className="p-2 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-gray-800/50 border border-gray-700 hover:border-gray-600 transition-colors"
+              data-testid="test-connection-btn"
+            >
+              <Activity className="w-4 h-4" />
+            </button>
           </div>
         </div>
         {isScanning && (

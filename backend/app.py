@@ -27,6 +27,7 @@ from src.routes.whatsup_routes import bp as whatsup_bp
 from src.routes.insights_routes import insights_bp
 from src.routes.diff_routes import diff_bp
 from src.routes.sensor_routes import create_sensor_blueprint
+from src.routes.incident_routes import create_incident_blueprint
 from src.services.whats_up import whats_up_monitor
 from src.services.whats_up import get_monitor as get_whats_up_monitor
 from src.services.cleanup import scheduled_cleanup_job
@@ -34,7 +35,7 @@ from src.services.scan_runtime import ScanRuntime, register_socket_handlers
 from src.services.observability import configure_logging, ensure_request_id, log_event
 
 # Import models to register them with SQLAlchemy
-from src.models import Scan, Alert, SensorAgent, SensorTelemetry
+from src.models import Scan, Alert, SensorAgent, SensorTelemetry, IncidentEmbedding
 from src.services import sensor_service
 
 # Global instances
@@ -256,6 +257,7 @@ def create_app(test_config=None):
     app.register_blueprint(insights_bp, url_prefix='/')  # insights_bp already has /api in routes
     app.register_blueprint(diff_bp, url_prefix='/')      # /api/scan-diff/<id>
     app.register_blueprint(create_sensor_blueprint(db), url_prefix='/api')
+    app.register_blueprint(create_incident_blueprint(db), url_prefix='/api')
 
     
     # Legacy routes for compatibility with Vite proxy

@@ -18,6 +18,55 @@ from ..config.database import db
 from .insights import generate_and_store_insights
 
 
+def _target_is_on_link(target_network):
+    """True if the target CIDR is directly reachable (ARP-capable) on a local interface,
+    False if it must be routed through a gateway.
+
+    ARP host-discovery (-PR) and ICMP address-mask (-PM) only work on the local L2
+    segment; across a router they elicit nothing and just burn a probe round per host.
+    This host has a single real NIC on the Lab net (172.16.0.0/22) and reaches the Home
+    net (192.168.68.0/22) routed via the gateway, so Home scans must drop those probes.
+    """
+    import ipaddress
+    try:
+        target = ipaddress.ip_network(target_network, strict=False)
+    except Exception:
+        return True  # unknown target -> preserve legacy ARP behavior
+    try:
+        import socket
+        import psutil
+        for addrs in psutil.net_if_addrs().values():
+            for a in addrs:
+                if a.family != socket.AF_INET or not a.netmask:
+                    continue
+                try:
+                    iface_net = ipaddress.ip_network(f"{a.address}/{a.netmask}", strict=False)
+                except Exception:
+                    continue
+                if iface_net.prefixlen == 32:
+                    continue  # /32 service VIPs (e.g. dummy0) are not a real L2 segment
+                if target.subnet_of(iface_net):
+                    return True
+        return False
+    except Exception:
+        # psutil unavailable: fall back to known topology (Home is routed, Lab on-link).
+        try:
+            from .scan_scope import is_home_network
+            return not is_home_network(target_network)
+        except Exception:
+            return True
+
+
+def _host_discovery_probes(on_link):
+    """Host-discovery probe set tuned to whether the target is on-link or routed."""
+    if on_link:
+        # Local segment: ARP is fastest/most reliable; ICMP echo/timestamp/netmask back it up.
+        return ['-PE', '-PP', '-PM', '-PR', '-PS22,80,443,8080', '-PA80,443']
+    # Routed: ARP (-PR) and address-mask (-PM) can't cross the gateway. Lean on routable
+    # ICMP echo/timestamp plus TCP SYN/ACK probes that actually traverse the firewall.
+    return ['-PE', '-PP', '-PS22,80,443,8080', '-PA80,443']
+
+
 def _get_scan_timeout_seconds():
     raw_value = os.environ.get('SCAN_TIMEOUT_SECONDS', '1800')
     try:
@@ -166,6 +215,13 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     print(f"Database error in emit_progress: {db_error}")
                     db.session.rollback()
 
+            on_link = _target_is_on_link(net or target_network)
+            runtime.append_log(
+                scan_id,
+                f'Host discovery mode: {"on-link (ARP)" if on_link else "routed (TCP/ICMP, ARP skipped)"} '
+                f'for {net or target_network}',
+            )
+
             emit_stage('running', f'Started {scan_type} on {net or target_network}')
             msg = (
                 f'Thread started for scan: {scan_type} target={net or target_network} '
@@ -200,8 +256,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                     pre_xml = f'scans/pre_discovery_{now}.xml'
                     pre_cmd = [
                         'nmap', '-sn',
-                        '-PE', '-PP', '-PM', '-PR',
-                        '-PS22,80,443,8080', '-PA80,443',
+                        *_host_discovery_probes(on_link),
                         '-n', '--max-retries', '2', '-T4',
                         target_network, '-oX', pre_xml,
                     ]
@@ -285,10 +340,11 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 else:
                     cmd += ['-sU', '-p', '53,67,68,80,443,1900,5353,554,8080']
             elif scan_type_normalized == 'discovery scan':
-                # Fast host discovery: prefer ARP (-PR) + skip port scan (-sn). If not root later, will still work (ARP needs privs, ping fallback).
+                # Fast host discovery (-sn, no port scan). Probes adapt to on-link vs routed
+                # below; ARP is used on-link only (needs privs), TCP/ICMP fallback when routed.
                 cmd += ['-sn']  # host discovery only
-                # Add multiple host discovery probes for better coverage
-                cmd += ['-PE', '-PP', '-PM', '-PR']  # ICMP echo, timestamp, netmask, ARP
+                # Probe set adapts to on-link (ARP) vs routed (TCP/ICMP) targets
+                cmd += _host_discovery_probes(on_link)
                 cmd += ['-n']  # disable DNS for speed / consistency
                 # Speed: reduce retries
                 cmd += ['--max-retries', '1', '-T4']

@@ -72,8 +72,8 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
       </div>
 
       {sa.status && sa.status !== 'not_run' && (
-        <div className="rounded-lg border border-indigo-500/40 bg-indigo-900/15 p-4">
-          <h4 className="text-sm font-medium text-indigo-200 mb-2 flex items-center gap-2">
+        <div className="rounded-lg border border-indigo-500/50 bg-indigo-900/30 p-4">
+          <h4 className="text-sm font-medium text-indigo-300 mb-2 flex items-center gap-2">
             {statusIcon(sa.status)}
             Scan analyst narrative
             {sa.source && <span className="text-xs text-gray-500 font-normal">({sa.source})</span>}
@@ -107,8 +107,8 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-lg border border-violet-500/30 bg-violet-900/10 p-4">
-          <h4 className="text-sm font-medium text-violet-200 mb-2">Insights generation</h4>
+        <div className="rounded-lg border border-violet-500/40 bg-violet-900/20 p-4">
+          <h4 className="text-sm font-medium text-violet-300 mb-2">Insights generation</h4>
           <dl className="text-sm space-y-1 text-gray-300">
             <div className="flex justify-between"><dt>Count</dt><dd>{ig.count ?? summary.total ?? 0}</dd></div>
             {ig.previous_scan_id != null && (
@@ -124,8 +124,8 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
           </dl>
         </div>
 
-        <div className="rounded-lg border border-violet-500/30 bg-violet-900/10 p-4">
-          <h4 className="text-sm font-medium text-violet-200 mb-2 flex items-center gap-2">
+        <div className="rounded-lg border border-violet-500/40 bg-violet-900/20 p-4">
+          <h4 className="text-sm font-medium text-violet-300 mb-2 flex items-center gap-2">
             {statusIcon(va.status)}
             Verdict agent (LLM)
           </h4>
@@ -149,8 +149,8 @@ const ScanAiTab = ({ scanId, scanDetails }) => {
           </dl>
         </div>
 
-        <div className="rounded-lg border border-violet-500/30 bg-violet-900/10 p-4">
-          <h4 className="text-sm font-medium text-violet-200 mb-2 flex items-center gap-2">
+        <div className="rounded-lg border border-violet-500/40 bg-violet-900/20 p-4">
+          <h4 className="text-sm font-medium text-violet-300 mb-2 flex items-center gap-2">
             {statusIcon(syn.status || 'not_run')}
             Synthesis agent
           </h4>
