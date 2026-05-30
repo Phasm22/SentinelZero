@@ -65,6 +65,11 @@ def create_scan_blueprint(db, socketio):
                 print(f'[DEBUG] No network_settings.json found, using default: {target_network}')
         except Exception as e:
             print(f'[DEBUG] Could not load network settings: {e}, using default: {target_network}')
+
+        # Optional request override for automation-driven scans (e.g. hunter handoff).
+        requested_target_network = (request.form.get('target_network') or '').strip()
+        if requested_target_network:
+            target_network = requested_target_network
         
         # Enforce concurrency limit (skip for lightweight Discovery Scan)
         scan_type_lower = (scan_type or '').strip().lower()

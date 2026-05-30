@@ -135,9 +135,9 @@ Three jobs **split across boxes**:
 | Job | Where | Why |
 |-----|--------|-----|
 | **Ollama (LLM)** | **palindrome** `192.168.68.202:11434` | GPU/dev box; already validated from lab (`ufw` opened). Remote HTTP is fine — latency ≪ nmap runtime. |
-| **Hunter controller** | **sentinelzero** | Wired lab L2; SentinelZero API localhost; sensor aggregation. |
-| **Lab probes** | **local on sentinelzero** | On-link ARP/ICMP/TCP for `172.16.0.0/22`. |
-| **Home probes** | **SSH executor on wired home node** | Avoid palindrome Wi‑Fi flakiness and double-hop routed scans. |
+| **Hunter controller** | **sentinel-hunter** `172.16.0.180` | Dedicated hunter VM with direct access to both networks; keeps active probes off sentinelzero host. |
+| **Lab probes** | **local on sentinel-hunter** (`enp6s18`) | On-link ARP/ICMP/TCP for `172.16.0.0/22`. |
+| **Home probes** | **local on sentinel-hunter** (`enp6s19`) | On-link home discovery without SSH hop or routed lab scan artifacts. |
 
 ### 5.1 Why not run the whole hunter on palindrome?
 
@@ -149,30 +149,23 @@ palindrome is on **Wi‑Fi** (home). That causes:
 
 palindrome remains ideal for **Ollama** and interactive dev; not for authoritative **home** probes.
 
-### 5.2 Home wired executor (day one)
+### 5.2 Dual-homed local executor (day one)
 
-**Primary candidate:** `ubuntu-server` — `192.168.71.30` (assets.json: linux-server, wired home
-segment).
+Hunter runs locally on `sentinel-hunter` with two interfaces:
 
-**Alternate:** `pihole-home` — `192.168.71.25` (Pi-hole; already has endpoint sensor — prefer not to
-load with heavy nmap unless necessary).
+- `enp6s18` on `172.16.0.180/22` for lab missions
+- `enp6s19` on `192.168.68.53/22` for home missions
 
 **Mechanism:**
 
 ```text
-hunter on sentinelzero
-  → discover_hosts(home): ssh root@192.168.71.30 'nmap -sn ...'
-  → port_scan_light(ip):   ssh ... 'nmap -sV --open ...'
+hunter on sentinel-hunter
+  → discover_hosts(lab):  nmap -e enp6s18 -sn ...
+  → discover_hosts(home): nmap -e enp6s19 -sn ...
+  → port_scan_light(ip):  nmap -e <mission iface> -sV --open ...
 ```
 
-Requirements before first home mission:
-
-- Passwordless SSH (key) from `sentinel`@sentinelzero → root@192.168.71.30
-- `nmap` installed on ubuntu-server
-- OPNsense: allow SSH from lab to home if not already (inter-VLAN)
-- Document executor in mission YAML: `executor: ssh://root@192.168.71.30`
-
-**Lab executor:** `local` (no SSH) — sentinelzero runs nmap directly.
+No SSH home executor is required for Phase 1.
 
 ### 5.3 Ollama exposure
 
@@ -195,14 +188,14 @@ Do **not** move Ollama to sentinelzero unless GPU is added there.
 ```text
 Internet ← home router 192.168.68.1 ← OPNsense WAN ← Lab 172.16.0.0/22
                                               ↑
-                                         sentinelzero
-                                         (172.16.0.198 DHCP, 172.16.0.254 VIP)
+                                        sentinel-hunter
+                           (172.16.0.180 on enp6s18, 192.168.68.53 on enp6s19)
 ```
 
 | Network | CIDR | Gateway | DNS | Hunter executor |
 |---------|------|---------|-----|-----------------|
-| Lab | `172.16.0.0/22` | 172.16.0.1 | 172.16.0.13 | **local** (sentinelzero) |
-| Home | `192.168.68.0/22` | 192.168.68.1 | 192.168.71.25 | **ssh** → 192.168.71.30 |
+| Lab | `172.16.0.0/22` | 172.16.0.1 | 172.16.0.13 | **local** (`-e enp6s18`) |
+| Home | `192.168.68.0/22` | 192.168.68.1 | 192.168.71.25 | **local** (`-e enp6s19`) |
 
 Scanner probe sets (mirror `scanner.py`):
 
@@ -487,12 +480,12 @@ When debugging blocked probes, watch on OPNsense:
 | Mission | Interface / direction |
 |---------|------------------------|
 | Lab local probes | Often **no firewall log** for east-west; IDS on LAN for SYN from `.198`/`.254` |
-| Home via SSH executor | Traffic **within home L2** — home router/OPNsense may not see it |
-| Home scan from lab (avoid) | LAN **in** from scanner → WAN **out** to `192.168.68.0/22` |
-| SSH lab → ubuntu-server | Allow 22 from `172.16.0.0/22` to `192.168.71.30` |
+| Home via dual-homed hunter | Traffic stays **within home L2** on `enp6s19`; no SSH hop required |
+| Home scan from lab (avoid) | Legacy fallback only: LAN **in** from scanner → WAN **out** to `192.168.68.0/22` |
+| Hunter management SSH | Allow 22 to `172.16.0.180` for admin access |
 
-Suppress or whitelist Suricata SID **2003068** (SSH scan) for sentinelzero scanner IPs — documented in
-`network.json` known_unknowns for `172.16.0.198`.
+Suppress or whitelist Suricata SID **2003068** (SSH scan) for scanner IPs — documented in
+`network.json` known_unknowns for `172.16.0.198` and `172.16.0.180`.
 
 ---
 
@@ -501,12 +494,11 @@ Suppress or whitelist Suricata SID **2003068** (SSH scan) for sentinelzero scann
 ### Phase 1 — MVP (target next sprint)
 
 - [ ] `hunter/seed.py`, `rank.py` — deterministic; unit-testable without LLM
-- [ ] `hunter/executors/local.py`, `executors/ssh.py`
+- [ ] `hunter/executors/local.py`
 - [ ] `hunter/tools.py` — read tools + discover + light port scan + scope guard
 - [ ] `hunter/loop.py` + `hunter.py` CLI
 - [ ] `missions/lab_inventory.yaml`, `missions/home_inventory.yaml`
 - [ ] `hunter/handoff.py` — JSON report + `POST /api/scan`
-- [ ] SSH key: sentinelzero → root@192.168.71.30
 - [ ] `sentinel-hunter.service` + timer (lab daily, home daily staggered)
 - [ ] Manual validation: home mission finds Pi-hole clients; lab mission diffs ARP vs scan #2
 
@@ -554,10 +546,9 @@ Agent-side sensor reporter changes live in `/home/sentinel/agent/` (not yet a se
 
 ## 16. Open questions
 
-1. Confirm **ubuntu-server** (`192.168.71.30`) as home SSH executor vs pihole-home.
-2. Stagger home vs lab hunt timers to avoid overlapping Ollama load on palindrome.
-3. Whether hunter reports should appear in UI before phase 3 (file-only OK initially).
-4. Wire palindrome later → could add optional local home executor override; lab stays on sentinelzero.
+1. Stagger home vs lab hunt timers to avoid overlapping Ollama load on palindrome.
+2. Whether hunter reports should appear in UI before phase 3 (file-only OK initially).
+3. Optional fallback: keep SSH home executor support in phase 2 for environments without dual-homed hunter.
 
 ---
 
