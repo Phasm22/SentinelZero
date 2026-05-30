@@ -390,6 +390,26 @@ class TestScanAPI:
             assert response.status_code == 200
             data = json.loads(response.data)
             assert data['status'] == 'success'
+
+    def test_trigger_scan_respects_target_network_override(self, client):
+        """POST /api/scan should honor target_network form override."""
+        with patch('src.routes.scan_routes.run_nmap_scan') as mock_scan:
+            mock_scan.return_value = None
+            with patch('os.path.exists', return_value=True):
+                with patch('builtins.open', mock_open(read_data='{"default_target_network":"172.16.0.0/22"}')):
+                    response = client.post(
+                        '/api/scan',
+                        data={
+                            'scan_type': 'Discovery Scan',
+                            'target_network': '192.168.68.0/22',
+                        },
+                    )
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['target_network'] == '192.168.68.0/22'
+        scan = Scan.query.get(data['scan_id'])
+        assert scan is not None
+        assert scan.target_network == '192.168.68.0/22'
     
     def test_trigger_scan_invalid_network(self, client):
         """Test trigger scan with invalid network"""
