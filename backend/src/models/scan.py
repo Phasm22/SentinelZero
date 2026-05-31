@@ -6,7 +6,7 @@ from ..config.database import db
 
 class Scan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     completed_at = db.Column(db.DateTime, nullable=True)
     scan_type = db.Column(db.String(32))
     target_network = db.Column(db.String(64), nullable=True)  # CIDR scanned, e.g. 172.16.0.0/22

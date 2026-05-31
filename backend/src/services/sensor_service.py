@@ -270,9 +270,23 @@ def compute_agent_status(agent: SensorAgent) -> str:
     return 'offline'
 
 
-def prune_old_telemetry(days: int = 30) -> int:
-    """APScheduler entry point — uses the app db session."""
+def prune_old_telemetry(days: int = None) -> int:
+    """APScheduler entry point — uses the app db session.
+
+    Telemetry is high-volume (~500 rows/hr at ~30 KB each across sensors), so
+    retention is deliberately short to keep the SQLite file from ballooning.
+    Override with SENTINEL_TELEMETRY_RETENTION_DAYS; defaults to 7 days, which
+    comfortably covers the timeline (120 min) and per-scan correlation (±15 min)
+    use cases while capping the table at a few GB.
+    """
+    import os
     from ..config.database import db
+
+    if days is None:
+        try:
+            days = int(os.environ.get('SENTINEL_TELEMETRY_RETENTION_DAYS', '7'))
+        except (TypeError, ValueError):
+            days = 7
 
     cutoff = datetime.utcnow() - timedelta(days=days)
     deleted = (

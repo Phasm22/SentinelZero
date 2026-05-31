@@ -23,6 +23,63 @@ def create_api_blueprint(db):
             'message': 'Server received ping',
             'timestamp': datetime.utcnow().isoformat()
         })
+
+    @bp.route('/debug/db-stats', methods=['GET'])
+    def db_stats():
+        """Diagnostics for the SQLite database.
+
+        Surfaces what was painfully invisible during the 1.7 GB / orphaned-WAL
+        incident: on-disk file sizes (including -wal/-shm sidecars), per-table
+        row counts, page/freelist accounting, and the active journal mode.
+        Read-only and cheap. Hit this first when data looks wrong or the file
+        is unexpectedly large.
+        """
+        try:
+            from sqlalchemy import text
+
+            uri = str(db.engine.url)
+            db_path = db.engine.url.database
+            files = {}
+            page_size = page_count = freelist = None
+            journal_mode = None
+            if db_path and db_path != ':memory:':
+                for suffix in ('', '-wal', '-shm'):
+                    p = db_path + suffix
+                    if os.path.exists(p):
+                        files[os.path.basename(p)] = os.path.getsize(p)
+                page_size = db.session.execute(text('PRAGMA page_size')).scalar()
+                page_count = db.session.execute(text('PRAGMA page_count')).scalar()
+                freelist = db.session.execute(text('PRAGMA freelist_count')).scalar()
+                journal_mode = db.session.execute(text('PRAGMA journal_mode')).scalar()
+
+            # Per-table row counts (only tables the ORM knows about)
+            tables = {}
+            for table_name in sorted(db.metadata.tables.keys()):
+                try:
+                    cnt = db.session.execute(
+                        text(f'SELECT COUNT(*) FROM "{table_name}"')
+                    ).scalar()
+                    tables[table_name] = cnt
+                except Exception as te:
+                    tables[table_name] = f'error: {te}'
+
+            total_bytes = sum(files.values()) if files else None
+            free_bytes = (freelist * page_size) if (freelist and page_size) else None
+            return jsonify({
+                'uri': uri,
+                'files': files,
+                'total_bytes': total_bytes,
+                'total_mb': round(total_bytes / 1e6, 1) if total_bytes else None,
+                'page_size': page_size,
+                'page_count': page_count,
+                'freelist_count': freelist,
+                'free_mb': round(free_bytes / 1e6, 1) if free_bytes else None,
+                'journal_mode': journal_mode,
+                'tables': tables,
+                'timestamp': datetime.utcnow().isoformat(),
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
     
     @bp.route('/dashboard-stats', methods=['GET'])
     def dashboard_stats():
@@ -98,11 +155,27 @@ def create_api_blueprint(db):
 
     @bp.route('/scan-history', methods=['GET'])
     def get_scan_history():
-        """Get scan history for the React frontend"""
+        """Get scan history for the React frontend.
+
+        Paginated newest-first. Accepts ?limit= (default 100, max 500) and
+        ?offset= so the list view bounds its work as scan volume grows instead
+        of loading every row on every poll.
+        """
         try:
             import pytz
-            
-            scans = Scan.query.order_by(Scan.created_at.desc()).all()
+
+            try:
+                limit = min(max(int(request.args.get('limit', 100)), 1), 500)
+            except (TypeError, ValueError):
+                limit = 100
+            try:
+                offset = max(int(request.args.get('offset', 0)), 0)
+            except (TypeError, ValueError):
+                offset = 0
+
+            base_query = Scan.query.order_by(Scan.created_at.desc())
+            total = base_query.order_by(None).count()
+            scans = base_query.limit(limit).offset(offset).all()
             denver = pytz.timezone('America/Denver')
             scans_data = []
             
@@ -148,9 +221,14 @@ def create_api_blueprint(db):
                     scan_dict['vulns_count'] = 0
                     
                 scans_data.append(scan_dict)
-            
-            return jsonify({'scans': scans_data})
-            
+
+            return jsonify({
+                'scans': scans_data,
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+            })
+
         except Exception as e:
             print(f'[DEBUG] Error getting scan history: {e}')
             import traceback

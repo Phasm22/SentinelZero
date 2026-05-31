@@ -3,6 +3,8 @@ Scan synchronization utility to rebuild database records from filesystem XML fil
 """
 import os
 import json
+import threading
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, Any
@@ -318,42 +320,42 @@ def _ensure_scans_dir(scans_dir: str = 'scans') -> str:
     return target_dir
 
 
-def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
-    """
-    Get synchronization status between database and filesystem
-    
-    Args:
-        scans_dir: Directory containing XML files
-        
-    Returns:
-        Dictionary with sync status information
-    """
+_SYNC_STATUS_TTL_SECONDS = 15
+_sync_status_cache: Dict[str, Any] = {}
+_sync_status_cache_at: float = 0.0
+_sync_status_lock = threading.Lock()
+
+
+def _compute_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
+    """Compute DB/filesystem sync status (uncached)."""
     target_dir = _ensure_scans_dir(scans_dir)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-    
-    # Get database scans
-    db_scans = Scan.query.all()
+
+    # Only the raw_xml_path column is needed — avoid loading full Scan rows
+    # (which include large JSON blobs) just to diff filenames.
+    raw_paths = db.session.query(Scan.raw_xml_path).all()
+    db_count = len(raw_paths)
     db_paths = {
-        _normalize_path(scan.raw_xml_path, base_dir)
-        for scan in db_scans
-        if scan.raw_xml_path
+        _normalize_path(p, base_dir)
+        for (p,) in raw_paths
+        if p
     }
-    
+
     # Get filesystem files
     fs_files = {
         os.path.normpath(os.path.join(target_dir, f))
         for f in os.listdir(target_dir)
         if f.endswith('.xml')
     }
-    
+
     # Find missing in database
     missing_in_db = fs_files - db_paths
-    
+
     # Find missing in filesystem
     missing_in_fs = db_paths - fs_files
-    
+
     return {
-        'database_scans': len(db_scans),
+        'database_scans': db_count,
         'filesystem_files': len(fs_files),
         'missing_in_database': len(missing_in_db),
         'missing_in_filesystem': len(missing_in_fs),
@@ -361,3 +363,32 @@ def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
         'missing_in_fs_files': sorted(list(missing_in_fs)),
         'in_sync': len(missing_in_db) == 0 and len(missing_in_fs) == 0
     }
+
+
+def get_sync_status(scans_dir: str = 'scans', refresh: bool = False) -> Dict[str, Any]:
+    """
+    Get synchronization status between database and filesystem.
+
+    Result is cached in-memory for a short TTL because the UI polls this
+    frequently and the DB/filesystem delta does not change between rapid polls.
+    Pass refresh=True to force recomputation.
+
+    Args:
+        scans_dir: Directory containing XML files
+        refresh: Bypass the cache and recompute
+
+    Returns:
+        Dictionary with sync status information
+    """
+    global _sync_status_cache, _sync_status_cache_at
+    now = time.time()
+    if not refresh:
+        with _sync_status_lock:
+            if _sync_status_cache and (now - _sync_status_cache_at) < _SYNC_STATUS_TTL_SECONDS:
+                return _sync_status_cache
+
+    result = _compute_sync_status(scans_dir)
+    with _sync_status_lock:
+        _sync_status_cache = result
+        _sync_status_cache_at = time.time()
+    return result

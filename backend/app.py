@@ -1,8 +1,16 @@
 """Modular Flask application entry point."""
+# Eventlet monkey-patching MUST happen before any stdlib import that it patches
+# (socket, threading, time, ...). Without this, blocking socket/DB calls do not
+# yield to the eventlet hub, so requests serialize even under an eventlet worker.
+# Guarded so it is a no-op if the gunicorn eventlet worker already patched.
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 import threading
 import time
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -222,6 +230,19 @@ def create_app(test_config=None):
                 minute=30,
                 id='sensor_telemetry_cleanup',
                 replace_existing=True,
+            )
+            # Keep the What's Up snapshot warm so /api/whatsup/summary serves from
+            # cache instead of running ~23 network probes per request. Fires almost
+            # immediately at startup to prime a cold cache, then every 30s.
+            scheduler.add_job(
+                refresh_whats_up_snapshot,
+                'interval',
+                seconds=30,
+                id='whats_up_snapshot_refresh',
+                replace_existing=True,
+                next_run_time=datetime.utcnow(),
+                max_instances=1,
+                coalesce=True,
             )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')

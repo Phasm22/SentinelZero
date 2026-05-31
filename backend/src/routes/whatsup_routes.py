@@ -8,9 +8,15 @@ bp = Blueprint('whatsup', __name__)
 
 @bp.route('/api/whatsup/summary')
 def whatsup_summary():
-    """Combined summary of all monitoring layers"""
+    """Combined summary of all monitoring layers.
+
+    Serves the cached snapshot (refresh=False) so the request never blocks on
+    network probes. The snapshot is kept fresh by a background scheduler job
+    (see refresh_whats_up_snapshot in app.py). On a cold cache the monitor
+    collects once, then subsequent requests are served from memory.
+    """
     try:
-        return jsonify(get_summary_data(refresh=True))
+        return jsonify(get_summary_data(refresh=False))
     except Exception as e:
         return jsonify({'error': f'Failed to get monitoring summary: {str(e)}'}), 500
 
