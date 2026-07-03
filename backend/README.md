@@ -1,57 +1,43 @@
 # SentinelZero Backend
 
-Flask API server for network scanning with real-time updates.
+Flask + Socket.IO API for network scanning, insights, sensors, and Hunter integration.
 
 ## Features
 
-- **Network Scanning** - nmap orchestration with real-time progress
-- **WebSocket Updates** - Live scan progress and notifications
-- **Modular Architecture** - Clean separation with services, routes, models
-- **Scheduled Scans** - APScheduler integration
-- **Health Monitoring** - Network infrastructure monitoring
-- **Settings Management** - JSON-based configuration
+- **Network scanning** — nmap orchestration with real-time WebSocket progress
+- **Insights & verdicts** — post-scan diffing, AI verdict pipeline, host-context enrichment
+- **Hunter integration** — runs, missions, pivot API
+- **Sensor telemetry** — agent ingest, timeline queries, retention pruning
+- **What's Up** — infrastructure health monitoring with cached snapshots
+- **Scheduled scans** — APScheduler jobs
+- **Settings** — JSON file–backed configuration via REST API
 
-## Quick Start
+## Quick start
 
 ```bash
-# Install dependencies
 uv sync
-
-# Run application
 uv run python app.py
-
-# Access: http://localhost:5000
+# → http://localhost:5000
 ```
 
 ## Development
 
 ```bash
-# Run tests
-uv run pytest
-
-# Format code
-uv run black .
-
-# Lint code
-uv run flake8 .
+uv run pytest tests/ -v
+uv run black app.py src/ tests/
+uv run flake8 app.py src/ tests/
 ```
 
 ## Architecture
 
-```
-backend/
-├── app.py                    # Main Flask application
-└── src/
-    ├── models/              # Database models
-    ├── routes/               # API endpoints
-    ├── services/             # Business logic
-    └── config/               # Configuration
-```
+See [src/README.md](src/README.md) for routes, services, models, and scheduled jobs.
 
-## API Endpoints
+## Key endpoints
 
-- `GET /api/dashboard-stats` - Dashboard statistics
-- `POST /api/scan` - Trigger network scan
-- `GET /api/scans` - Scan history
-- `GET /api/settings/<section>` - Get settings
-- `POST /api/settings/<section>` - Update settings
+- `GET /api/ping` — liveness
+- `GET /api/health` — health check
+- `GET /api/scan-history` — paginated scan list
+- `POST /api/scan` — trigger scan
+- `GET /api/insights` — insight feed
+- `GET /api/hunter/runs` — Hunter run history
+- `POST /api/sensor/ingest` — sensor telemetry

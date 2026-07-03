@@ -14,8 +14,12 @@ Browser-based network scanner with real-time nmap orchestration, vulnerability d
 
 - **Network Scanning** - TCP, IoT discovery, vulnerability scripts
 - **Real-time Updates** - WebSocket-powered live progress
+- **Insights & Verdicts** - Post-scan diffing with AI verdict pipeline
+- **Hunter Runs** - Run history, missions, and pivot integration
+- **Sensor Telemetry** - Network and endpoint agent ingest
 - **Manual Upload** - Import XML from external scans (macOS WiFi)
 - **Scheduled Scans** - Automated scanning with notifications
+- **Lab Status** - Infrastructure health monitoring ("What's Up")
 - **Modern UI** - Responsive React frontend with system theme
 - **Production Ready** - Systemd service with uv package management
 
@@ -133,9 +137,12 @@ See `docker-compose.yml` for configuration.
 
 ## Documentation
 
+- **[Startup Guide](STARTUP.md)** - Dev and production scripts
+- **[Deployment](DEPLOYMENT.md)** - Systemd, health checks, DB maintenance
+- **[Scripts Guide](SCRIPTS.md)** - All available scripts
 - **[Authentik Setup](AUTHENTIK_SETUP.md)** - SSO authentication setup
 - **[Traefik Configuration](traefik/README.md)** - Remote Traefik setup
 - **[Nginx Alternative](nginx/README.md)** - Alternative reverse proxy
-- **[Backend Architecture](backend/src/README.md)** - Modular structure
-- **[Scripts Guide](SCRIPTS.md)** - All available scripts
+- **[Backend Architecture](backend/src/README.md)** - Routes, services, models
 - **[Backend Setup](backend/README.md)** - Installation guide
+- **[Tests](backend/tests/README.md)** - Running pytest and Vitest

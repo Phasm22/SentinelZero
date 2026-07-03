@@ -1,268 +1,140 @@
 # SentinelZero Deployment Guide
 
-This guide covers different deployment strategies for SentinelZero, from simple systemd services to automated CI/CD pipelines.
+This guide describes how SentinelZero is deployed on a single homelab host today.
 
-## 🚀 Deployment Options
+## Current architecture
 
-### 1. Simple SystemD Deployment (Current)
-**Best for**: Single server, manual deployments
-- Uses development mode (`npm run dev`)
-- Manual restarts required
-- No build optimization
+```
+┌──────────────────────┐     ┌─────────────────────────────┐
+│  Traefik + Authentik │────▶│  Vite dev server (3173)     │
+│  (optional, remote)  │     │  proxies /api → backend     │
+└──────────────────────┘     └─────────────────────────────┘
+                                          │
+                               ┌──────────▼──────────┐
+                               │  sentinelzero.service│
+                               │  Flask + Socket.IO   │
+                               │  port 5000           │
+                               └─────────────────────┘
+```
 
-### 2. Production SystemD Deployment (Recommended)
-**Best for**: Single server, production use
-- Uses production builds
-- Optimized performance
-- Better security
-- Automated deployment scripts
+Production on this machine uses **one systemd unit** (`sentinelzero.service`) for the backend. The React UI runs as a Vite dev server on port **3173** during development (or can be built and served statically for a single-port setup).
 
-### 3. GitHub Actions + Webhook Deployment
-**Best for**: Automated deployments, multiple environments
-- Automated testing
-- Production builds
-- Webhook-triggered deployments
-- Rollback capabilities
+Authentication, when enabled, is handled by remote **Traefik + Authentik** forward auth — see [AUTHENTIK_SETUP.md](AUTHENTIK_SETUP.md).
 
-## 📋 Production SystemD Setup
+## Prerequisites
 
-### Prerequisites
 ```bash
-# Install dependencies
 sudo apt update
-sudo apt install -y python3 python3-pip nodejs npm nginx nmap hping3 dig curl jq git
+sudo apt install -y nmap curl git
 
-# Install uv for Python package management
-pip3 install uv
+# Install uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install serve for static file serving
-npm install -g serve
+# Node.js 18+ for the frontend
+# (install via nodesource, nvm, or your distro package manager)
 ```
 
-### Installation
+## Quick deploy
+
+From the repo root:
+
 ```bash
-# Run the improved installation script
-sudo ./systemd/install-systemd-improved.sh
+./start-prod.sh          # build frontend, install systemd unit, start service
+./start-prod.sh --test   # run tests first
 ```
 
-### Manual Deployment
+Manual service install:
+
 ```bash
-# Deploy latest changes
-sudo -u sentinel ./scripts/deploy-production.sh
-```
-
-## 🔄 Automated Deployment Setup
-
-### 1. GitHub Actions Setup
-
-#### Required Secrets
-Add these secrets to your GitHub repository:
-- `HOST`: Your server IP/hostname
-- `USERNAME`: SSH username (usually `sentinel`)
-- `SSH_KEY`: Private SSH key for deployment
-
-#### Workflow Features
-- ✅ Automated testing on PRs
-- ✅ Production builds
-- ✅ Deploy only on successful builds
-- ✅ Artifact caching
-- ✅ Rollback on failure
-
-### 2. Webhook Deployment
-
-#### Setup Webhook Server
-```bash
-# Install webhook service
-sudo cp systemd/sentinelzero-webhook.service /etc/systemd/system/
+sudo cp sentinelzero.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable sentinelzero-webhook.service
-sudo systemctl start sentinelzero-webhook.service
+sudo systemctl enable sentinelzero
+sudo systemctl start sentinelzero
 ```
 
-#### Configure GitHub Webhook
-1. Go to your repository settings
-2. Navigate to "Webhooks"
-3. Add webhook with:
-   - **Payload URL**: `http://your-server:9000`
-   - **Content type**: `application/json`
-   - **Secret**: Set a secure webhook secret
-   - **Events**: Select "Workflow runs" and "Pushes"
+## Service management
 
-#### Update Webhook Secret
 ```bash
-# Edit the webhook service file
-sudo nano /etc/systemd/system/sentinelzero-webhook.service
-
-# Update the GITHUB_WEBHOOK_SECRET environment variable
-# Restart the service
-sudo systemctl restart sentinelzero-webhook.service
+sudo systemctl status sentinelzero
+sudo systemctl restart sentinelzero
+sudo journalctl -u sentinelzero -f
 ```
 
-## 🏗️ Architecture Comparison
+## Health checks
 
-### Current Setup (Development Mode)
-```
-┌─────────────────┐    ┌─────────────────┐
-│   Nginx (80)    │    │   Frontend      │
-│   (Optional)    │────│   (npm run dev) │
-└─────────────────┘    └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   Backend       │
-                       │   (Python)      │
-                       └─────────────────┘
-```
-
-### Recommended Production Setup
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Nginx (80)    │────│   Frontend      │    │   Backend       │
-│   (Reverse      │    │   (Production   │    │   (Python)      │
-│    Proxy)       │    │    Build)       │    │   (Port 5000)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-## 🔧 Service Management
-
-### View Logs
 ```bash
-# Backend logs
-journalctl -u sentinelzero-backend.service -f
-
-# Frontend logs
-journalctl -u sentinelzero-frontend.service -f
-
-# Webhook logs
-journalctl -u sentinelzero-webhook.service -f
-```
-
-### Restart Services
-```bash
-# Restart all services
-sudo systemctl restart sentinelzero-backend.service
-sudo systemctl restart sentinelzero-frontend.service
-
-# Or restart individually
-sudo systemctl restart sentinelzero-backend.service
-```
-
-### Health Checks
-```bash
-# Check service status
-systemctl status sentinelzero-backend.service
-systemctl status sentinelzero-frontend.service
-
-# Test endpoints
+curl http://localhost:5000/api/ping
 curl http://localhost:5000/api/health
-curl http://localhost:3173
+curl http://localhost:3173          # frontend (dev)
 ```
 
-## 🚨 Troubleshooting
+## Environment variables
 
-### Common Issues
+Set in `sentinelzero.service` or override with a drop-in:
 
-#### 1. Services Not Starting
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SENTINEL_BIND_PORT` | `5000` | Backend listen port |
+| `SENTINEL_ALLOWED_ORIGINS` | see service file | CORS / Socket.IO origins |
+| `SCAN_TIMEOUT_SECONDS` | `1800` | Lab scan watchdog |
+| `SCAN_TIMEOUT_VULN_SECONDS` | `10800` | Vuln-script scan watchdog |
+| `SENTINEL_TELEMETRY_RETENTION_DAYS` | `7` | Sensor telemetry prune age |
+| `SENTINEL_VACUUM_AFTER_PRUNE` | `1` | Run SQLite VACUUM after telemetry delete |
+
+## Database maintenance
+
+SQLite lives at `backend/instance/sentinelzero.db`. Telemetry pruning runs daily at 03:30; VACUUM runs after deletes and weekly on Sundays at 03:45.
+
+To reclaim space manually (brief downtime recommended):
+
 ```bash
-# Check logs
-journalctl -u sentinelzero-backend.service --no-pager
-
-# Check permissions
-ls -la /home/sentinel/SentinelZero/
+sudo systemctl stop sentinelzero
+cd backend && uv run python -c "
+from app import create_app
+from src.services import sensor_service
+app = create_app({'ENABLE_BACKGROUND_SERVICES': False})
+with app.app_context():
+    print('deleted', sensor_service.prune_old_telemetry())
+"
+# VACUUM is triggered automatically when rows are deleted
+sudo systemctl start sentinelzero
 ```
 
-#### 2. Frontend Build Issues
+## Troubleshooting
+
+**Service won't start**
+
 ```bash
-# Rebuild frontend
-cd /home/sentinel/SentinelZero/frontend/react-sentinelzero
-npm ci
-npm run build
+journalctl -u sentinelzero --no-pager -n 50
+ls -la backend/instance/ backend/scans/
 ```
 
-#### 3. Backend Dependencies
+**Port in use**
+
 ```bash
-# Update Python dependencies
-cd /home/sentinel/SentinelZero/backend
-uv sync
+./cleanup-sentinelzero.sh cleanup
 ```
 
-### Performance Optimization
+**Dependency updates**
 
-#### 1. Nginx Configuration
-```nginx
-# Add to nginx config for better performance
-location / {
-    # Enable gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript;
-    
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
-
-#### 2. SystemD Resource Limits
-```ini
-# Add to service files
-MemoryMax=512M
-LimitNOFILE=65536
-```
-
-## 🔐 Security Considerations
-
-### 1. Firewall Rules
 ```bash
-# Allow only necessary ports
-sudo ufw allow 22    # SSH
-sudo ufw allow 80    # HTTP
-sudo ufw allow 443   # HTTPS
-sudo ufw enable
+cd backend && uv sync
+cd frontend/react-sentinelzero && npm install
 ```
 
-### 2. SSL/TLS Setup
+## Docker (optional)
+
+For a standalone container without Authentik:
+
 ```bash
-# Install certbot
-sudo apt install certbot python3-certbot-nginx
-
-# Get SSL certificate
-sudo certbot --nginx -d your-domain.com
+docker-compose up -d
 ```
 
-### 3. Service Security
-- Services run as non-root user (`sentinel`)
-- Restricted file system access
-- No new privileges
-- Private temporary directories
+See `docker-compose.yml` for configuration.
 
-## 📊 Monitoring
+## Related docs
 
-### 1. Health Endpoints
-- Backend: `http://localhost:5000/api/health`
-- Frontend: `http://localhost:3173`
-- Webhook: `http://localhost:9000/health`
-
-### 2. Log Monitoring
-```bash
-# Set up log rotation
-sudo nano /etc/logrotate.d/sentinelzero
-```
-
-### 3. Performance Monitoring
-```bash
-# Monitor resource usage
-htop
-systemctl status sentinelzero-backend.service
-```
-
-## 🎯 Recommended Approach
-
-For your use case, I recommend:
-
-1. **Start with Production SystemD**: Use the improved systemd setup for better performance
-2. **Add GitHub Actions**: For automated testing and builds
-3. **Implement Webhook Deployment**: For automated deployments on successful builds
-4. **Add Monitoring**: Set up health checks and alerting
-
-This gives you the best of both worlds: reliable production deployment with automated CI/CD when you're ready for it.
+- [STARTUP.md](STARTUP.md) — dev vs prod scripts
+- [SCRIPTS.md](SCRIPTS.md) — script reference
+- [AUTHENTIK_SETUP.md](AUTHENTIK_SETUP.md) — SSO
+- [traefik/README.md](traefik/README.md) — reverse proxy

@@ -1,63 +1,87 @@
 # SentinelZero Backend Architecture
 
-Modular Flask architecture for network scanning with real-time updates.
+Modular Flask application with Socket.IO for real-time scan progress, insights, sensors, and Hunter integration.
 
-## Architecture
+## Layout
 
 ```
 backend/
-├── app.py                    # Main Flask application
+├── app.py                 # Entry point, schema migration, scheduler, Socket.IO
+├── run-app.sh             # Production startup (systemd ExecStart)
 └── src/
-    ├── models/              # Database models
-    │   ├── scan.py          # Scan model
-    │   └── alert.py         # Alert model
-    ├── routes/               # API endpoints
-    │   ├── scan_routes.py   # Scan endpoints
-    │   ├── settings_routes.py # Settings endpoints
-    │   ├── schedule_routes.py # Scheduler endpoints
-    │   └── api_routes.py    # General API endpoints
-    ├── services/             # Business logic
-    │   ├── scanner.py       # Nmap orchestration
-    │   ├── notifications.py # Pushover notifications
-    │   └── whats_up.py      # Network monitoring
-    └── config/               # Configuration
-        ├── database.py      # SQLAlchemy setup
-        └── scheduler.py     # APScheduler setup
+    ├── models/
+    │   ├── scan.py        # Scan records, hosts/vulns/insights JSON
+    │   ├── alert.py       # Alert notifications
+    │   ├── sensor.py      # SensorAgent, SensorTelemetry
+    │   └── incident.py    # IncidentEmbedding
+    ├── routes/
+    │   ├── scan_routes.py       # Trigger/cancel scans, scan status
+    │   ├── api_routes.py        # Dashboard, scan history, ping, health
+    │   ├── settings_routes.py   # JSON settings CRUD
+    │   ├── schedule_routes.py   # Scheduled scans
+    │   ├── upload_routes.py     # Manual XML upload
+    │   ├── insights_routes.py   # Insights, verdicts, host-context
+    │   ├── hunter_routes.py     # Hunter runs, missions, pivot API
+    │   ├── sensor_routes.py     # Sensor agent ingest + registry
+    │   ├── diff_routes.py       # Scan diff vs previous
+    │   ├── incident_routes.py   # Incident memory / embeddings
+    │   └── whatsup_routes.py    # Network health ("What's Up")
+    ├── services/
+    │   ├── scanner.py           # Nmap orchestration
+    │   ├── scan_runtime.py      # Scan lifecycle + socket handlers
+    │   ├── insights.py          # Insight generation post-scan
+    │   ├── scan_analysis.py     # Per-scan AI pipeline metadata
+    │   ├── host_context.py      # DHCP/ARP/registry host enrichment
+    │   ├── diff.py              # Scan-to-scan diffs
+    │   ├── sync.py              # Scan file ↔ DB sync
+    │   ├── sensor_service.py    # Telemetry queries + prune/VACUUM
+    │   ├── hunter_reports.py    # Hunter report normalization
+    │   ├── agent_service.py     # Verdict agent integration
+    │   ├── whats_up.py          # Infrastructure health probes
+    │   ├── cleanup.py           # Scheduled XML/data cleanup
+    │   ├── notifications.py     # Pushover
+    │   └── asset_registry.py    # Known asset context
+    └── config/
+        ├── database.py    # SQLAlchemy + SQLite WAL pragmas
+        └── scheduler.py   # APScheduler job store
 ```
 
-## Key Components
+## Database
 
-### Models
-- **`scan.py`** - Scan database model with relationships
-- **`alert.py`** - Alert database model for notifications
+- SQLite at `backend/instance/sentinelzero.db` (WAL mode)
+- Schema is ensured on startup via `_ensure_database_schema()` in `app.py` — columns and indexes are added idempotently; existing data is preserved
+- Composite index on `sensor_telemetry (agent_id, collected_at)` for fast latest-telemetry lookups
 
-### Routes
-- **`scan_routes.py`** - `/api/scan`, `/api/clear-scan/<id>`
-- **`settings_routes.py`** - `/api/settings` (GET/POST)
-- **`schedule_routes.py`** - `/api/scheduled-scans` (GET/POST)
-- **`api_routes.py`** - `/api/dashboard-stats`, `/api/scans`, `/api/alerts`
+## Key API surfaces
 
-### Services
-- **`scanner.py`** - Nmap scan orchestration with progress tracking
-- **`notifications.py`** - Pushover notification system
-- **`whats_up.py`** - Network health monitoring
+| Area | Examples |
+|------|----------|
+| Scans | `POST /api/scan`, `GET /api/scan-history`, `GET /api/active-scans` |
+| Insights | `GET /api/insights`, `GET /api/scans/<id>/host-context` |
+| Hunter | `GET /api/hunter/runs`, `POST /api/hunter/missions` |
+| Sensors | `POST /api/sensor/ingest`, `GET /api/sensor/agents` |
+| Health | `GET /api/ping`, `GET /api/health`, `GET /api/whatsup/summary` |
+
+Host-context GET returns cached data only (`status: pending` if not yet enriched). Enrichment runs during scan postprocessing and via a startup backfill timer.
+
+## Scheduled jobs
+
+Registered in `app.py` when `ENABLE_BACKGROUND_SERVICES` is true:
+
+- XML cleanup (03:15 daily)
+- Sensor telemetry prune (03:30 daily) + VACUUM when rows deleted
+- Weekly VACUUM safety net (Sunday 03:45)
+- What's Up snapshot refresh (every 30s)
+- Hunter baseline snapshot (every 6h)
 
 ## Development
 
 ```bash
-# Run application
-uv run python app.py
-
-# Run tests
-uv run pytest
-
-# Format code
-uv run black .
+cd backend
+uv sync
+uv run python app.py          # http://0.0.0.0:5000
+uv run pytest tests/ -v
+uv run black app.py src/ tests/
 ```
 
-## Benefits
-
-- **Separation of Concerns** - Routes, models, services clearly separated
-- **Maintainability** - Smaller, focused files
-- **Reusability** - Services can be used across routes
-- **Testing** - Unit tests focus on individual components
+Tests use in-memory SQLite; background services are disabled via `TESTING` config.

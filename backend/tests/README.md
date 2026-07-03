@@ -1,160 +1,99 @@
 # SentinelZero Test Suite
 
-## Overview
-
-This test suite provides comprehensive testing for the SentinelZero network scanning dashboard, covering both backend Python functionality and frontend React components.
-
-## Test Structure
+## Structure
 
 ```
 tests/
-├── __init__.py                 # Test package initialization
-├── conftest.py                 # Pytest configuration and fixtures
-├── README.md                   # This file
-├── unit/                       # Unit tests
-│   ├── __init__.py
-│   ├── test_database.py        # Database model tests
-│   └── test_settings.py        # Settings functionality tests
-├── integration/                # Integration tests
-│   ├── __init__.py
-│   ├── test_api_endpoints.py   # API endpoint tests
-│   ├── test_iot_scan.py        # IoT scanning tests
-│   └── test_multi_schedule.py  # Multi-schedule tests
-├── e2e/                        # End-to-end tests
-│   └── __init__.py
-└── *.spec.js                   # Playwright frontend tests
+├── conftest.py              # Shared fixtures (if present)
+├── unit/                    # Fast, isolated tests
+│   ├── test_database.py
+│   ├── test_scanner_helpers.py
+│   ├── test_sensor_telemetry.py
+│   ├── test_host_context.py
+│   ├── test_insights_and_diff.py
+│   ├── test_hunter_reports.py
+│   └── …
+└── integration/             # Flask test client, API flows
+    ├── test_api_endpoints.py
+    ├── test_comprehensive_api.py
+    ├── test_aux_routes.py
+    └── test_scan_flow_socket.py
 ```
 
-## Test Types
+There is no `tests/e2e/` Python directory. Frontend tests use **Vitest** in `frontend/react-sentinelzero/`. Playwright is a dev dependency but no `.spec.js` suites are checked in; Playwright output dirs are gitignored.
 
-### Backend Tests (Python/pytest)
+## Running tests
 
-- **Unit Tests**: Test individual functions and classes in isolation
-- **Integration Tests**: Test API endpoints and component interactions
-- **E2E Tests**: Test complete workflows and user scenarios
-
-### Frontend Tests (Playwright)
-
-- **Component Tests**: Test individual React components
-- **Page Tests**: Test complete page functionality
-- **User Flow Tests**: Test complete user journeys
-
-## Running Tests
-
-### Backend Tests
+From repo root via `frontend/package.json`:
 
 ```bash
-# Run all backend tests
-npm run test:backend
+cd frontend
+npm run test:backend       # all backend tests + coverage
+npm run test:unit          # unit only
+npm run test:integration   # integration only
+npm run test:frontend      # Vitest (React)
+npm run test               # backend + frontend
+npm run test:coverage      # backend with HTML coverage report
+```
 
-# Run specific test types
-npm run test:unit
-npm run test:integration
-npm run test:e2e
+Directly in backend:
 
-# Run with coverage
+```bash
+cd backend
+uv run pytest tests/ -v
+uv run pytest tests/unit/test_sensor_telemetry.py -v
+```
+
+Frontend only:
+
+```bash
+cd frontend/react-sentinelzero
+npm run test:run
 npm run test:coverage
 ```
 
-### Frontend Tests
-
-```bash
-# Run all frontend tests
-npm run test:frontend
-
-# Run Playwright tests
-npm run test:playwright
-
-# Run Playwright with UI
-npm run test:playwright:ui
-```
-
-### All Tests
-
-```bash
-# Run both backend and frontend tests
-npm run test
-```
-
-## Test Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run test` | Run all tests (backend + frontend) |
-| `npm run test:backend` | Run Python backend tests with coverage |
-| `npm run test:frontend` | Run React frontend tests |
-| `npm run test:unit` | Run unit tests only |
-| `npm run test:integration` | Run integration tests only |
-| `npm run test:e2e` | Run end-to-end tests only |
-| `npm run test:coverage` | Run tests with detailed coverage report |
-| `npm run test:playwright` | Run Playwright E2E tests |
-| `npm run test:playwright:ui` | Run Playwright tests with UI |
-| `npm run lint` | Run code linting |
-| `npm run format` | Format code with Black |
-| `npm run pre-commit` | Run linting and backend tests |
-
 ## Coverage
 
-The test suite aims for:
-- **70% minimum coverage** for backend code
-- **Comprehensive API testing** for all endpoints
-- **User flow coverage** for critical frontend paths
+Configured in `backend/pyproject.toml`:
 
-## Test Data
+- Source: `src/` (+ `app.py` when run via npm scripts)
+- Minimum: **38%** (`--cov-fail-under=38`)
+- HTML report: `backend/htmlcov/`
 
-Test fixtures are defined in `conftest.py`:
-- `sample_scan_data`: Sample scan information
-- `sample_host_data`: Sample host information
-- Database fixtures for isolated testing
+Coverage data (`.coverage`) is gitignored.
 
-## Adding New Tests
+## Writing tests
 
-### Backend Tests
+**Unit tests** — mock external I/O, use in-memory SQLite:
 
-1. **Unit Tests**: Add to `tests/unit/` directory
-2. **Integration Tests**: Add to `tests/integration/` directory
-3. **E2E Tests**: Add to `tests/e2e/` directory
+```python
+app = create_app({
+    'TESTING': True,
+    'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+    'ENABLE_BACKGROUND_SERVICES': False,
+})
+```
 
-### Frontend Tests
+**Integration tests** — use Flask test client against the same in-memory config.
 
-1. Add `.spec.js` files to `tests/` directory
-2. Use Playwright for browser automation
-3. Follow existing naming conventions
+Place new files under `tests/unit/` or `tests/integration/` following the `test_*.py` naming convention.
 
-## Best Practices
+## Lint and format
 
-- Use descriptive test names
-- Test both success and failure cases
-- Mock external dependencies
-- Keep tests isolated and independent
-- Use fixtures for common test data
-- Aim for fast test execution
-
-## CI/CD Integration
-
-Tests are configured to run in CI/CD pipelines:
-- Backend tests run with pytest
-- Frontend tests run with Playwright
-- Coverage reports are generated
-- Linting is enforced
+```bash
+cd frontend
+npm run lint          # flake8 on backend
+npm run format        # black on backend
+npm run lint:frontend
+npm run pre-commit    # lint + backend tests
+```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Database conflicts**: Tests use isolated databases via fixtures
-2. **Port conflicts**: Tests use different ports than development
-3. **File permissions**: Ensure test directories are writable
-
-### Debug Mode
-
 ```bash
-# Run tests with verbose output
-pytest -v -s
+# Verbose single file
+uv run pytest tests/unit/test_host_context.py -v -s
 
-# Run specific test file
-pytest tests/unit/test_database.py -v
-
-# Run with debugger
-pytest --pdb
-``` 
+# Drop into debugger on failure
+uv run pytest tests/unit/test_scanner_helpers.py --pdb
+```
