@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, memo, lazy, Suspense } from 'react'
 import { useSocket } from '@/contexts/SocketContext'
 import { useToast } from '@/contexts/ToastContext'
 import { apiService } from '@/utils/api'
@@ -64,6 +64,7 @@ const Dashboard = () => {
   const [activeScans, setActiveScans] = useState([])
   const [activeScansLoading, setActiveScansLoading] = useState(false)
   const [stopAllLoading, setStopAllLoading] = useState(false)
+  const activeScansInFlightRef = useRef(false)
 
   const loadDashboardData = async () => {
     try {
@@ -177,21 +178,36 @@ const Dashboard = () => {
 
   // Fetch active scans
   useEffect(() => {
-    if (activeTab !== 'active') return
+    if (activeTab !== 'active') return undefined
+
+    let cancelled = false
     let interval = null
+
     const fetchActive = async () => {
+      if (activeScansInFlightRef.current) return
+      activeScansInFlightRef.current = true
       setActiveScansLoading(true)
       try {
-        const resp = await apiService.getActiveScans ? await apiService.getActiveScans() : await fetch('/api/active-scans').then(r => r.json())
-        setActiveScans(resp.scans || [])
+        const resp = await apiService.getActiveScans()
+        if (!cancelled) setActiveScans(resp.scans || [])
       } catch {
-        setActiveScans([])
+        if (!cancelled) setActiveScans([])
+      } finally {
+        activeScansInFlightRef.current = false
+        if (!cancelled) setActiveScansLoading(false)
       }
-      setActiveScansLoading(false)
     }
-    fetchActive()
-    interval = setInterval(fetchActive, 3000)
-    return () => clearInterval(interval)
+
+    fetchActive().then(() => {
+      if (!cancelled) {
+        interval = setInterval(fetchActive, 3000)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+    }
   }, [activeTab])
 
   const handleScanTrigger = async (scanType) => {

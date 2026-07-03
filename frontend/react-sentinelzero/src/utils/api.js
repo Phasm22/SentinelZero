@@ -43,6 +43,11 @@ export const apiService = {
     return response.data
   },
 
+  getActiveScans: async () => {
+    const response = await axios.get(`${API_BASE_URL}/active-scans`)
+    return response.data
+  },
+
   getScan: async (scanId) => {
     const response = await axios.get(`${API_BASE_URL}/scan/${scanId}`)
     return response.data

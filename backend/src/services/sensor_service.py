@@ -270,6 +270,28 @@ def compute_agent_status(agent: SensorAgent) -> str:
     return 'offline'
 
 
+def _vacuum_enabled() -> bool:
+    import os
+    return os.environ.get('SENTINEL_VACUUM_AFTER_PRUNE', '1').strip().lower() not in (
+        '0', 'false', 'no',
+    )
+
+
+def vacuum_database() -> None:
+    """Reclaim SQLite file space after telemetry pruning."""
+    from sqlalchemy import text
+    from ..config.database import db
+
+    if not _vacuum_enabled():
+        return
+    if not db.engine.url.drivername.startswith('sqlite'):
+        return
+
+    db.session.close()
+    with db.engine.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
+        conn.execute(text('VACUUM'))
+
+
 def prune_old_telemetry(days: int = None) -> int:
     """APScheduler entry point — uses the app db session.
 
@@ -295,6 +317,8 @@ def prune_old_telemetry(days: int = None) -> int:
         .delete(synchronize_session=False)
     )
     db.session.commit()
+    if deleted > 0:
+        vacuum_database()
     return deleted
 
 

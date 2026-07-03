@@ -113,6 +113,11 @@ def _ensure_database_schema(app, db):
                         f'ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}'
                     )
 
+            connection.exec_driver_sql(
+                'CREATE INDEX IF NOT EXISTS ix_sensor_telemetry_agent_collected '
+                'ON sensor_telemetry (agent_id, collected_at DESC)'
+            )
+
         from src.services.scan_scope import infer_target_network_from_hosts
         import json as _json
 
@@ -130,6 +135,27 @@ def _ensure_database_schema(app, db):
                 scan.target_network = inferred
         if scans_missing:
             db.session.commit()
+
+
+def _backfill_host_context(app, db):
+    """Populate host_context_json for scans that missed postprocessing enrichment."""
+    with app.app_context():
+        from src.services.host_context import store_host_context
+
+        missing = Scan.query.filter(
+            Scan.host_context_json.is_(None),
+            Scan.hosts_json.isnot(None),
+        ).all()
+        if not missing:
+            return
+        print(f'[INFO] Backfilling host context for {len(missing)} scan(s)...')
+        for scan in missing:
+            try:
+                store_host_context(scan.id)
+            except Exception as exc:
+                print(f'[WARN] host context backfill failed for scan {scan.id}: {exc}')
+        print('[INFO] Host context backfill complete')
+
 
 def create_app(test_config=None):
     """Application factory pattern."""
@@ -229,6 +255,15 @@ def create_app(test_config=None):
                 hour=3,
                 minute=30,
                 id='sensor_telemetry_cleanup',
+                replace_existing=True,
+            )
+            scheduler.add_job(
+                sensor_service.vacuum_database,
+                'cron',
+                day_of_week='sun',
+                hour=3,
+                minute=45,
+                id='sensor_telemetry_vacuum',
                 replace_existing=True,
             )
             # Keep the What's Up snapshot warm so /api/whatsup/summary serves from
@@ -386,6 +421,7 @@ def create_app(test_config=None):
     if app.config.get('ENABLE_BACKGROUND_SERVICES') and not app.config.get('TESTING'):
         threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
         threading.Timer(2.0, start_background_services).start()
+        threading.Timer(10.0, lambda: _backfill_host_context(app, db)).start()
 
     return app
 

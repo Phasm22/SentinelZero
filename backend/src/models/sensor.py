@@ -3,6 +3,9 @@ Models for sentinel sensor agents and their telemetry.
 """
 import json
 from datetime import datetime
+
+from sqlalchemy import Index
+
 from ..config.database import db
 
 
@@ -62,6 +65,10 @@ class SensorTelemetry(db.Model):
 
     # Full collector payload as JSON blob
     collectors_json = db.Column(db.Text)
+
+    __table_args__ = (
+        Index('ix_sensor_telemetry_agent_collected', 'agent_id', 'collected_at'),
+    )
 
     def as_dict(self, include_collectors=True):
         d = {
