@@ -44,13 +44,22 @@ const HunterHostList = ({ insight }) => {
             <button
               type="button"
               onClick={() => setShowQuiet((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 rounded-lg border border-gray-600/30 bg-gray-700/30 hover:bg-gray-700/50 px-4 py-3 transition-colors"
+              aria-expanded={showQuiet}
+              className={`w-full flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+                showQuiet
+                  ? 'border-blue-500/40 bg-blue-900/25 ring-1 ring-blue-500/25'
+                  : 'border-gray-600/30 bg-gray-700/30 hover:border-gray-500/50 hover:bg-gray-700/55 active:bg-gray-700/65'
+              }`}
             >
               <span className="flex items-center gap-2 text-sm text-gray-200">
                 <span className={`w-2 h-2 rounded-full ${quietTier.dot}`} />
                 {quietHosts.length} host{quietHosts.length === 1 ? '' : 's'} {quietTier.label.toLowerCase()} · no anomalies
               </span>
-              <span className="flex items-center gap-1 text-xs text-gray-400">
+              <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors ${
+                showQuiet
+                  ? 'border-blue-500/30 bg-blue-500/15 text-blue-200'
+                  : 'border-gray-600/40 bg-gray-800/50 text-gray-400'
+              }`}>
                 {showQuiet ? 'Hide' : 'Show all'}
                 {showQuiet ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </span>

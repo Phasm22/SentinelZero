@@ -3,6 +3,8 @@ import { PlusCircle, AlertTriangle, CheckCircle, Clock, Filter, X } from 'lucide
 import { apiService } from '../utils/api'
 import { useToast } from '../contexts/ToastContext'
 import { useSocket } from '../contexts/SocketContext'
+import InfoModalTrigger from './InfoModalTrigger'
+import { InsightsCardHelp, PivotMissionButtonHelp } from './hunter/hunterHelpContent'
 
 const VERDICT_STYLES = {
   escalate: 'bg-red-500/20 text-red-400 border border-red-500/40',
@@ -65,6 +67,39 @@ const formatVerdictPending = (insight) => {
   }
 }
 
+const PIVOT_ELIGIBLE_TYPES = new Set([
+  'new_host', 'new_port', 'service_change', 'new_vuln_critical', 'new_vuln_high',
+])
+
+const isPivotEligible = (insight) => {
+  if (insight.verdict !== 'escalate') return false
+  const label = insight.network_label || insight.details?.network_label
+  if (label !== 'Lab') return false
+  const host = insight.host || insight.details?.ip
+  if (!host || !/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false
+  return PIVOT_ELIGIBLE_TYPES.has(insight.type)
+}
+
+const getPivotIneligibleHint = (insight) => {
+  if (insight.verdict !== 'escalate' || isPivotEligible(insight)) return null
+
+  const label = insight.network_label || insight.details?.network_label
+  if (label && label !== 'Lab') {
+    return 'Escalated, but pivot missions are Lab-only (Home insights excluded).'
+  }
+
+  const host = insight.host || insight.details?.ip
+  if (host && !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return 'Escalated rollup insight — pivot requires a single host IP (e.g. new port on one machine).'
+  }
+
+  if (!PIVOT_ELIGIBLE_TYPES.has(insight.type)) {
+    return `Escalated, but ${insight.type.replace(/_/g, ' ')} is not pivot-eligible (inventory/gap types).`
+  }
+
+  return 'Escalated, but does not meet pivot criteria (Lab + single IP + eligible type).'
+}
+
 const InsightsCard = () => {
   const [insights, setInsights]     = useState([])
   const [summary, setSummary]       = useState({})
@@ -73,6 +108,7 @@ const InsightsCard = () => {
   const [showFilters, setShowFilters] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [verdictsTick, setVerdictsTick] = useState(0)
+  const [spawningPivotId, setSpawningPivotId] = useState(null)
 
   const { showToast }  = useToast()
   const { socket }     = useSocket()
@@ -165,6 +201,27 @@ const InsightsCard = () => {
     }
   }
 
+  const handleSpawnPivot = async (e, insight) => {
+    e.stopPropagation()
+    setSpawningPivotId(insight.id)
+    try {
+      const result = await apiService.spawnHunterMission({
+        ip: insight.host,
+        type: insight.type,
+        scan_id: insight.scan_id,
+        network_label: insight.network_label || insight.details?.network_label || 'Lab',
+        target_network: insight.details?.target_network || '172.16.0.0/22',
+        iface: 'enp6s18',
+      })
+      showToast(`Pivot mission started: ${result.mission_id}`, 'success')
+    } catch (error) {
+      const msg = error?.response?.data?.reason || error?.response?.data?.error || 'Failed to start pivot mission'
+      showToast(msg, 'danger')
+    } finally {
+      setSpawningPivotId(null)
+    }
+  }
+
   const getPriorityColor = (priority) => {
     const thresholds = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
     const threshold  = thresholds.find(t => priority >= t) || 10
@@ -192,7 +249,16 @@ const InsightsCard = () => {
     <div className="bg-gradient-to-br from-green-900/80 to-gray-900/60 border border-green-400/30 rounded-md shadow-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8" data-testid="insights-card">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl lg:text-2xl font-title font-bold text-green-200 flex items-center gap-2">
-          <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" /> Recent Insights
+          <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" />
+          Recent Insights
+          <InfoModalTrigger
+            title="Recent Insights & Pivot Missions"
+            ariaLabel="How insights and pivot missions work"
+            testId="insights-card-help"
+            iconClassName="w-4 h-4 sm:w-5 sm:h-5"
+          >
+            <InsightsCardHelp />
+          </InfoModalTrigger>
           {summary.escalated > 0 && (
             <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
               {summary.escalated} escalated
@@ -360,6 +426,39 @@ const InsightsCard = () => {
                   {insight.verdict_evidence && (
                     <p className="text-xs text-gray-400 font-mono leading-relaxed mt-1">{insight.verdict_evidence}</p>
                   )}
+                  {isPivotEligible(insight) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleSpawnPivot(e, insight)}
+                        disabled={spawningPivotId === insight.id}
+                        className="text-xs px-3 py-1.5 rounded border border-purple-500/40 bg-purple-900/30 text-purple-200 hover:bg-purple-900/50 disabled:opacity-50"
+                        data-testid={`spawn-pivot-${insight.id}`}
+                      >
+                        {spawningPivotId === insight.id ? 'Starting pivot…' : 'Start pivot mission'}
+                      </button>
+                      <InfoModalTrigger
+                        title="Start Pivot Mission"
+                        ariaLabel="What a pivot mission does"
+                        testId={`spawn-pivot-help-${insight.id}`}
+                        iconClassName="w-3.5 h-3.5"
+                      >
+                        <PivotMissionButtonHelp />
+                      </InfoModalTrigger>
+                    </div>
+                  )}
+                  {(() => {
+                    const pivotHint = getPivotIneligibleHint(insight)
+                    if (!pivotHint) return null
+                    return (
+                      <p
+                        className="text-xs text-amber-300/90 mt-3 leading-relaxed"
+                        data-testid={`pivot-ineligible-hint-${insight.id}`}
+                      >
+                        {pivotHint}
+                      </p>
+                    )
+                  })()}
                   {(() => {
                     const pending = formatVerdictPending(insight)
                     if (!pending) return null

@@ -43,7 +43,12 @@ const PrioritizedHostCard = ({ host }) => {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full text-left p-3 sm:p-4 cursor-pointer"
+        aria-expanded={expanded}
+        className={`w-full text-left p-3 sm:p-4 cursor-pointer rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+          expanded
+            ? 'bg-blue-500/10 ring-1 ring-blue-500/30'
+            : 'hover:bg-white/[0.06] active:bg-white/[0.08]'
+        }`}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -65,9 +70,15 @@ const PrioritizedHostCard = ({ host }) => {
               <Metric label="Events" value={host.event_count} highlight />
             </div>
             {expanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-blue-500/30 bg-blue-500/15 px-2 py-1 text-xs text-blue-200 flex-shrink-0">
+                Hide
+                <ChevronDown className="w-4 h-4" />
+              </span>
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-gray-600/40 bg-gray-700/50 px-2 py-1 text-xs text-gray-400 flex-shrink-0 transition-colors group-hover:border-gray-500/60 group-hover:bg-gray-600/50 group-hover:text-gray-200">
+                Details
+                <ChevronRight className="w-4 h-4" />
+              </span>
             )}
           </div>
         </div>

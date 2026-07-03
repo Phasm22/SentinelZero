@@ -25,11 +25,13 @@ const HunterTimeline = ({ runs, selectedRunId, onSelect }) => (
         return (
           <button
             key={meta.runId}
+            type="button"
             onClick={() => onSelect(meta.runId)}
-            className={`w-full text-left rounded-lg border p-3 transition-all duration-200 ${
+            aria-pressed={active}
+            className={`w-full text-left rounded-lg border p-3 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
               active
                 ? 'bg-gradient-to-br from-gray-700/70 to-gray-800/60 border-blue-500/50 ring-1 ring-blue-500/40 shadow-lg'
-                : 'bg-gray-800/40 border-white/10 hover:border-white/25 hover:bg-gray-800/60'
+                : 'bg-gray-800/40 border-white/10 hover:border-blue-400/35 hover:bg-gray-800/70 hover:ring-1 hover:ring-blue-500/20 active:bg-gray-800/80'
             }`}
           >
             <div className="flex items-center justify-between gap-2">

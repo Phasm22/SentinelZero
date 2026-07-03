@@ -244,6 +244,19 @@ def create_app(test_config=None):
                 max_instances=1,
                 coalesce=True,
             )
+            # Version the Hunter baseline (drift-detection source of truth).
+            # Idempotent: only writes a snapshot when the baseline content has
+            # changed. Runs shortly after startup, then every 6 hours.
+            scheduler.add_job(
+                hunter_reports.snapshot_baseline,
+                'interval',
+                hours=6,
+                id='hunter_baseline_snapshot',
+                replace_existing=True,
+                next_run_time=datetime.utcnow(),
+                max_instances=1,
+                coalesce=True,
+            )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
 

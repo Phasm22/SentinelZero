@@ -6,6 +6,10 @@ import HunterChangeSummary from '../components/hunter/HunterChangeSummary'
 import HunterHostList from '../components/hunter/HunterHostList'
 import HunterTimeline from '../components/hunter/HunterTimeline'
 import HunterNarrative from '../components/hunter/HunterNarrative'
+import HunterMissionStatus from '../components/hunter/HunterMissionStatus'
+import HunterPivotChain from '../components/hunter/HunterPivotChain'
+import InfoModalTrigger from '../components/InfoModalTrigger'
+import { HunterRunsPageHelp } from '../components/hunter/hunterHelpContent'
 import { deriveRunInsight } from '../components/hunter/hunterFormat'
 
 const Card = ({ children, className = '' }) => (
@@ -16,6 +20,7 @@ const Card = ({ children, className = '' }) => (
 
 const HunterRuns = () => {
   const [overview, setOverview] = useState(null)
+  const [missions, setMissions] = useState([])
   const [selectedRunId, setSelectedRunId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -26,8 +31,10 @@ const HunterRuns = () => {
       try {
         setIsLoading(true)
         const payload = await apiService.getHunterOverview(30)
+        const missionPayload = await apiService.getHunterMissions(20).catch(() => ({ missions: [] }))
         if (!active) return
         setOverview(payload)
+        setMissions(missionPayload?.missions || [])
         setSelectedRunId(payload?.runs?.[0]?.huntRun?.runId || null)
       } catch (err) {
         if (!active) return
@@ -87,6 +94,14 @@ const HunterRuns = () => {
         <div className="flex items-center gap-3">
           <Radar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
           <h1 className="text-xl sm:text-2xl font-bold text-gray-100">Hunter Runs</h1>
+          <InfoModalTrigger
+            title="Hunter Runs"
+            ariaLabel="About Hunter runs and pivot missions"
+            testId="hunter-runs-page-help"
+            iconClassName="w-5 h-5"
+          >
+            <HunterRunsPageHelp />
+          </InfoModalTrigger>
           <span className="rounded-full border border-gray-600/50 bg-gray-800/70 px-2.5 py-0.5 text-xs text-gray-300">
             {overview?.meta?.run_count || runs.length} runs
           </span>
@@ -97,13 +112,15 @@ const HunterRuns = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-4">
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-4">
           <HunterTimeline runs={runs} selectedRunId={selectedRun.huntRun?.runId} onSelect={setSelectedRunId} />
+          <HunterMissionStatus missions={missions} />
         </div>
 
         <section className="space-y-4 sm:space-y-6 xl:col-span-3">
           <HunterRunHeader run={selectedRun} insight={insight} />
           <HunterChangeSummary run={selectedRun} insight={insight} />
+          {selectedRun.huntPivotChain && <HunterPivotChain chain={selectedRun.huntPivotChain} />}
           <HunterHostList insight={insight} />
           <HunterNarrative run={selectedRun} />
         </section>

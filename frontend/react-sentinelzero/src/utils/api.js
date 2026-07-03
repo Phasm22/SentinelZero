@@ -222,4 +222,19 @@ export const apiService = {
     const response = await axios.get(`${API_BASE_URL}/hunter/overview?limit=${encodeURIComponent(limit)}`)
     return response.data
   },
-} 
+
+  getHunterMissions: async (limit = 20) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/missions?limit=${encodeURIComponent(limit)}`)
+    return response.data
+  },
+
+  getHunterMission: async (missionId) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/missions/${encodeURIComponent(missionId)}`)
+    return response.data
+  },
+
+  spawnHunterMission: async (seed) => {
+    const response = await axios.post(`${API_BASE_URL}/hunter/missions`, seed)
+    return response.data
+  },
+}

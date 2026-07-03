@@ -52,6 +52,53 @@ LAB_SAMPLE = {
     "scan_triggered": {"status": "success", "scan_id": 31},
 }
 
+PIVOT_SAMPLE = {
+    "mission_id": "pivot-abc123",
+    "mission_type": "pivot",
+    "target_network": "172.16.0.0/22",
+    "executor": "local",
+    "iface": "enp6s18",
+    "completed_at": "2026-07-03T20:00:00Z",
+    "seed_summary": {"seed_ip": "172.16.0.10", "seed_type": "new_port", "scan_id": 42},
+    "pivot_events": [
+        {
+            "event_id": "evt-1",
+            "seq": 1,
+            "ts": "2026-07-03T19:58:00Z",
+            "task_id": "task-a",
+            "parent_event_id": None,
+            "ip": "172.16.0.10",
+            "type": "nmap_scan",
+            "description": "nmap found 2 open ports",
+            "action": "nmap_scan",
+        },
+        {
+            "event_id": "evt-2",
+            "seq": 2,
+            "ts": "2026-07-03T19:59:00Z",
+            "task_id": "task-b",
+            "parent_event_id": "evt-1",
+            "ip": "172.16.0.10",
+            "type": "smb_enum",
+            "description": "smb enum: 2 shares",
+            "action": "smb_enum",
+        },
+    ],
+    "findings": [
+        {
+            "ip": "172.16.0.10",
+            "type": "pivot_smb_exposure",
+            "description": "smb enum on 172.16.0.10: 2 shares",
+            "recommended_action": "observe",
+        }
+    ],
+    "hosts_recommended_for_scan": ["172.16.0.10"],
+    "hosts_recommended_total": 1,
+    "hosts_recommended_capped": False,
+    "worker_summaries": ["SMB pivot complete"],
+    "scan_triggered": {"status": "skipped", "reason": "pivot mission"},
+}
+
 
 def test_normalize_report_produces_canonical_sections():
     normalized = hunter_reports.normalize_report(HOME_ASSESS_SAMPLE, report_name="hunt-home_assess-example.json")
@@ -85,6 +132,47 @@ def test_build_context_pack_has_must_mention_facts():
     assert context["prompt_contract"]["acceptance_checks"]
 
 
+def test_normalize_pivot_report_includes_hunt_pivot_chain():
+    normalized = hunter_reports.normalize_report(PIVOT_SAMPLE, report_name="hunt-pivot-abc123.json")
+    assert "huntPivotChain" in normalized
+    chain = normalized["huntPivotChain"]
+    assert chain["eventTotal"] == 2
+    assert chain["edgeCount"] == 1
+    assert chain["depth"] >= 2
+    assert normalized["huntRun"]["missionType"] == "pivot"
+    assert set(normalized.keys()) >= {
+        "huntRun",
+        "huntHost",
+        "huntEvent",
+        "huntRecommendation",
+        "whatChanged",
+        "deterministicNarrative",
+        "llmContextPack",
+        "huntPivotChain",
+    }
+
+
+def test_list_missions_reads_status_sidecars(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "hunt-pivot-live.status.json").write_text(
+        json.dumps({
+            "mission_id": "pivot-live",
+            "state": "running",
+            "started_at": "2026-07-03T20:00:00Z",
+            "updated_at": "2026-07-03T20:01:00Z",
+            "pid": 999999,
+            "last_task": "turn 1",
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
+    missions = hunter_reports.list_missions(limit=10)
+    assert len(missions) == 1
+    assert missions[0]["missionId"] == "pivot-live"
+    assert missions[0]["state"] in {"running", "stalled"}
+
+
 def test_hunter_overview_reads_reports_and_baseline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     reports_dir = tmp_path / "reports"
     state_dir = tmp_path / "state"
@@ -114,3 +202,54 @@ def test_hunter_overview_reads_reports_and_baseline(tmp_path: Path, monkeypatch:
     assert overview["meta"]["baseline_fingerprint_hosts"] == 2
     assert overview["latest"]["huntRun"]["missionId"] in {"home_assess", "lab_inventory"}
 
+
+
+def test_baseline_status_includes_metadata(_reports, tmp_path, monkeypatch):
+    reports, baseline = _reports
+    monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
+    _write(baseline, {"fingerprints": {"aa:bb": {"vendor": "x"}}})
+    status = hunter_reports.baseline_status()
+    assert status["exists"] is True
+    assert status["path_used"].endswith("baseline.json")
+    assert status["size_bytes"] > 0
+    assert status["sha256"] and len(status["sha256"]) == 64
+    assert status["modified_at"] is not None
+    assert status["snapshot_count"] == 0
+
+
+def test_snapshot_baseline_is_idempotent(_reports, tmp_path, monkeypatch):
+    reports, baseline = _reports
+    monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
+    _write(baseline, {"fingerprints": {"aa:bb": {"vendor": "x"}}})
+
+    first = hunter_reports.snapshot_baseline()
+    assert first["status"] == "snapshotted"
+    assert first["snapshot_count"] == 1
+
+    # Unchanged baseline -> no new snapshot
+    second = hunter_reports.snapshot_baseline()
+    assert second["status"] == "unchanged"
+    assert second["snapshot_count"] == 1
+
+    # Changed baseline -> new snapshot
+    _write(baseline, {"fingerprints": {"aa:bb": {"vendor": "x"}, "cc:dd": {"vendor": "y"}}})
+    third = hunter_reports.snapshot_baseline()
+    assert third["status"] == "snapshotted"
+    assert third["snapshot_count"] == 2
+
+
+def test_snapshot_baseline_no_baseline(_reports, tmp_path, monkeypatch):
+    reports, baseline = _reports  # baseline file not written
+    monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
+    result = hunter_reports.snapshot_baseline()
+    assert result["status"] == "no_baseline"
+
+
+def test_snapshot_baseline_prunes_to_max(_reports, tmp_path, monkeypatch):
+    reports, baseline = _reports
+    monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
+    for i in range(5):
+        _write(baseline, {"fingerprints": {f"aa:bb:{i}": {"vendor": "x"}}})
+        hunter_reports.snapshot_baseline(max_snapshots=3)
+    status = hunter_reports.baseline_status()
+    assert status["snapshot_count"] == 3

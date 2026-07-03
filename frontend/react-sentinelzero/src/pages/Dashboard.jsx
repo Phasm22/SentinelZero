@@ -3,12 +3,9 @@ import { useSocket } from '@/contexts/SocketContext'
 import { useToast } from '@/contexts/ToastContext'
 import { apiService } from '@/utils/api'
 const ScanDetailsModal = lazy(() => import('@/components/ScanDetailsModal'))
-import AnimatedValue from '@/components/AnimatedValue'
-import StatCard from '@/components/StatCard'
 import Button from '@/components/Button'
+import LatestScanSnapshot from '@/components/LatestScanSnapshot'
 import {
-  Server,
-  Shield,
   AlertTriangle,
   Clock,
   Play,
@@ -18,7 +15,6 @@ import {
   Rocket,
   Cpu,
   Bug,
-  ShieldCheck,
   Info,
   Loader2,
   ChevronDown,
@@ -75,20 +71,9 @@ const Dashboard = () => {
       ])
       
       setRecentScans(scansData.scans || [])
-      
-      // If we have scans, use data from the most recent scan
-      if (scansData.scans && scansData.scans.length > 0) {
-        const latestScan = scansData.scans[0]
-        setSystemInfo({
-          total_scans: scansData.scans.length,
-          hosts_count: latestScan.hosts_count || 0,
-          vulns_count: latestScan.vulns_count || 0,
-          latest_scan_time: latestScan.timestamp
-        })
-      } else {
-        // Fallback to API stats if no scans
-        setSystemInfo(statsData)
-      }
+
+      const totalScans = statsData.totalScans ?? statsData.total_scans ?? scansData.scans?.length ?? 0
+      setSystemInfo({ total_scans: totalScans })
       
       setIsLoading(false)
     } catch (error) {
@@ -314,11 +299,7 @@ const Dashboard = () => {
     showToast(error, 'danger')
   }
 
-  // Accept use24Hour as a prop or fallback to false
-  const VulnIcon = ({ count }) =>
-    count === 0
-      ? <ShieldCheck className="w-7 h-7 text-green-500" />
-      : <AlertTriangle className="w-7 h-7 text-red-500 animate-pulse" />
+  const latestScan = recentScans[0] || null
 
   // Helper for Disconnected dot
   const DisconnectedDot = () => (
@@ -534,37 +515,13 @@ const Dashboard = () => {
 
         {/* Right Column - Stats and Recent Scans */}
         <div className="space-y-3 sm:space-y-4 lg:space-y-6" data-testid="dashboard-right-column">
-          {/* System Info Cards Grid */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4" data-testid="stats-cards-grid">
-            <StatCard
-              icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-400 mb-1" />}
-              label="Total Scans"
-              value={<AnimatedValue value={systemInfo.total_scans || 0} className="text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-100" />}
-              hoverRing="hover:ring-blue-400/40"
-              data-testid="total-scans-stat"
-            />
-            <StatCard
-              icon={<Shield className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400 mb-1" />}
-              label="Hosts Found"
-              value={<AnimatedValue value={systemInfo.hosts_count || 0} className="text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-100" />}
-              hoverRing="hover:ring-green-400/40"
-              data-testid="hosts-found-stat"
-            />
-            <StatCard
-              icon={VulnIcon({ count: systemInfo.vulns_count })}
-              label="Vulnerabilities"
-              value={<AnimatedValue value={systemInfo.vulns_count || 0} className={`text-lg sm:text-xl lg:text-2xl font-extrabold ${systemInfo.vulns_count === 0 ? 'text-green-300' : 'text-red-400'}`} />}
-              hoverRing="hover:ring-red-400/40"
-              data-testid="vulnerabilities-stat"
-            />
-            <StatCard
-              icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-300 mb-1" />}
-              label="Last Scan"
-              value={<div className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-100">{systemInfo.latest_scan_time ? formatTimestamp(systemInfo.latest_scan_time, preferences.use24Hour) : 'Never'}</div>}
-              hoverRing="hover:ring-yellow-300/40"
-              data-testid="last-scan-stat"
-            />
-          </div>
+          <LatestScanSnapshot
+            scan={latestScan}
+            totalScans={systemInfo.total_scans || 0}
+            preferences={preferences}
+            onViewDetails={handleViewDetails}
+            formatTimestamp={formatTimestamp}
+          />
 
           {/* Recent Scans - Compact Version */}
           <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-3 sm:p-4" data-testid="recent-scans-card">
