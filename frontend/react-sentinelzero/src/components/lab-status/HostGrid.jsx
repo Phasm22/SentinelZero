@@ -1,6 +1,5 @@
 import React from 'react'
 import HostCard from './HostCard'
-import NetworkScanners from './NetworkScanners'
 
 const HostGrid = ({ detailedData, filter }) => {
   if (!detailedData) return null
@@ -125,43 +124,43 @@ const HostGrid = ({ detailedData, filter }) => {
     .filter(segment => groupedHosts[segment] && groupedHosts[segment].length > 0)
     .map(segment => [segment, groupedHosts[segment]])
 
+  if (networkScanners.length > 0) {
+    sortedGroups.unshift(['External DNS', networkScanners])
+  }
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-100 dark:text-gray-100">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
           Host Details
-          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-300 dark:text-gray-300">
+          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-600 dark:text-gray-300">
             ({hosts.length} {hosts.length === 1 ? 'host' : 'hosts'})
           </span>
         </h2>
         
         {filter !== 'all' && (
-          <div className="text-xs sm:text-sm text-gray-300 dark:text-gray-300 bg-white/10 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-white/20 dark:border-white/20 self-start capitalize">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-gray-200 dark:border-white/20 self-start capitalize">
             Filtered: {filter}
           </div>
         )}
       </div>
 
-      {/* Network Scanners - Consolidated View */}
-      {networkScanners.length > 0 && (
-        <NetworkScanners hosts={networkScanners} />
-      )}
-
       {sortedGroups.map(([segment, segmentHosts]) => (
-        <div key={segment} className="space-y-3 sm:space-y-4">
-          <div className="flex items-center gap-3">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-200 dark:text-gray-200">{segment}</h3>
-            <div className="flex-1 h-px bg-gradient-to-r from-gray-600 dark:from-gray-600 to-transparent"></div>
-            <span className="text-xs sm:text-sm text-gray-300 dark:text-gray-300">
-              {segmentHosts.length} {segmentHosts.length === 1 ? 'host' : 'hosts'}
+        <div key={segment} className="space-y-2">
+          <div className="flex items-center gap-3 sticky top-0 z-10 bg-transparent py-1">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-200">{segment}</h3>
+            <div className="flex-1 h-px bg-gradient-to-r from-gray-300 dark:from-gray-600 to-transparent" />
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              {segmentHosts.length}
             </span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+          <div className="space-y-2">
             {segmentHosts.map((host, index) => (
               <HostCard 
                 key={`${host.ip}-${host.name}-${index}`} 
-                host={host} 
+                host={host}
+                hideLayerBadge={filter !== 'all'}
               />
             ))}
           </div>

@@ -7,11 +7,11 @@ export const InsightsCardHelp = () => (
       They appear here after a scan completes and the verdict pipeline runs.
     </p>
     <p>
-      <strong className="text-gray-200">Pivot missions</strong> are started manually — they never
+      <strong className="text-gray-700 dark:text-gray-200">Pivot missions</strong> are started manually — they never
       auto-launch from escalate. Expand an insight row to look for{' '}
-      <strong className="text-gray-200">Start pivot mission</strong>.
+      <strong className="text-gray-700 dark:text-gray-200">Start pivot mission</strong>.
     </p>
-    <ul className="list-disc list-inside space-y-1 text-gray-400">
+    <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
       <li>Verdict must be <span className="text-red-300">escalate</span></li>
       <li>Network must be <span className="text-blue-300">Lab</span> (Home insights are excluded)</li>
       <li>Host must be a single IP address</li>
@@ -31,10 +31,10 @@ export const PivotMissionButtonHelp = () => (
     </p>
     <p>
       The mission runs in the background on this server. Progress appears under{' '}
-      <strong className="text-gray-200">Hunter Runs → Pivot Missions</strong>. When complete, the
+      <strong className="text-gray-700 dark:text-gray-200">Hunter Runs → Pivot Missions</strong>. When complete, the
       report shows in the run timeline with a pivot chain view.
     </p>
-    <ul className="list-disc list-inside space-y-1 text-gray-400">
+    <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
       <li>Passive steps run automatically</li>
       <li>Active steps (e.g. SMB enum) may stall until approved on the Hunter CLI</li>
       <li>Findings are embedded into incident memory with source &quot;mission&quot;</li>
@@ -45,13 +45,13 @@ export const PivotMissionButtonHelp = () => (
 export const HunterRunsPageHelp = () => (
   <>
     <p>This page shows two kinds of Hunter output:</p>
-    <ul className="list-disc list-inside space-y-2 text-gray-400">
+    <ul className="list-disc list-inside space-y-2 text-gray-500 dark:text-gray-400">
       <li>
-        <strong className="text-gray-200">Inventory / assess runs</strong> — scheduled missions
+        <strong className="text-gray-700 dark:text-gray-200">Inventory / assess runs</strong> — scheduled missions
         (lab inventory, home assess) that diff sensors vs scans and recommend follow-up scans.
       </li>
       <li>
-        <strong className="text-gray-200">Pivot runs</strong> — manual deep-dives seeded from an
+        <strong className="text-gray-700 dark:text-gray-200">Pivot runs</strong> — manual deep-dives seeded from an
         escalated Lab insight on the dashboard. Look for{' '}
         <span className="font-mono text-purple-300">pivot-*</span> mission IDs and the pivot chain panel.
       </li>
@@ -66,7 +66,7 @@ export const HunterRunsPageHelp = () => (
 export const PivotMissionsPanelHelp = () => (
   <>
     <p>Live status for manually spawned pivot missions.</p>
-    <ul className="list-disc list-inside space-y-1 text-gray-400">
+    <ul className="list-disc list-inside space-y-1 text-gray-500 dark:text-gray-400">
       <li><span className="text-blue-300">running</span> — orchestrator is active</li>
       <li><span className="text-yellow-300">stalled</span> — waiting for approval or no heartbeat</li>
       <li><span className="text-green-300">done</span> — report written to hunt-*.json</li>

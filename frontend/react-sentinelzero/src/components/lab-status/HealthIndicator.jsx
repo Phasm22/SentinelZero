@@ -14,7 +14,7 @@ const HealthIndicator = ({
       case 'up':
       case true:
         return {
-          color: 'text-green-400',
+          color: 'text-green-600 dark:text-green-400',
           bg: 'bg-green-500/20',
           border: 'border-green-500/30',
           icon: CheckCircle,
@@ -23,7 +23,7 @@ const HealthIndicator = ({
         }
       case 'warning':
         return {
-          color: 'text-yellow-400',
+          color: 'text-yellow-600 dark:text-yellow-400',
           bg: 'bg-yellow-500/20',
           border: 'border-yellow-500/30',
           icon: AlertTriangle,
@@ -34,7 +34,7 @@ const HealthIndicator = ({
       case 'down':
       case false:
         return {
-          color: 'text-red-400',
+          color: 'text-red-600 dark:text-red-400',
           bg: 'bg-red-500/20',
           border: 'border-red-500/30',
           icon: XCircle,
@@ -44,7 +44,7 @@ const HealthIndicator = ({
       case 'unknown':
       default:
         return {
-          color: 'text-gray-400',
+          color: 'text-gray-500 dark:text-gray-400',
           bg: 'bg-gray-500/20',
           border: 'border-gray-500/30',
           icon: Clock,

@@ -11,17 +11,17 @@ const HunterChangeSummary = ({ run, insight }) => {
   const { severityCounts, baselineUpdates, fingerprintEvents } = insight
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4 sm:p-6">
+    <div className="bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-gray-200/80 dark:border-white/10 rounded-md shadow-xl p-4 sm:p-6">
       <div className="flex items-center gap-3 mb-4">
         <GitCompare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-        <h3 className="text-lg sm:text-xl font-bold text-gray-200">What Changed</h3>
+        <h3 className="text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-200">What Changed</h3>
         {total > 0 && (
-          <span className="ml-auto text-sm text-gray-400 font-mono">{total} events</span>
+          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 font-mono">{total} events</span>
         )}
       </div>
 
       {total === 0 ? (
-        <div className="rounded-lg border border-gray-600/30 bg-gray-700/30 px-4 py-3 text-sm text-gray-300">
+        <div className="rounded-lg border border-gray-600/30 bg-gray-700/30 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
           No fingerprint changes — inventory / recon sweep only.
         </div>
       ) : (
@@ -45,7 +45,7 @@ const HunterChangeSummary = ({ run, insight }) => {
             {SEVERITY_ORDER.filter((sev) => (severityCounts[sev] || 0) > 0).map((sev) => (
               <div key={sev} className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${SEVERITY_TIERS[sev].dot}`} />
-                <span className="text-xs text-gray-300">{SEVERITY_TIERS[sev].label}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-300">{SEVERITY_TIERS[sev].label}</span>
                 <span className={`text-xs font-mono ${SEVERITY_TIERS[sev].text}`}>{severityCounts[sev]}</span>
               </div>
             ))}
@@ -71,10 +71,10 @@ const HunterChangeSummary = ({ run, insight }) => {
 
       {/* Fingerprint continuity footer */}
       <div className="mt-4 pt-4 border-t border-gray-600/30 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <span className="inline-flex items-center gap-2 text-gray-300">
+        <span className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300">
           <Fingerprint className="w-4 h-4 text-cyan-400" />
           Baseline updates
-          <span className="font-mono text-gray-100">{baselineUpdates}</span>
+          <span className="font-mono text-gray-900 dark:text-gray-100">{baselineUpdates}</span>
         </span>
         {fingerprintEvents.length > 0 ? (
           <span className="flex flex-wrap gap-2">

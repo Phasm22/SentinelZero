@@ -10,10 +10,10 @@ const STATUS_DOT = {
 
 const HunterTimeline = ({ runs, selectedRunId, onSelect }) => (
   <aside className="space-y-2">
-    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl px-4 py-3 flex items-center gap-2">
+    <div className="bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-gray-200/80 dark:border-white/10 rounded-md shadow-xl px-4 py-3 flex items-center gap-2">
       <Radar className="w-4 h-4 text-blue-400" />
-      <span className="text-sm font-semibold text-gray-200">Run Timeline</span>
-      <span className="ml-auto text-xs text-gray-400 font-mono">{runs.length}</span>
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Run Timeline</span>
+      <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 font-mono">{runs.length}</span>
     </div>
 
     <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
@@ -37,7 +37,7 @@ const HunterTimeline = ({ runs, selectedRunId, onSelect }) => (
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 min-w-0">
                 <span className={`w-2 h-2 rounded-full shadow-sm flex-shrink-0 ${STATUS_DOT[scan.status]}`} title={scan.label} />
-                <span className="text-sm font-semibold text-gray-100 truncate">{meta.missionId || 'run'}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{meta.missionId || 'run'}</span>
               </span>
               {eventCount > 0 ? (
                 <span className="flex-shrink-0 rounded-full bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 text-[10px] font-mono text-blue-300">
@@ -47,7 +47,7 @@ const HunterTimeline = ({ runs, selectedRunId, onSelect }) => (
                 <span className="flex-shrink-0 text-[10px] font-mono text-gray-500">—</span>
               )}
             </div>
-            <div className="mt-1 text-xs text-gray-400 font-mono truncate">{meta.targetNetwork}</div>
+            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{meta.targetNetwork}</div>
             <div className="mt-0.5 text-xs text-gray-500">{timeAgo(meta.completedAt)}</div>
           </button>
         )

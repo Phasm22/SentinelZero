@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { PlusCircle, AlertTriangle, CheckCircle, Clock, Filter, X } from 'lucide-react'
+import { PlusCircle, AlertTriangle, CheckCircle, Clock, Filter, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { apiService } from '../utils/api'
 import { useToast } from '../contexts/ToastContext'
 import { useSocket } from '../contexts/SocketContext'
@@ -234,7 +234,7 @@ const InsightsCard = () => {
     return (
       <div className="bg-gradient-to-br from-green-900/80 to-gray-900/60 border border-green-400/30 rounded-md shadow-xl p-6 mb-8" data-testid="insights-card">
         <h2 className="text-2xl font-title font-bold text-green-200 mb-4 flex items-center gap-2">
-          <PlusCircle className="w-6 h-6 text-green-400" /> Recent Insights
+          <Sparkles className="w-6 h-6 text-green-400" /> Recent Insights
         </h2>
         <div className="animate-pulse space-y-3">
           {[1, 2, 3].map(i => (
@@ -249,7 +249,7 @@ const InsightsCard = () => {
     <div className="bg-gradient-to-br from-green-900/80 to-gray-900/60 border border-green-400/30 rounded-md shadow-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8" data-testid="insights-card">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl lg:text-2xl font-title font-bold text-green-200 flex items-center gap-2">
-          <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" />
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" />
           Recent Insights
           <InfoModalTrigger
             title="Recent Insights & Pivot Missions"
@@ -341,11 +341,22 @@ const InsightsCard = () => {
         </div>
       ) : (
         <ul className="space-y-2 sm:space-y-3" data-testid="insights-list">
-          {insights.map((insight, idx) => (
+          {insights.map((insight, idx) => {
+            const isExpanded = expandedId === insight.id
+            return (
             <li
               key={insight.id || idx}
-              className={`p-2 sm:p-3 rounded-md border ${getPriorityColor(insight.priority)} ${!insight.is_read ? 'ring-1 ring-current' : ''} cursor-pointer`}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isExpanded}
+              className={`p-2 sm:p-3 rounded-md border transition-colors ${getPriorityColor(insight.priority)} ${!insight.is_read ? 'ring-1 ring-current' : ''} cursor-pointer hover:bg-gray-100/60 dark:hover:bg-white/5 ${isExpanded ? 'bg-gray-100/50 dark:bg-white/5' : ''}`}
               onClick={() => toggleExpand(insight.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleExpand(insight.id)
+                }
+              }}
               data-testid={`insight-row-${idx}`}
             >
               <div className="flex items-start gap-2 sm:gap-3">
@@ -403,11 +414,19 @@ const InsightsCard = () => {
                         <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     )}
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 text-gray-500 dark:text-gray-400">
+                      <span className="hidden sm:inline text-xs">Details</span>
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {expandedId === insight.id && (
+              {isExpanded && (
                 <div className="mt-2 pt-2 border-t border-white/10 ml-7 sm:ml-8" data-testid="insight-expanded">
                   {insight.details?.asset_context && (
                     <ContextBlock title="Asset">
@@ -476,7 +495,7 @@ const InsightsCard = () => {
                 </div>
               )}
             </li>
-          ))}
+          )})}
         </ul>
       )}
 

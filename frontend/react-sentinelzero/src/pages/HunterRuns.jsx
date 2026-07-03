@@ -13,7 +13,7 @@ import { HunterRunsPageHelp } from '../components/hunter/hunterHelpContent'
 import { deriveRunInsight } from '../components/hunter/hunterFormat'
 
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4 sm:p-6 ${className}`}>
+  <div className={`bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-gray-200/80 dark:border-white/10 rounded-md shadow-xl p-4 sm:p-6 ${className}`}>
     {children}
   </div>
 )
@@ -61,7 +61,7 @@ const HunterRuns = () => {
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <Card className="flex items-center justify-center gap-3">
           <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-400" />
-          <span className="text-gray-300">Loading hunter runs…</span>
+          <span className="text-gray-600 dark:text-gray-300">Loading hunter runs…</span>
         </Card>
       </div>
     )
@@ -83,7 +83,7 @@ const HunterRuns = () => {
   if (!selectedRun) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Card className="text-gray-300">No hunter runs found.</Card>
+        <Card className="text-gray-600 dark:text-gray-300">No hunter runs found.</Card>
       </div>
     )
   }
@@ -92,8 +92,8 @@ const HunterRuns = () => {
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Radar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-100">Hunter Runs</h1>
+          <Radar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Hunter Runs</h1>
           <InfoModalTrigger
             title="Hunter Runs"
             ariaLabel="About Hunter runs and pivot missions"
@@ -102,12 +102,12 @@ const HunterRuns = () => {
           >
             <HunterRunsPageHelp />
           </InfoModalTrigger>
-          <span className="rounded-full border border-gray-600/50 bg-gray-800/70 px-2.5 py-0.5 text-xs text-gray-300">
+          <span className="rounded-full border border-gray-300 dark:border-gray-600/50 bg-gray-100 dark:bg-gray-800/70 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-300">
             {overview?.meta?.run_count || runs.length} runs
           </span>
         </div>
-        <div className="text-sm text-gray-400">
-          Baseline hosts: <span className="font-mono text-gray-200">{overview?.meta?.baseline_fingerprint_hosts ?? '—'}</span>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Baseline hosts: <span className="font-mono text-gray-800 dark:text-gray-200">{overview?.meta?.baseline_fingerprint_hosts ?? '—'}</span>
         </div>
       </div>
 

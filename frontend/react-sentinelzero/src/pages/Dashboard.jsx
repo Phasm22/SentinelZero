@@ -23,10 +23,11 @@ import {
 import { useUserPreferences } from '@/contexts/UserPreferencesContext'
 import { formatTimestamp } from '@/utils/date'
 import ScanningSection from '@/components/ScanningSection'
-import RecentScansTable from '@/components/RecentScansTable'
+import RecentScansList from '@/components/RecentScansList'
 import InsightsCard from '@/components/InsightsCard'
 import Modal from '@/components/Modal'
 import { buildNmapCommand } from '@/components/ScanControls'
+import useViewedScans from '@/hooks/useViewedScans'
 
 const Dashboard = () => {
   const { preferences } = useUserPreferences()
@@ -44,6 +45,7 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { socket, isConnected, isInitialized, subscribeToScan, unsubscribeFromScan } = useSocket()
   const { showToast } = useToast()
+  const { isViewed, markViewed } = useViewedScans()
   const [pollInterval, setPollInterval] = useState(null)
   const [showScanConfirm, setShowScanConfirm] = useState(false)
   const [showDataMenu, setShowDataMenu] = useState(false)
@@ -217,6 +219,9 @@ const Dashboard = () => {
   }
 
   const handleViewDetails = (scan) => {
+    if (scan?.id != null) {
+      markViewed(scan.id)
+    }
     setSelectedScan(scan)
     setIsModalOpen(true)
   }
@@ -510,10 +515,20 @@ const Dashboard = () => {
                 )}
               </div>
             )}
+            {activeTab === 'recent' && (
+              <div data-testid="recent-scans-content">
+                <RecentScansList
+                  scans={recentScans}
+                  preferences={preferences}
+                  onViewDetails={handleViewDetails}
+                  isViewed={isViewed}
+                />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column - Stats and Recent Scans */}
+        {/* Right Column - Latest Scan */}
         <div className="space-y-3 sm:space-y-4 lg:space-y-6" data-testid="dashboard-right-column">
           <LatestScanSnapshot
             scan={latestScan}
@@ -522,33 +537,6 @@ const Dashboard = () => {
             onViewDetails={handleViewDetails}
             formatTimestamp={formatTimestamp}
           />
-
-          {/* Recent Scans - Compact Version */}
-          <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-3 sm:p-4" data-testid="recent-scans-card">
-            <h2 className="text-lg sm:text-xl font-title font-bold text-gray-100 mb-3 sm:mb-4" data-testid="recent-scans-title">Recent Scans</h2>
-            <div className="space-y-2 sm:space-y-3" data-testid="recent-scans-list">
-              {recentScans.slice(0, 3).map((scan) => (
-                <div key={scan.id} className="flex items-center justify-between p-2 sm:p-3 bg-white/5 rounded-md" data-testid={`recent-scan-item-${scan.id}`}>
-                  <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" data-testid="scan-status-indicator"></div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs sm:text-sm font-medium text-gray-200 truncate" data-testid="scan-type">{scan.scan_type}</div>
-                      <div className="text-xs text-gray-400 truncate" data-testid="scan-timestamp">{formatTimestamp(scan.timestamp, preferences.use24Hour)}</div>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => handleViewDetails(scan)}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs sm:text-sm flex-shrink-0"
-                    data-testid={`recent-scan-view-btn-${scan.id}`}
-                  >
-                    View
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
