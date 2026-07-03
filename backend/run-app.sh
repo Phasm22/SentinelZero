@@ -93,17 +93,19 @@ kill_port() {
 cleanup_processes() {
     echo -e "${YELLOW}🧹 Cleaning up existing processes...${NC}"
     
-    # Kill any existing Python app.py processes
+    # Kill any existing app processes (legacy dev server and gunicorn workers)
     pkill -f "python.*app.py" 2>/dev/null || true
-    
+    pkill -f "gunicorn.*app:app" 2>/dev/null || true
+
     # Kill any processes on our target port
     kill_port $BACKEND_PORT
-    
+
     # Wait for processes to actually terminate
     sleep 3
-    
+
     # Double-check and force kill if needed
     pkill -9 -f "python.*app.py" 2>/dev/null || true
+    pkill -9 -f "gunicorn.*app:app" 2>/dev/null || true
     
     # Wait a bit more
     sleep 2

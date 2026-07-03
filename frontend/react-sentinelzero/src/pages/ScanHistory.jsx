@@ -71,7 +71,15 @@ const ScanHistory = () => {
     setIsSyncing(true)
     try {
       const result = await apiService.syncScans(syncMode)
-      showToast(result.message, 'success')
+      const sr = result.sync_result || {}
+      const parts = []
+      if (sr.synced_count) parts.push(`imported ${sr.synced_count}`)
+      if (sr.skipped_count) parts.push(`${sr.skipped_count} already indexed`)
+      if (sr.skipped_artifacts) parts.push(`skipped ${sr.skipped_artifacts} pre-discovery artifacts`)
+      if (sr.pruned_count) parts.push(`pruned ${sr.pruned_count} stale records`)
+      if (sr.error_count) parts.push(`${sr.error_count} errors`)
+      const detail = parts.length ? parts.join(', ') : 'no changes'
+      showToast(result.message ? `${result.message}: ${detail}` : `Sync complete: ${detail}`, 'success')
       loadScanHistory()
       loadSyncStatus()
     } catch (error) {
@@ -104,7 +112,7 @@ const ScanHistory = () => {
   return (
     <div className="space-y-4 w-full">
       {syncStatus && !syncStatus.in_sync && (
-        <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-900/20 border border-amber-700/40 rounded-md px-4 py-2">
+        <div className="flex items-center gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-700/40 rounded-md px-4 py-2">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{syncStatus.missing_in_database} scan file{syncStatus.missing_in_database !== 1 ? 's' : ''} not indexed in database</span>
         </div>

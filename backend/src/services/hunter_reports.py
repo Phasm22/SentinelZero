@@ -1,12 +1,16 @@
 """Normalize Hunter report artifacts for SentinelZero UI consumption."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+MISSION_STALE_MINUTES = 15
 
 DEFAULT_REPORT_DIRS = (
     "/home/hunter/agent/reports",
@@ -339,6 +343,157 @@ def build_llm_context_pack(run: dict[str, Any], top_n_hosts: int = 5, events_per
     }
 
 
+def _build_pivot_chain(raw: dict[str, Any]) -> dict[str, Any] | None:
+    items = raw.get("pivot_events")
+    if not isinstance(items, list) or not items:
+        return None
+
+    events: list[dict[str, Any]] = []
+    parent_ids: set[str] = set()
+    child_refs = 0
+    max_seq = 0
+
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        event_id = str(item.get("event_id") or f"pivot:{idx}")
+        parent = item.get("parent_event_id")
+        seq = _safe_int(item.get("seq"), idx + 1)
+        max_seq = max(max_seq, seq)
+        if parent:
+            child_refs += 1
+        parent_ids.add(event_id)
+        events.append({
+            "eventId": event_id,
+            "seq": seq,
+            "ts": item.get("ts"),
+            "taskId": str(item.get("task_id") or ""),
+            "parentEventId": parent,
+            "ip": str(item.get("ip") or ""),
+            "type": str(item.get("type") or "unknown"),
+            "description": str(item.get("description") or ""),
+            "action": str(item.get("action") or ""),
+        })
+
+    if not events:
+        return None
+
+    depth = 1
+    if child_refs:
+        by_id = {event["eventId"]: event for event in events}
+
+        def _depth(event_id: str, seen: set[str]) -> int:
+            if event_id in seen:
+                return 1
+            seen.add(event_id)
+            event = by_id.get(event_id)
+            if not event or not event.get("parentEventId"):
+                return 1
+            return 1 + _depth(str(event["parentEventId"]), seen)
+
+        depth = max(_depth(event["eventId"], set()) for event in events)
+
+    return {
+        "events": events,
+        "edgeCount": child_refs,
+        "depth": depth,
+        "eventTotal": len(events),
+        "maxSeq": max_seq,
+    }
+
+
+def _iter_status_files(limit: int = 50) -> list[Path]:
+    files: list[Path] = []
+    for root in report_dirs():
+        if not root.exists() or not root.is_dir():
+            continue
+        files.extend(root.glob("hunt-*.status.json"))
+    files = sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[: max(limit, 1)]
+
+
+def _pid_alive(pid: Any) -> bool:
+    try:
+        pid_int = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid_int <= 0:
+        return False
+    try:
+        os.kill(pid_int, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _effective_mission_state(payload: dict[str, Any]) -> str:
+    state = str(payload.get("state") or "unknown").strip().lower()
+    if state in {"done", "failed", "stalled"}:
+        return state
+    updated_at = _parse_iso(payload.get("updated_at"))
+    if updated_at:
+        age_min = (datetime.now(timezone.utc) - updated_at).total_seconds() / 60.0
+        pid = payload.get("pid")
+        if age_min > MISSION_STALE_MINUTES and not _pid_alive(pid):
+            return "stalled"
+    return state or "unknown"
+
+
+def _normalize_mission_status(raw: dict[str, Any], *, status_name: str) -> dict[str, Any]:
+    mission_id = str(raw.get("mission_id") or "").strip()
+    if mission_id.startswith("hunt-"):
+        mission_id = mission_id.removeprefix("hunt-").removesuffix(".status.json")
+    state = _effective_mission_state(raw)
+    report_glob = None
+    for root in report_dirs():
+        if not root.exists():
+            continue
+        matches = sorted(root.glob(f"hunt-{mission_id}-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if matches:
+            report_glob = matches[0].name
+            break
+    return {
+        "missionId": mission_id,
+        "statusFile": status_name,
+        "state": state,
+        "startedAt": raw.get("started_at"),
+        "updatedAt": raw.get("updated_at"),
+        "pid": raw.get("pid"),
+        "lastTask": raw.get("last_task"),
+        "error": raw.get("error"),
+        "reportId": report_glob,
+    }
+
+
+def list_missions(limit: int = 20) -> list[dict[str, Any]]:
+    missions: list[dict[str, Any]] = []
+    for path in _iter_status_files(limit=limit):
+        payload = _read_json_file(path)
+        if payload is None:
+            continue
+        missions.append(_normalize_mission_status(payload, status_name=path.name))
+    missions.sort(
+        key=lambda item: _parse_iso(item.get("updatedAt")) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    return missions
+
+
+def mission_by_id(mission_id: str) -> dict[str, Any] | None:
+    cleaned = str(mission_id or "").strip()
+    if not cleaned:
+        return None
+    target_name = f"hunt-{cleaned}.status.json"
+    for path in _iter_status_files(limit=500):
+        if path.name != target_name:
+            continue
+        payload = _read_json_file(path)
+        if payload is None:
+            return None
+        return _normalize_mission_status(payload, status_name=path.name)
+    return None
+
+
 def normalize_report(raw: dict[str, Any], *, report_name: str) -> dict[str, Any]:
     events = _build_events(raw)
     hosts, recommendations = _host_rollups(raw, events)
@@ -360,6 +515,7 @@ def normalize_report(raw: dict[str, Any], *, report_name: str) -> dict[str, Any]
         "workerSummaries": raw.get("worker_summaries") if isinstance(raw.get("worker_summaries"), list) else [],
         "eventCount": len(events),
         "hostCount": len(hosts),
+        "missionType": str(raw.get("mission_type") or "inventory"),
     }
     normalized = {
         "huntRun": hunt_run,
@@ -372,6 +528,9 @@ def normalize_report(raw: dict[str, Any], *, report_name: str) -> dict[str, Any]
             "hostTotal": len(hosts),
         },
     }
+    pivot_chain = _build_pivot_chain(raw)
+    if pivot_chain is not None:
+        normalized["huntPivotChain"] = pivot_chain
     normalized["deterministicNarrative"] = _build_deterministic_bullets(normalized)
     normalized["llmContextPack"] = build_llm_context_pack(normalized)
     return normalized

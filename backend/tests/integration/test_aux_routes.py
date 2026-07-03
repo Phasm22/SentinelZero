@@ -230,3 +230,64 @@ def test_hunter_latest_route_404_without_reports(client, monkeypatch):
     monkeypatch.setenv("HUNTER_REPORTS_DIR", "/tmp/does-not-exist-hunter-reports")
     response = client.get("/api/hunter/runs/latest")
     assert response.status_code == 404
+
+
+def test_hunter_missions_spawn_and_list(client, tmp_path, monkeypatch):
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
+
+    class FakeProc:
+        pid = 4242
+
+    def fake_popen(*args, **kwargs):
+        return FakeProc()
+
+    monkeypatch.setattr("src.services.agent_service.subprocess.Popen", fake_popen)
+    monkeypatch.setattr(
+        "src.services.agent_service._can_call_agent",
+        lambda: (True, None),
+    )
+    monkeypatch.setattr(
+        "src.services.agent_service._pivot_script",
+        lambda: str(tmp_path / "pivot.py"),
+    )
+    (tmp_path / "pivot.py").write_text("# stub", encoding="utf-8")
+    monkeypatch.setenv("SENTINEL_AGENT_DIR", str(tmp_path))
+
+    spawn = client.post(
+        "/api/hunter/missions",
+        json={
+            "ip": "172.16.0.10",
+            "type": "new_port",
+            "scan_id": 7,
+            "network_label": "Lab",
+            "target_network": "172.16.0.0/22",
+        },
+    )
+    assert spawn.status_code == 202
+    payload = spawn.get_json()
+    assert payload["status"] == "started"
+    mission_id = payload["mission_id"]
+    assert mission_id.startswith("pivot-")
+
+    (reports_dir / f"hunt-{mission_id}.status.json").write_text(
+        json.dumps({
+            "mission_id": mission_id,
+            "state": "running",
+            "started_at": "2026-07-03T20:00:00Z",
+            "updated_at": "2026-07-03T20:01:00Z",
+            "pid": 4242,
+            "last_task": "turn 0",
+        }),
+        encoding="utf-8",
+    )
+
+    listing = client.get("/api/hunter/missions?limit=5")
+    assert listing.status_code == 200
+    missions = listing.get_json()["missions"]
+    assert any(item["missionId"] == mission_id for item in missions)
+
+    detail = client.get(f"/api/hunter/missions/{mission_id}")
+    assert detail.status_code == 200
+    assert detail.get_json()["mission"]["missionId"] == mission_id

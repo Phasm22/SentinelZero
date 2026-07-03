@@ -599,3 +599,85 @@ def _emit(socketio, scan_id: int, event: str = "insights.verdicts_ready") -> Non
         socketio.emit(event, {"scan_id": scan_id})
     except Exception as exc:
         logger.warning("agent_service: socket emit failed: %s", exc)
+
+
+def _pivot_script() -> str:
+    return os.path.join(_AGENT_DIR, "pivot.py")
+
+
+def _mission_logs_dir() -> str:
+    reports = os.environ.get("HUNTER_REPORTS_DIR", os.path.join(_AGENT_DIR, "reports"))
+    logs = os.path.join(reports, "mission-logs")
+    os.makedirs(logs, exist_ok=True)
+    return logs
+
+
+def spawn_mission(seed: dict) -> dict:
+    """Fire-and-forget pivot mission via Popen — no parked app_context or DB session."""
+    ok, reason = _can_call_agent()
+    if not ok:
+        return {"status": "skipped", "reason": reason}
+
+    if not isinstance(seed, dict) or not str(seed.get("ip") or "").strip():
+        return {"status": "error", "reason": "seed must include ip"}
+
+    pivot_script = _pivot_script()
+    if not os.path.exists(pivot_script):
+        return {"status": "error", "reason": f"pivot script not found: {pivot_script}"}
+
+    mission_id = f"pivot-{uuid.uuid4().hex[:12]}"
+    seeds_dir = os.path.join(_mission_logs_dir(), "seeds")
+    os.makedirs(seeds_dir, exist_ok=True)
+    seed_path = os.path.join(seeds_dir, f"{mission_id}.json")
+    with open(seed_path, "w", encoding="utf-8") as handle:
+        json.dump(seed, handle, indent=2)
+        handle.write("\n")
+
+    allowed_cidrs = seed.get("allowed_cidrs")
+    if isinstance(allowed_cidrs, list) and allowed_cidrs:
+        cidr_arg = ",".join(str(c) for c in allowed_cidrs)
+    else:
+        cidr_arg = str(seed.get("target_network") or "172.16.0.0/22")
+
+    target_network = str(seed.get("target_network") or cidr_arg.split(",")[0])
+    log_path = os.path.join(_mission_logs_dir(), f"{mission_id}.log")
+    log_handle = open(log_path, "a", encoding="utf-8")
+
+    args = [
+        _AGENT_PYTHON,
+        pivot_script,
+        "--mission-id",
+        mission_id,
+        "--seed-file",
+        seed_path,
+        "--allowed-cidrs",
+        cidr_arg,
+        "--target-network",
+        target_network,
+    ]
+    iface = seed.get("iface")
+    if iface:
+        args.extend(["--iface", str(iface)])
+
+    allow_active = bool(seed.get("allow_active"))
+    if allow_active:
+        args.append("--allow-active")
+
+    try:
+        proc = subprocess.Popen(
+            args,
+            env=_agent_env(),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    except Exception as exc:
+        log_handle.close()
+        return {"status": "error", "reason": str(exc)}
+
+    return {
+        "status": "started",
+        "mission_id": mission_id,
+        "pid": proc.pid,
+        "log_path": log_path,
+    }

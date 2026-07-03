@@ -1,8 +1,16 @@
 """Modular Flask application entry point."""
+# Eventlet monkey-patching MUST happen before any stdlib import that it patches
+# (socket, threading, time, ...). Without this, blocking socket/DB calls do not
+# yield to the eventlet hub, so requests serialize even under an eventlet worker.
+# Guarded so it is a no-op if the gunicorn eventlet worker already patched.
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 import threading
 import time
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -105,6 +113,11 @@ def _ensure_database_schema(app, db):
                         f'ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}'
                     )
 
+            connection.exec_driver_sql(
+                'CREATE INDEX IF NOT EXISTS ix_sensor_telemetry_agent_collected '
+                'ON sensor_telemetry (agent_id, collected_at DESC)'
+            )
+
         from src.services.scan_scope import infer_target_network_from_hosts
         import json as _json
 
@@ -122,6 +135,27 @@ def _ensure_database_schema(app, db):
                 scan.target_network = inferred
         if scans_missing:
             db.session.commit()
+
+
+def _backfill_host_context(app, db):
+    """Populate host_context_json for scans that missed postprocessing enrichment."""
+    with app.app_context():
+        from src.services.host_context import store_host_context
+
+        missing = Scan.query.filter(
+            Scan.host_context_json.is_(None),
+            Scan.hosts_json.isnot(None),
+        ).all()
+        if not missing:
+            return
+        print(f'[INFO] Backfilling host context for {len(missing)} scan(s)...')
+        for scan in missing:
+            try:
+                store_host_context(scan.id)
+            except Exception as exc:
+                print(f'[WARN] host context backfill failed for scan {scan.id}: {exc}')
+        print('[INFO] Host context backfill complete')
+
 
 def create_app(test_config=None):
     """Application factory pattern."""
@@ -222,6 +256,41 @@ def create_app(test_config=None):
                 minute=30,
                 id='sensor_telemetry_cleanup',
                 replace_existing=True,
+            )
+            scheduler.add_job(
+                sensor_service.vacuum_database,
+                'cron',
+                day_of_week='sun',
+                hour=3,
+                minute=45,
+                id='sensor_telemetry_vacuum',
+                replace_existing=True,
+            )
+            # Keep the What's Up snapshot warm so /api/whatsup/summary serves from
+            # cache instead of running ~23 network probes per request. Fires almost
+            # immediately at startup to prime a cold cache, then every 30s.
+            scheduler.add_job(
+                refresh_whats_up_snapshot,
+                'interval',
+                seconds=30,
+                id='whats_up_snapshot_refresh',
+                replace_existing=True,
+                next_run_time=datetime.utcnow(),
+                max_instances=1,
+                coalesce=True,
+            )
+            # Version the Hunter baseline (drift-detection source of truth).
+            # Idempotent: only writes a snapshot when the baseline content has
+            # changed. Runs shortly after startup, then every 6 hours.
+            scheduler.add_job(
+                hunter_reports.snapshot_baseline,
+                'interval',
+                hours=6,
+                id='hunter_baseline_snapshot',
+                replace_existing=True,
+                next_run_time=datetime.utcnow(),
+                max_instances=1,
+                coalesce=True,
             )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
@@ -352,6 +421,7 @@ def create_app(test_config=None):
     if app.config.get('ENABLE_BACKGROUND_SERVICES') and not app.config.get('TESTING'):
         threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
         threading.Timer(2.0, start_background_services).start()
+        threading.Timer(10.0, lambda: _backfill_host_context(app, db)).start()
 
     return app
 

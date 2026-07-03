@@ -123,6 +123,34 @@ class NetworkProbe:
             }
 
 
+def _probe_in_parallel(probe_one, items, max_workers=12):
+    """Run probe_one over items concurrently, preserving input order.
+
+    Under eventlet monkey-patching these are green threads, so blocking socket
+    waits overlap and total time is ~max(item) instead of sum(item). Any item
+    that raises is recorded as a failed probe rather than aborting the batch.
+    """
+    items = list(items)
+    if not items:
+        return []
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _safe(item):
+        try:
+            return probe_one(item)
+        except Exception as e:  # never let one probe sink the whole snapshot
+            return {
+                'name': item.get('name') if isinstance(item, dict) else str(item),
+                'ip': item.get('ip') if isinstance(item, dict) else None,
+                'status': 'down',
+                'error': f'probe error: {e}',
+                'checked_at': datetime.utcnow().isoformat(),
+            }
+
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(items))) as pool:
+        return list(pool.map(_safe, items))
+
+
 class WhatsUpMonitor:
     """Collect and emit lab-health snapshots."""
 
@@ -135,9 +163,18 @@ class WhatsUpMonitor:
         self._lock = threading.Lock()
 
     def collect_snapshot(self):
-        loopbacks = self._collect_loopbacks()
-        services = self._collect_services()
-        infrastructure = self._collect_infrastructure()
+        # Run the three probe layers concurrently. Under eventlet monkey-patching
+        # these are green threads and the blocking socket waits overlap, so total
+        # time is ~max(layer) instead of sum(layer). Falls back gracefully if a
+        # layer raises.
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            f_loop = pool.submit(self._collect_loopbacks)
+            f_svc = pool.submit(self._collect_services)
+            f_infra = pool.submit(self._collect_infrastructure)
+            loopbacks = f_loop.result()
+            services = f_svc.result()
+            infrastructure = f_infra.result()
         snapshot = self._build_snapshot(loopbacks, services, infrastructure)
         with self._lock:
             self._last_snapshot = snapshot
@@ -155,10 +192,9 @@ class WhatsUpMonitor:
         return payload
 
     def _collect_loopbacks(self):
-        results = []
-        for loopback in self.loopbacks:
+        def probe_one(loopback):
             probe_result = self.probe.ping(loopback['ip'], timeout=0.5)
-            results.append({
+            return {
                 'name': loopback['name'],
                 'ip': loopback['ip'],
                 'description': loopback.get('description', ''),
@@ -168,12 +204,11 @@ class WhatsUpMonitor:
                 'method': probe_result.get('method', 'unknown'),
                 'error': None if probe_result['success'] else probe_result.get('error'),
                 'checked_at': datetime.utcnow().isoformat(),
-            })
-        return results
+            }
+        return _probe_in_parallel(probe_one, self.loopbacks)
 
     def _collect_services(self):
-        results = []
-        for service in self.services:
+        def probe_one(service):
             target_host = service.get('domain') or service['ip']
             target_ip = self.probe.resolve(target_host) if service.get('domain') else service.get('ip')
             port = service.get('port', 80)
@@ -216,7 +251,7 @@ class WhatsUpMonitor:
                 }
 
             overall_success = dns_info['success'] and service_info['success']
-            results.append({
+            return {
                 'name': service['name'],
                 'domain': service.get('domain'),
                 'ip': service.get('ip'),
@@ -236,12 +271,11 @@ class WhatsUpMonitor:
                 'service': service_info,
                 'status': 'up' if overall_success else 'down',
                 'overall_status': 'up' if overall_success else 'down',
-            })
-        return results
+            }
+        return _probe_in_parallel(probe_one, self.services)
 
     def _collect_infrastructure(self):
-        results = []
-        for infra in self.infrastructure:
+        def probe_one(infra):
             port = infra.get('port')
             infra_type = infra.get('type', 'ping')
             checked_at = datetime.utcnow().isoformat()
@@ -259,7 +293,7 @@ class WhatsUpMonitor:
             else:
                 probe_result = self.probe.ping(infra['ip'], timeout=0.5)
 
-            results.append({
+            return {
                 'name': infra['name'],
                 'ip': infra['ip'],
                 'port': port,
@@ -269,8 +303,8 @@ class WhatsUpMonitor:
                 'response_time': probe_result.get('response_time'),
                 'method': probe_result.get('method', infra_type),
                 'checked_at': checked_at,
-            })
-        return results
+            }
+        return _probe_in_parallel(probe_one, self.infrastructure)
 
     @staticmethod
     def _build_snapshot(loopbacks, services, infrastructure):

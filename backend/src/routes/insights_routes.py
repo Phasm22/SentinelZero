@@ -209,15 +209,15 @@ def post_scan_analyst(scan_id):
 @insights_bp.route('/api/scans/<int:scan_id>/host-context', methods=['GET'])
 def get_scan_host_context(scan_id):
     """Per-scan host identification context (DHCP, ARP, registry, nmap, user labels)."""
-    from ..services.host_context import load_host_context, build_host_context
+    from ..services.host_context import load_host_context
 
     scan = Scan.query.get(scan_id)
     if not scan:
         return jsonify({"error": "Scan not found"}), 404
     ctx = load_host_context(scan)
-    if not ctx and scan.hosts_json:
-        ctx = build_host_context(scan)
-    return jsonify({"scan_id": scan_id, "host_context": ctx})
+    if not ctx:
+        return jsonify({"scan_id": scan_id, "host_context": None, "status": "pending"})
+    return jsonify({"scan_id": scan_id, "host_context": ctx, "status": "ready"})
 
 
 @insights_bp.route('/api/scans/<int:scan_id>/host-context/labels', methods=['PATCH'])

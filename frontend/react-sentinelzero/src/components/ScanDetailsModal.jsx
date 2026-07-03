@@ -194,7 +194,7 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
         aria-label={`Scan details — ${scanDetails.scan_type}`}
       >
         <div
-          className="relative w-full max-w-4xl transform rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl transition-all"
+          className="relative w-full max-w-4xl transform rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl transition-all"
           data-testid="modal-content"
           onClick={(e) => e.stopPropagation()}
         >
@@ -271,8 +271,8 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan Type</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">{scanDetails.scan_type}</div>
                       </div>
-                      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-500/20">
-                        <div className="text-sm font-medium text-indigo-400">Target network</div>
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-500/20">
+                        <div className="text-sm font-medium text-indigo-700 dark:text-indigo-400">Target network</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">
                           {scanDetails.network_label || '—'}
                         </div>
@@ -296,8 +296,8 @@ const ScanDetailsModal = ({ scan, isOpen, onClose }) => {
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scan ID</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">#{scanDetails.id}</div>
                       </div>
-                      <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border border-violet-500/20">
-                        <div className="text-sm font-medium text-violet-400 flex items-center gap-1">
+                      <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4 border border-violet-200 dark:border-violet-500/20">
+                        <div className="text-sm font-medium text-violet-700 dark:text-violet-400 flex items-center gap-1">
                           <Bot className="w-3 h-3" /> Insights
                         </div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">

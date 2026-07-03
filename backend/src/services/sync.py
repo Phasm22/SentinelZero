@@ -3,6 +3,9 @@ Scan synchronization utility to rebuild database records from filesystem XML fil
 """
 import os
 import json
+import re
+import threading
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, Any
@@ -18,6 +21,58 @@ def _normalize_path(path: str, base_dir: str) -> str:
     if os.path.isabs(path):
         return os.path.normpath(path)
     return os.path.normpath(os.path.join(base_dir, path))
+
+
+def _is_sync_artifact(filename: str) -> bool:
+    """Internal scan artifacts that should not be imported as user scans."""
+    lower = filename.lower()
+    return lower.startswith('pre_discovery_') and lower.endswith('.xml')
+
+
+def _scan_type_from_filename(filename: str) -> str:
+    lower = filename.lower()
+    if 'pre_discovery' in lower:
+        return 'Pre-Discovery'
+    if 'full_tcp' in lower:
+        return 'Full TCP'
+    if 'iot' in lower:
+        return 'IoT Scan'
+    if 'vuln' in lower:
+        return 'Vuln Scripts'
+    if 'uploaded' in lower:
+        return 'Uploaded Scan'
+    if 'discovery' in lower:
+        return 'Discovery Scan'
+    return 'Unknown'
+
+
+_FILENAME_TS_RE = re.compile(r'(\d{4}-\d{2}-\d{2}_\d{4})')
+
+
+def _timestamp_from_filename(filename: str):
+    match = _FILENAME_TS_RE.search(filename)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), '%Y-%m-%d_%H%M')
+    except ValueError:
+        return None
+
+
+def _timestamp_from_mtime(xml_path: str):
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(xml_path))
+    except OSError:
+        return None
+
+
+def _resolve_scan_timestamps(xml_path: str, scan_info: Dict[str, Any]):
+    """Resolve created_at/completed_at from XML, filename, or file mtime."""
+    filename = os.path.basename(xml_path)
+    fallback = _timestamp_from_filename(filename) or _timestamp_from_mtime(xml_path)
+    start = scan_info.get('start_time') or fallback
+    end = scan_info.get('end_time') or start or fallback
+    return start, end
 
 
 def _to_relative_path(path: str, base_dir: str) -> str:
@@ -71,18 +126,7 @@ def parse_xml_file(xml_path: str) -> Dict[str, Any]:
         
         # Determine scan type from filename
         filename = os.path.basename(xml_path)
-        if 'discovery' in filename.lower():
-            scan_info['scan_type'] = 'Discovery Scan'
-        elif 'full_tcp' in filename.lower():
-            scan_info['scan_type'] = 'Full TCP'
-        elif 'iot' in filename.lower():
-            scan_info['scan_type'] = 'IoT Scan'
-        elif 'vuln' in filename.lower():
-            scan_info['scan_type'] = 'Vuln Scripts'
-        elif 'uploaded' in filename.lower():
-            scan_info['scan_type'] = 'Uploaded Scan'
-        elif 'pre_discovery' in filename.lower():
-            scan_info['scan_type'] = 'Pre-Discovery'
+        scan_info['scan_type'] = _scan_type_from_filename(filename)
         
         # Parse hosts
         hosts = []
@@ -236,12 +280,17 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
     
     synced_count = 0
     skipped_count = 0
+    skipped_artifacts = 0
     pruned_count = 0
     error_count = 0
     errors = []
     
     for xml_file in sorted(xml_files):
         xml_path = os.path.normpath(os.path.join(target_dir, xml_file))
+
+        if _is_sync_artifact(xml_file):
+            skipped_artifacts += 1
+            continue
         
         # Skip if already in database
         if xml_path in existing_scans_by_path:
@@ -255,6 +304,8 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
                 error_count += 1
                 errors.append(f'Failed to parse {xml_file}')
                 continue
+
+            created_at, completed_at = _resolve_scan_timestamps(xml_path, scan_data)
             
             # Create scan record
             scan = Scan(
@@ -267,8 +318,8 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
                 hosts_json=json.dumps(scan_data['hosts']),
                 vulns_json=json.dumps(scan_data['vulns']),
                 raw_xml_path=_to_relative_path(xml_path, base_dir),
-                created_at=scan_data['start_time'] or datetime.utcnow(),
-                completed_at=scan_data['end_time'] or datetime.utcnow()
+                created_at=created_at or datetime.utcnow(),
+                completed_at=completed_at or datetime.utcnow()
             )
             
             db.session.add(scan)
@@ -299,10 +350,13 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
             pruned_count += 1
         if stale_scans:
             db.session.commit()
+
+    _invalidate_sync_status_cache()
     
     return {
         'synced_count': synced_count,
         'skipped_count': skipped_count,
+        'skipped_artifacts': skipped_artifacts,
         'pruned_count': pruned_count,
         'error_count': error_count,
         'total_files': len(xml_files),
@@ -318,46 +372,87 @@ def _ensure_scans_dir(scans_dir: str = 'scans') -> str:
     return target_dir
 
 
-def get_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
-    """
-    Get synchronization status between database and filesystem
-    
-    Args:
-        scans_dir: Directory containing XML files
-        
-    Returns:
-        Dictionary with sync status information
-    """
+_SYNC_STATUS_TTL_SECONDS = 15
+_sync_status_cache: Dict[str, Any] = {}
+_sync_status_cache_at: float = 0.0
+_sync_status_lock = threading.Lock()
+
+
+def _invalidate_sync_status_cache():
+    global _sync_status_cache, _sync_status_cache_at
+    with _sync_status_lock:
+        _sync_status_cache = {}
+        _sync_status_cache_at = 0.0
+
+
+def _compute_sync_status(scans_dir: str = 'scans') -> Dict[str, Any]:
+    """Compute DB/filesystem sync status (uncached)."""
     target_dir = _ensure_scans_dir(scans_dir)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-    
-    # Get database scans
-    db_scans = Scan.query.all()
+
+    # Only the raw_xml_path column is needed — avoid loading full Scan rows
+    # (which include large JSON blobs) just to diff filenames.
+    raw_paths = db.session.query(Scan.raw_xml_path).all()
+    db_count = len(raw_paths)
     db_paths = {
-        _normalize_path(scan.raw_xml_path, base_dir)
-        for scan in db_scans
-        if scan.raw_xml_path
+        _normalize_path(p, base_dir)
+        for (p,) in raw_paths
+        if p
     }
-    
-    # Get filesystem files
+
+    # Get filesystem files (exclude internal artifacts from sync status)
     fs_files = {
         os.path.normpath(os.path.join(target_dir, f))
         for f in os.listdir(target_dir)
-        if f.endswith('.xml')
+        if f.endswith('.xml') and not _is_sync_artifact(f)
     }
-    
+    artifact_files = [
+        f for f in os.listdir(target_dir)
+        if f.endswith('.xml') and _is_sync_artifact(f)
+    ]
+
     # Find missing in database
     missing_in_db = fs_files - db_paths
-    
+
     # Find missing in filesystem
     missing_in_fs = db_paths - fs_files
-    
+
     return {
-        'database_scans': len(db_scans),
+        'database_scans': db_count,
         'filesystem_files': len(fs_files),
         'missing_in_database': len(missing_in_db),
         'missing_in_filesystem': len(missing_in_fs),
         'missing_in_db_files': sorted(list(missing_in_db)),
         'missing_in_fs_files': sorted(list(missing_in_fs)),
+        'skipped_artifact_files': len(artifact_files),
         'in_sync': len(missing_in_db) == 0 and len(missing_in_fs) == 0
     }
+
+
+def get_sync_status(scans_dir: str = 'scans', refresh: bool = False) -> Dict[str, Any]:
+    """
+    Get synchronization status between database and filesystem.
+
+    Result is cached in-memory for a short TTL because the UI polls this
+    frequently and the DB/filesystem delta does not change between rapid polls.
+    Pass refresh=True to force recomputation.
+
+    Args:
+        scans_dir: Directory containing XML files
+        refresh: Bypass the cache and recompute
+
+    Returns:
+        Dictionary with sync status information
+    """
+    global _sync_status_cache, _sync_status_cache_at
+    now = time.time()
+    if not refresh:
+        with _sync_status_lock:
+            if _sync_status_cache and (now - _sync_status_cache_at) < _SYNC_STATUS_TTL_SECONDS:
+                return _sync_status_cache
+
+    result = _compute_sync_status(scans_dir)
+    with _sync_status_lock:
+        _sync_status_cache = result
+        _sync_status_cache_at = time.time()
+    return result

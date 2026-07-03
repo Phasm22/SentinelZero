@@ -32,6 +32,7 @@ backend/flask.log
 # Test/coverage
 frontend/react-sentinelzero/coverage/
 backend/htmlcov/
+backend/.coverage
 backend/.pytest_cache/
 
 # Backups

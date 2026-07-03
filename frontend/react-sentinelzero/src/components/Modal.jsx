@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import useModalEscape from '../hooks/useModalEscape'
 
@@ -23,7 +24,7 @@ const Modal = ({
     full: 'max-w-full mx-4',
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="modal-container">
       <div
         className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
@@ -46,7 +47,7 @@ const Modal = ({
         >
           {title && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700" data-testid="modal-header">
-              <h3 id="modal-title" className="text-lg font-semibold text-gray-100" data-testid="modal-title">
+              <h3 id="modal-title" className="text-lg font-semibold text-gray-100 font-title" data-testid="modal-title">
                 {title}
               </h3>
               {showCloseButton && (
@@ -63,12 +64,13 @@ const Modal = ({
             </div>
           )}
 
-          <div className="px-6 py-4" data-testid="modal-body">
+          <div className="px-6 py-4 font-sans font-normal" data-testid="modal-body">
             {children}
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

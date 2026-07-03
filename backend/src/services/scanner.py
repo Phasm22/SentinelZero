@@ -80,6 +80,10 @@ def _get_scan_timeout_seconds(scan_type_normalized=None, target_network=None, on
     """Watchdog budget: routed/home and IoT scans need more time than on-link lab scans."""
     from .scan_scope import is_home_network
 
+    if scan_type_normalized == 'vuln scripts':
+        # Vuln scripts run NSE against every open service; allow much longer than port sweeps.
+        return _parse_timeout_env('SCAN_TIMEOUT_VULN_SECONDS', 10800)
+
     net = target_network or ''
     home = is_home_network(net) or not on_link
     if scan_type_normalized == 'iot scan' and home:
@@ -87,6 +91,52 @@ def _get_scan_timeout_seconds(scan_type_normalized=None, target_network=None, on
     if home:
         return _parse_timeout_env('SCAN_TIMEOUT_HOME_SECONDS', 5400)
     return _parse_timeout_env('SCAN_TIMEOUT_SECONDS', 1800)
+
+
+# Port sweep used by Full TCP and as vuln-script fallback when no recent scan exists.
+_FULL_TCP_PORT_SPEC = (
+    'T:1-2048,3306,3389,5000,5353,5432,8006,8080,8443,8581,9000,1194,51820'
+)
+
+
+def _get_open_ports_from_recent_full_tcp(target_network):
+    """Return sorted open TCP ports from the latest completed Full TCP scan on this network."""
+    from .scan_scope import normalize_cidr
+
+    net = normalize_cidr(target_network) or target_network
+    recent = (
+        Scan.query
+        .filter(Scan.scan_type.ilike('%full tcp%'))
+        .filter(Scan.status == 'complete')
+        .filter(Scan.target_network == net)
+        .order_by(Scan.completed_at.desc())
+        .first()
+    )
+    if not recent or not recent.hosts_json:
+        return None
+    try:
+        hosts = json.loads(recent.hosts_json)
+    except (TypeError, ValueError):
+        return None
+    ports = set()
+    for host in hosts:
+        for port in host.get('ports', []):
+            proto = str(port.get('protocol') or 'tcp').lower()
+            if proto not in ('tcp', ''):
+                continue
+            try:
+                ports.add(int(port['port']))
+            except (TypeError, ValueError, KeyError):
+                continue
+    return sorted(ports) if ports else None
+
+
+def _vuln_scripts_port_spec(target_network):
+    """Pick ports for vuln-script scans: known opens from Full TCP, else the standard sweep."""
+    known_ports = _get_open_ports_from_recent_full_tcp(target_network)
+    if known_ports:
+        return ','.join(str(p) for p in known_ports), f'{len(known_ports)} open ports from latest Full TCP scan'
+    return _FULL_TCP_PORT_SPEC, 'standard Full TCP port range (no recent Full TCP scan for this network)'
 
 
 def _should_run_pre_discovery(scan_type_normalized, target_network, on_link, pre_discovery_requested):
@@ -372,9 +422,7 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 cmd = ['nmap', '-v', '-T4', '-Pn']
             if scan_type_normalized == 'full tcp':
                 # Balanced deep scan: broader ports + service/OS without full -p- (T2-class) sweep
-                port_spec = (
-                    'T:1-2048,3306,3389,5000,5353,5432,8006,8080,8443,8581,9000,1194,51820'
-                )
+                port_spec = _FULL_TCP_PORT_SPEC
                 if _priv_fallback:
                     cmd += [
                         '-sT', '-p', port_spec, '--open',
@@ -406,10 +454,16 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 # Speed: reduce retries
                 cmd += ['--max-retries', '1', '-T4']
             elif scan_type_normalized == 'vuln scripts':
+                port_spec, port_source = _vuln_scripts_port_spec(net or target_network)
+                runtime.append_log(scan_id, f'Vuln scan port list: {port_source}')
+                vuln_scan_flags = [
+                    '-p', port_spec, '--open',
+                    '-T3', '--max-retries', '2', '--host-timeout', '15m',
+                ]
                 if _priv_fallback:
-                    cmd += ['-sT', '-p-', '--open']
+                    cmd += ['-sT', *vuln_scan_flags]
                 else:
-                    cmd += ['-sS', '-p-', '--open']
+                    cmd += ['-sS', *vuln_scan_flags]
             else:
                 runtime.fail_scan(scan_id, f'Unknown scan type: {scan_type}', error_code='unknown_scan_type')
                 msg = f'Unknown scan type: {scan_type}'
