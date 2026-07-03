@@ -34,6 +34,9 @@ frontend/react-sentinelzero/coverage/
 backend/htmlcov/
 backend/.coverage
 backend/.pytest_cache/
+backend/test-results/
+backend/playwright-report/
+frontend/react-sentinelzero/test-results/
 
 # Backups
 ../sentinelzero-backup-*/
