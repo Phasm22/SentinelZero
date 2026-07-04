@@ -364,8 +364,15 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
     }
 
 
-def _ensure_scans_dir(scans_dir: str = 'scans') -> str:
+def _ensure_scans_dir(scans_dir: str | None = None) -> str:
     """Return absolute scans directory path, creating it if missing."""
+    from ..config.paths import get_scans_dir, scans_dir_for_sync
+
+    if scans_dir is None or scans_dir == 'scans':
+        return str(get_scans_dir())
+    if os.path.isabs(scans_dir):
+        os.makedirs(scans_dir, exist_ok=True)
+        return scans_dir
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
     target_dir = os.path.join(base_dir, scans_dir)
     os.makedirs(target_dir, exist_ok=True)

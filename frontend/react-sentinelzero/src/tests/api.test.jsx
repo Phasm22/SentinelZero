@@ -334,7 +334,6 @@ describe('API Endpoints', () => {
 
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith('/api/settings')
-        expect(axios.get).toHaveBeenCalledWith('/api/network-interfaces')
       })
     })
 

@@ -319,8 +319,9 @@ class TestGeneralAPI:
         data = json.loads(response.data)
         assert 'error' in data
     
+    @pytest.mark.local
     def test_network_interfaces(self, client):
-        """Test get network interfaces"""
+        """Test get network interfaces (requires real psutil on host)."""
         response = client.get('/api/network-interfaces')
         assert response.status_code == 200
         data = json.loads(response.data)

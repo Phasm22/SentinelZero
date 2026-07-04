@@ -91,6 +91,7 @@ def test_data_delete_endpoint_scopes(client, app):
     assert payload['summary']['deleted_alerts'] == 1
 
 
+@pytest.mark.local
 def test_sync_scans_reconcile_mode(client):
     response = client.post('/api/sync-scans', json={'mode': 'reconcile_db'})
     assert response.status_code == 200

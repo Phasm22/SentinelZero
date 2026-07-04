@@ -36,6 +36,7 @@ backend/.coverage
 backend/.pytest_cache/
 backend/test-results/
 backend/playwright-report/
+frontend/react-sentinelzero/playwright-report/
 frontend/react-sentinelzero/test-results/
 
 # Backups

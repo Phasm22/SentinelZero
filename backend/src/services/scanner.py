@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 
 from ..models import Scan
 from ..config.database import db
+from ..config.paths import make_scan_xml_path, make_named_scan_xml_path, get_scans_dir
 from .insights import generate_and_store_insights
 
 
@@ -256,6 +257,264 @@ def parse_vulners_output(host_ip, cpe, output):
                 })
     return vulns
 
+def _finalize_scan_from_xml(
+    scan_id,
+    xml_path,
+    stored_xml_path,
+    scan_type,
+    scan_type_normalized,
+    target_network,
+    runtime,
+    app,
+    socketio,
+    security_settings,
+    emit_stage,
+):
+    """Parse nmap XML, persist results, generate insights, and complete the scan."""
+    scan = runtime.get_scan(scan_id)
+
+    for i in range(5):
+        if os.path.exists(xml_path) and os.path.getsize(xml_path) > 100:
+            break
+        time.sleep(1)
+    if not os.path.exists(xml_path) or os.path.getsize(xml_path) < 100:
+        runtime.fail_scan(scan_id, 'XML file not found or too small (no results)', error_code='missing_xml')
+        return
+
+    emit_stage('parsing', 'Parsing scan results...')
+    emit_stage('parsing', 'Parsing XML results...')
+    hosts = []
+    vulns = []
+
+    try:
+        parse_attempts, parse_delay = _get_xml_parse_retry_policy()
+        tree = None
+        parse_error = None
+        for attempt in range(1, parse_attempts + 1):
+            try:
+                tree = ET.parse(xml_path)
+                parse_error = None
+                break
+            except ET.ParseError as e:
+                parse_error = e
+                if attempt < parse_attempts:
+                    runtime.append_log(
+                        scan_id,
+                        f'XML parse retry {attempt}/{parse_attempts - 1} after error: {e}',
+                    )
+                    time.sleep(parse_delay)
+        if parse_error is not None:
+            raise parse_error
+        root = tree.getroot()
+        total_open_ports = 0
+        for host in root.findall('host'):
+            status = host.find('status')
+            if status is None or status.attrib.get('state') != 'up':
+                continue
+            host_obj = {}
+            addr = host.find('address[@addrtype="ipv4"]')
+            if addr is not None:
+                host_obj['ip'] = addr.attrib.get('addr')
+            hostnames_el = host.find('hostnames')
+            if hostnames_el is not None:
+                host_obj['hostnames'] = [hn.attrib.get('name') for hn in hostnames_el.findall('hostname') if hn.attrib.get('name')]
+            mac_addr = host.find('address[@addrtype="mac"]')
+            if mac_addr is not None:
+                host_obj['mac'] = mac_addr.attrib.get('addr')
+                if mac_addr.attrib.get('vendor'):
+                    host_obj['vendor'] = mac_addr.attrib.get('vendor')
+            os_el = host.find('os')
+            if os_el is not None:
+                osmatch = os_el.find('osmatch')
+                if osmatch is not None:
+                    host_obj['os'] = {
+                        'name': osmatch.attrib.get('name'),
+                        'accuracy': osmatch.attrib.get('accuracy')
+                    }
+            uptime_el = host.find('uptime')
+            if uptime_el is not None:
+                host_obj['uptime'] = {
+                    'seconds': int(uptime_el.attrib.get('seconds', '0') or 0),
+                    'lastboot': uptime_el.attrib.get('lastboot')
+                }
+            distance_el = host.find('distance')
+            if distance_el is not None and distance_el.attrib.get('value'):
+                host_obj['distance'] = int(distance_el.attrib.get('value'))
+            ports_block = host.find('ports')
+            open_ports = []
+            if ports_block is not None:
+                for port_el in ports_block.findall('port'):
+                    state_el = port_el.find('state')
+                    if state_el is None:
+                        continue
+                    state_value = state_el.attrib.get('state')
+                    proto = port_el.attrib.get('protocol')
+                    if not _is_reportable_port_state(proto, state_value):
+                        continue
+                    portid = port_el.attrib.get('portid')
+                    service_el = port_el.find('service')
+                    service_name = service_el.attrib.get('name') if service_el is not None else None
+                    product = service_el.attrib.get('product') if service_el is not None and service_el.attrib.get('product') else None
+                    version = service_el.attrib.get('version') if service_el is not None and service_el.attrib.get('version') else None
+                    extrainfo = (
+                        service_el.attrib.get('extrainfo')
+                        if service_el is not None and service_el.attrib.get('extrainfo')
+                        else None
+                    )
+                    try:
+                        p_int = int(portid)
+                    except Exception:
+                        p_int = None
+
+                    from ..utils.port_mapping import get_service_name
+                    final_service_name = get_service_name(p_int or int(portid) if portid.isdigit() else 0, service_name)
+
+                    port_entry = {
+                        'port': p_int or portid,
+                        'protocol': proto,
+                        'service': final_service_name,
+                        'product': product,
+                        'version': version,
+                    }
+                    if extrainfo:
+                        port_entry['extrainfo'] = extrainfo
+                    open_ports.append(port_entry)
+
+                    for script_el in port_el.findall('script'):
+                        script_id = script_el.attrib.get('id', '')
+                        if 'vuln' not in script_id:
+                            continue
+                        if script_id == 'vulners' and script_el.attrib.get('output'):
+                            host_ip = host_obj.get('ip')
+                            cpe = None
+                            cpe_match = re.search(
+                                r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
+                            )
+                            if cpe_match:
+                                cpe = cpe_match.group(1)
+                            vulns.extend(
+                                parse_vulners_output(
+                                    host_ip, cpe, script_el.attrib['output'],
+                                )
+                            )
+                        else:
+                            vulns.append({
+                                'id': script_id,
+                                'output': script_el.attrib.get('output', ''),
+                                'host': host_obj.get('ip'),
+                                'port': p_int or portid,
+                                'protocol': proto,
+                            })
+            if open_ports:
+                open_ports.sort(key=lambda x: (x.get('port') or 0, x.get('protocol') or ''))
+                total_open_ports += len(open_ports)
+                host_obj['ports'] = open_ports
+
+            host_ip = host_obj.get('ip')
+            if host_ip:
+                for script_el in host.findall('.//script'):
+                    script_id = script_el.attrib.get('id', '')
+                    if 'vuln' not in script_id:
+                        continue
+                    if script_id == 'vulners' and script_el.attrib.get('output'):
+                        cpe = None
+                        cpe_match = re.search(
+                            r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
+                        )
+                        if cpe_match:
+                            cpe = cpe_match.group(1)
+                        vulns.extend(
+                            parse_vulners_output(
+                                host_ip, cpe, script_el.attrib['output'],
+                            )
+                        )
+                    elif script_id not in {v.get('id') for v in vulns if v.get('host') == host_ip}:
+                        vulns.append({
+                            'id': script_id,
+                            'output': script_el.attrib.get('output', ''),
+                            'host': host_ip,
+                            'port': None,
+                            'protocol': None,
+                        })
+
+            hosts.append(host_obj)
+        try:
+            scan.total_ports = total_open_ports
+            scan.open_ports = total_open_ports
+        except Exception:
+            pass
+        if scan_type_normalized == 'discovery scan':
+            try:
+                import ipaddress as _ip
+                net = _ip.ip_network(target_network, strict=False)
+                filtered = []
+                for h in hosts:
+                    ip = h.get('ip')
+                    try:
+                        ip_obj = _ip.ip_address(ip)
+                        if ip_obj == net.network_address or ip_obj == net.broadcast_address:
+                            continue
+                    except Exception:
+                        pass
+                    filtered.append(h)
+                if len(filtered) != len(hosts):
+                    print(f"[DEBUG] Discovery filtering removed {len(hosts)-len(filtered)} network/broadcast entries")
+                hosts = filtered
+            except Exception as _e:
+                print(f"[WARN] Discovery filtering failed: {_e}")
+        try:
+            scan.total_hosts = len(hosts)
+            scan.hosts_up = len(hosts)
+            db.session.commit()
+        except Exception as _e:
+            print(f'[WARN] Failed updating host counters: {_e}')
+
+        msg = f'Parsed {len(hosts)} hosts, {len(vulns)} vulns.'
+        runtime.append_log(scan_id, msg)
+        print(msg)
+
+    except Exception as e:
+        runtime.fail_scan(scan_id, f'XML parse error: {str(e)}', error_code='xml_parse_error')
+        return
+
+    emit_stage('saving', 'Saving scan results to database...')
+    scan.hosts_json = json.dumps(hosts)
+    scan.vulns_json = json.dumps(vulns)
+    scan.raw_xml_path = stored_xml_path
+    db.session.commit()
+
+    if scan_type_normalized == 'discovery scan':
+        emit_stage('postprocessing', 'Discovery complete – skipping insights...')
+        try:
+            from . import scan_analysis
+            scan_analysis.record_insights_generation(
+                scan_id,
+                count=0,
+                skipped_reason='Discovery scan — insights not generated',
+            )
+        except Exception:
+            pass
+    else:
+        emit_stage('postprocessing', 'Generating insights...')
+        try:
+            insights = generate_and_store_insights(scan_id)
+            print(f'Generated {len(insights) if insights else 0} insights for scan {scan_id}')
+            try:
+                from . import agent_service
+                threading.Thread(
+                    target=agent_service.run_ai_pipeline,
+                    args=(scan_id, app, socketio),
+                    daemon=True,
+                ).start()
+                print(f'Spawned AI pipeline thread for scan {scan_id}')
+            except Exception as _agent_err:
+                print(f'Failed to spawn verdict agent: {_agent_err}')
+        except Exception as e:
+            print(f'Error generating insights: {str(e)}')
+
+    runtime.complete_scan(scan_id, 'Scan complete!')
+    runtime.append_log(scan_id, f'Scan complete: {scan_type}')
+
 def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app=None, target_network='172.16.0.0/22', _priv_fallback=False, pre_discovery=False):
     """
     Run an nmap scan with the specified parameters
@@ -329,10 +588,10 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             # Accept common aliases for discovery scans
             if scan_type_normalized in ('discovery', 'discover', 'host discovery'):
                 scan_type_normalized = 'discovery scan'
-            xml_path = f'scans/{scan_type_normalized.replace(" ", "_")}_{now}.xml'
-            # Ensure scans directory exists to avoid silent file write issues
+            stored_xml_path, absolute_xml_path = make_scan_xml_path(scan_type_normalized, now)
+            xml_path = str(absolute_xml_path)
             try:
-                os.makedirs(os.path.dirname(xml_path), exist_ok=True)
+                get_scans_dir()
             except Exception as _e:
                 print(f'[WARN] Could not ensure scans directory: {_e}')
             
@@ -352,7 +611,8 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             if use_pre_discovery and scan_type_normalized not in ('discovery scan',):
                 try:
                     emit_stage('running', 'Pre-discovery: enumerating live hosts...')
-                    pre_xml = f'scans/pre_discovery_{now}.xml'
+                    pre_stored, pre_absolute = make_named_scan_xml_path(f'pre_discovery_{now}.xml')
+                    pre_xml = str(pre_absolute)
                     pre_cmd = [
                         'nmap', '-sn',
                         *_host_discovery_probes(on_link),
@@ -535,6 +795,23 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 adj_msg = f'Executing adjusted command: {" ".join(exec_cmd)}'
                 runtime.append_log(scan_id, adj_msg)
                 print(adj_msg)
+
+            from .mock_scanner import mock_scanner_enabled, run_mock_nmap_execution
+            if mock_scanner_enabled():
+                run_mock_nmap_execution(
+                    scan_id,
+                    scan_type,
+                    scan_type_normalized,
+                    target_network,
+                    stored_xml_path,
+                    xml_path,
+                    runtime,
+                    app,
+                    socketio,
+                    security_settings,
+                    emit_stage,
+                )
+                return
             
             # Execute nmap
             proc = subprocess.Popen(exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
@@ -685,264 +962,19 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
                 print(f'[ERROR] nmap failed (code {proc.returncode}). Last lines:\n{output_tail}')
                 return
 
-            # Validate XML output before parsing
-            for i in range(5):
-                if os.path.exists(xml_path) and os.path.getsize(xml_path) > 100:
-                    break
-                time.sleep(1)
-            if not os.path.exists(xml_path) or os.path.getsize(xml_path) < 100:
-                runtime.fail_scan(scan_id, 'XML file not found or too small (no results)', error_code='missing_xml')
-                return
-
-            emit_stage('parsing', 'Parsing scan results...')
-            
-            # Parse XML results
-            emit_stage('parsing', 'Parsing XML results...')
-            hosts = []
-            vulns = []
-            
-            try:
-                parse_attempts, parse_delay = _get_xml_parse_retry_policy()
-                tree = None
-                parse_error = None
-                for attempt in range(1, parse_attempts + 1):
-                    try:
-                        tree = ET.parse(xml_path)
-                        parse_error = None
-                        break
-                    except ET.ParseError as e:
-                        parse_error = e
-                        if attempt < parse_attempts:
-                            runtime.append_log(
-                                scan_id,
-                                f'XML parse retry {attempt}/{parse_attempts - 1} after error: {e}',
-                            )
-                            time.sleep(parse_delay)
-                if parse_error is not None:
-                    raise parse_error
-                root = tree.getroot()
-                total_open_ports = 0
-                for host in root.findall('host'):
-                    status = host.find('status')
-                    if status is None or status.attrib.get('state') != 'up':
-                        continue
-                    host_obj = {}
-                    addr = host.find('address[@addrtype="ipv4"]')
-                    if addr is not None:
-                        host_obj['ip'] = addr.attrib.get('addr')
-                    # Hostnames
-                    hostnames_el = host.find('hostnames')
-                    if hostnames_el is not None:
-                        host_obj['hostnames'] = [hn.attrib.get('name') for hn in hostnames_el.findall('hostname') if hn.attrib.get('name')]
-                    # MAC / vendor (if layer2 present)
-                    mac_addr = host.find('address[@addrtype="mac"]')
-                    if mac_addr is not None:
-                        host_obj['mac'] = mac_addr.attrib.get('addr')
-                        if mac_addr.attrib.get('vendor'):
-                            host_obj['vendor'] = mac_addr.attrib.get('vendor')
-                    # OS detection (simplified: first osmatch)
-                    os_el = host.find('os')
-                    if os_el is not None:
-                        osmatch = os_el.find('osmatch')
-                        if osmatch is not None:
-                            host_obj['os'] = {
-                                'name': osmatch.attrib.get('name'),
-                                'accuracy': osmatch.attrib.get('accuracy')
-                            }
-                    # Uptime
-                    uptime_el = host.find('uptime')
-                    if uptime_el is not None:
-                        host_obj['uptime'] = {
-                            'seconds': int(uptime_el.attrib.get('seconds', '0') or 0),
-                            'lastboot': uptime_el.attrib.get('lastboot')
-                        }
-                    # Distance
-                    distance_el = host.find('distance')
-                    if distance_el is not None and distance_el.attrib.get('value'):
-                        host_obj['distance'] = int(distance_el.attrib.get('value'))
-                    # Ports
-                    ports_block = host.find('ports')
-                    open_ports = []
-                    if ports_block is not None:
-                        for port_el in ports_block.findall('port'):
-                            state_el = port_el.find('state')
-                            if state_el is None:
-                                continue
-                            state_value = state_el.attrib.get('state')
-                            proto = port_el.attrib.get('protocol')
-                            if not _is_reportable_port_state(proto, state_value):
-                                continue
-                            portid = port_el.attrib.get('portid')
-                            service_el = port_el.find('service')
-                            service_name = service_el.attrib.get('name') if service_el is not None else None
-                            product = service_el.attrib.get('product') if service_el is not None and service_el.attrib.get('product') else None
-                            version = service_el.attrib.get('version') if service_el is not None and service_el.attrib.get('version') else None
-                            extrainfo = (
-                                service_el.attrib.get('extrainfo')
-                                if service_el is not None and service_el.attrib.get('extrainfo')
-                                else None
-                            )
-                            try:
-                                p_int = int(portid)
-                            except Exception:
-                                p_int = None
-                            
-                            # Use common port mapping for better service identification
-                            from ..utils.port_mapping import get_service_name
-                            final_service_name = get_service_name(p_int or int(portid) if portid.isdigit() else 0, service_name)
-                            
-                            port_entry = {
-                                'port': p_int or portid,
-                                'protocol': proto,
-                                'service': final_service_name,
-                                'product': product,
-                                'version': version,
-                            }
-                            if extrainfo:
-                                port_entry['extrainfo'] = extrainfo
-                            open_ports.append(port_entry)
-
-                            for script_el in port_el.findall('script'):
-                                script_id = script_el.attrib.get('id', '')
-                                if 'vuln' not in script_id:
-                                    continue
-                                if script_id == 'vulners' and script_el.attrib.get('output'):
-                                    host_ip = host_obj.get('ip')
-                                    cpe = None
-                                    cpe_match = re.search(
-                                        r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
-                                    )
-                                    if cpe_match:
-                                        cpe = cpe_match.group(1)
-                                    vulns.extend(
-                                        parse_vulners_output(
-                                            host_ip, cpe, script_el.attrib['output'],
-                                        )
-                                    )
-                                else:
-                                    vulns.append({
-                                        'id': script_id,
-                                        'output': script_el.attrib.get('output', ''),
-                                        'host': host_obj.get('ip'),
-                                        'port': p_int or portid,
-                                        'protocol': proto,
-                                    })
-                    if open_ports:
-                        open_ports.sort(key=lambda x: (x.get('port') or 0, x.get('protocol') or ''))
-                        total_open_ports += len(open_ports)
-                        host_obj['ports'] = open_ports
-
-                    host_ip = host_obj.get('ip')
-                    if host_ip:
-                        for script_el in host.findall('.//script'):
-                            script_id = script_el.attrib.get('id', '')
-                            if 'vuln' not in script_id:
-                                continue
-                            if script_id == 'vulners' and script_el.attrib.get('output'):
-                                cpe = None
-                                cpe_match = re.search(
-                                    r'(cpe:/[\w:.-]+)', script_el.attrib['output'],
-                                )
-                                if cpe_match:
-                                    cpe = cpe_match.group(1)
-                                vulns.extend(
-                                    parse_vulners_output(
-                                        host_ip, cpe, script_el.attrib['output'],
-                                    )
-                                )
-                            elif script_id not in {v.get('id') for v in vulns if v.get('host') == host_ip}:
-                                vulns.append({
-                                    'id': script_id,
-                                    'output': script_el.attrib.get('output', ''),
-                                    'host': host_ip,
-                                    'port': None,
-                                    'protocol': None,
-                                })
-
-                    hosts.append(host_obj)
-                # Update aggregate port counts on scan
-                try:
-                    scan.total_ports = total_open_ports
-                    scan.open_ports = total_open_ports
-                except Exception:
-                    pass
-                # If discovery scan, filter out network/broadcast addresses that can appear as 'up' when -Pn was previously used
-                if scan_type_normalized == 'discovery scan':
-                    try:
-                        import ipaddress as _ip
-                        net = _ip.ip_network(target_network, strict=False)
-                        filtered = []
-                        for h in hosts:
-                            ip = h.get('ip')
-                            try:
-                                ip_obj = _ip.ip_address(ip)
-                                if ip_obj == net.network_address or ip_obj == net.broadcast_address:
-                                    continue
-                            except Exception:
-                                pass
-                            filtered.append(h)
-                        if len(filtered) != len(hosts):
-                            print(f"[DEBUG] Discovery filtering removed {len(hosts)-len(filtered)} network/broadcast entries")
-                        hosts = filtered
-                    except Exception as _e:
-                        print(f"[WARN] Discovery filtering failed: {_e}")
-                # Update host counters (especially important for discovery scan accuracy)
-                try:
-                    scan.total_hosts = len(hosts)
-                    scan.hosts_up = len(hosts)
-                    db.session.commit()
-                except Exception as _e:
-                    print(f'[WARN] Failed updating host counters: {_e}')
-                
-                msg = f'Parsed {len(hosts)} hosts, {len(vulns)} vulns.'
-                runtime.append_log(scan_id, msg)
-                print(msg)
-                
-            except Exception as e:
-                runtime.fail_scan(scan_id, f'XML parse error: {str(e)}', error_code='xml_parse_error')
-                return
-            
-            # Save results
-            emit_stage('saving', 'Saving scan results to database...')
-            scan.hosts_json = json.dumps(hosts)
-            scan.vulns_json = json.dumps(vulns)
-            scan.raw_xml_path = xml_path
-            # Do not mark complete until after insights
-            db.session.commit()
-            
-            # Generate insights unless discovery-only
-            if scan_type_normalized == 'discovery scan':
-                emit_stage('postprocessing', 'Discovery complete – skipping insights...')
-                try:
-                    from . import scan_analysis
-                    scan_analysis.record_insights_generation(
-                        scan_id,
-                        count=0,
-                        skipped_reason='Discovery scan — insights not generated',
-                    )
-                except Exception:
-                    pass
-            else:
-                emit_stage('postprocessing', 'Generating insights...')
-                try:
-                    insights = generate_and_store_insights(scan_id)
-                    print(f'Generated {len(insights) if insights else 0} insights for scan {scan_id}')
-                    # Spawn verdict agent in background — never blocks scan completion
-                    try:
-                        from . import agent_service
-                        threading.Thread(
-                            target=agent_service.run_ai_pipeline,
-                            args=(scan_id, app, socketio),
-                            daemon=True,
-                        ).start()
-                        print(f'Spawned AI pipeline thread for scan {scan_id}')
-                    except Exception as _agent_err:
-                        print(f'Failed to spawn verdict agent: {_agent_err}')
-                except Exception as e:
-                    print(f'Error generating insights: {str(e)}')
-            # Finalize
-            scan = runtime.complete_scan(scan_id, 'Scan complete!')
-            runtime.append_log(scan_id, f'Scan complete: {scan_type}')
+            _finalize_scan_from_xml(
+                scan_id=scan_id,
+                xml_path=xml_path,
+                stored_xml_path=stored_xml_path,
+                scan_type=scan_type,
+                scan_type_normalized=scan_type_normalized,
+                target_network=target_network,
+                runtime=runtime,
+                app=app,
+                socketio=socketio,
+                security_settings=security_settings,
+                emit_stage=emit_stage,
+            )
             
         except Exception as e:
             try:

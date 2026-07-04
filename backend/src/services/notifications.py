@@ -32,7 +32,7 @@ def send_pushover_alert(message, level='info', scan_id=None, socketio=None):
                 socketio.emit('scan_log', {'msg': f'Pushover failed: {resp.text}'})
         
         # Log to database
-        alert = Alert(message=message, level=level, scan_id=scan_id)
+        alert = Alert(message=message, severity=level, scan_id=scan_id)
         db.session.add(alert)
         db.session.commit()
         

@@ -53,11 +53,13 @@ def create_upload_blueprint(db, socketio):
             runtime.emit_snapshot(scan)
             
             # Save XML file
+            from ..config.paths import make_named_scan_xml_path, get_scans_dir
             now = datetime.now().strftime('%Y-%m-%d_%H%M')
             safe_filename = secure_filename(f'uploaded_{scan_type.lower().replace(" ", "_")}_{now}.xml')
-            xml_path = f'scans/{safe_filename}'
+            stored_xml_path, absolute_xml_path = make_named_scan_xml_path(safe_filename)
+            xml_path = str(absolute_xml_path)
             
-            os.makedirs('scans', exist_ok=True)
+            get_scans_dir()
             with open(xml_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
             
@@ -67,7 +69,7 @@ def create_upload_blueprint(db, socketio):
             # Update scan with results
             scan.hosts_json = json.dumps(hosts)
             scan.vulns_json = json.dumps(vulns)
-            scan.raw_xml_path = xml_path
+            scan.raw_xml_path = stored_xml_path
             scan.status = 'complete'
             scan.status_message = f'Upload complete: {len(hosts)} hosts, {len(vulns)} vulnerabilities'
             scan.total_hosts = len(hosts)

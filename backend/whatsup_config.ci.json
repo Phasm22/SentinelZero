@@ -1,0 +1,11 @@
+{
+  "loopbacks": [
+    {"name": "Localhost", "ip": "127.0.0.1", "description": "SentinelZero health probe", "interface": "lo"}
+  ],
+  "services": [
+    {"name": "Local DNS Check", "ip": "127.0.0.1", "port": 53, "type": "ping", "path": "/"}
+  ],
+  "infrastructure": [
+    {"name": "CI Gateway", "ip": "127.0.0.1", "type": "ping"}
+  ]
+}
