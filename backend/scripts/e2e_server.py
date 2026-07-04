@@ -6,7 +6,7 @@ import json
 import os
 import sys
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +17,8 @@ tmpdir = tempfile.mkdtemp(prefix="sentinelzero-e2e-")
 os.environ.setdefault("SENTINEL_MOCK_SCANNER", "1")
 os.environ.setdefault("SENTINEL_WHATSUP_CONFIG", "whatsup_config.ci.json")
 os.environ.setdefault("SENTINEL_BIND_HOST", "127.0.0.1")
-os.environ.setdefault("SENTINEL_BIND_PORT", "5000")
+os.environ.setdefault("SENTINEL_BIND_PORT", "5099")
+os.environ.setdefault("SENTINEL_ALLOWED_ORIGINS", "http://127.0.0.1:5099")
 os.environ["SENTINEL_SCANS_DIR"] = str(Path(tmpdir) / "scans")
 Path(os.environ["SENTINEL_SCANS_DIR"]).mkdir(parents=True, exist_ok=True)
 
@@ -54,7 +55,7 @@ def seed_database(application):
             open_ports=2,
             hosts_json=json.dumps(sample_hosts),
             vulns_json=json.dumps([]),
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             source="manual",
             initiated_by="e2e-seed",
         )

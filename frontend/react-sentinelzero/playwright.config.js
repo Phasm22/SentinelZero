@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const E2E_PORT = process.env.SENTINEL_E2E_PORT || '5099'
+const E2E_BASE_URL = `http://127.0.0.1:${E2E_PORT}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -9,7 +12,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   timeout: 60_000,
   use: {
-    baseURL: 'http://127.0.0.1:5000',
+    baseURL: E2E_BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -28,9 +31,9 @@ export default defineConfig({
     },
     {
       command: 'cd ../../backend && uv run python scripts/e2e_server.py',
-      url: 'http://127.0.0.1:5000/healthz',
+      url: `${E2E_BASE_URL}/healthz`,
       timeout: 120_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
   ],
 })
