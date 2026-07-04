@@ -203,9 +203,23 @@ def test_hunter_overview_reads_reports_and_baseline(tmp_path: Path, monkeypatch:
     assert overview["latest"]["huntRun"]["missionId"] in {"home_assess", "lab_inventory"}
 
 
+def _write(path: Path, data: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data), encoding="utf-8")
 
-def test_baseline_status_includes_metadata(_reports, tmp_path, monkeypatch):
-    reports, baseline = _reports
+
+@pytest.fixture
+def hunter_report_paths(tmp_path, monkeypatch):
+    reports = tmp_path / "reports"
+    baseline = tmp_path / "baseline.json"
+    reports.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports))
+    monkeypatch.setenv("HUNTER_BASELINE_PATH", str(baseline))
+    return reports, baseline
+
+
+def test_baseline_status_includes_metadata(hunter_report_paths, tmp_path, monkeypatch):
+    reports, baseline = hunter_report_paths
     monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
     _write(baseline, {"fingerprints": {"aa:bb": {"vendor": "x"}}})
     status = hunter_reports.baseline_status()
@@ -217,8 +231,8 @@ def test_baseline_status_includes_metadata(_reports, tmp_path, monkeypatch):
     assert status["snapshot_count"] == 0
 
 
-def test_snapshot_baseline_is_idempotent(_reports, tmp_path, monkeypatch):
-    reports, baseline = _reports
+def test_snapshot_baseline_is_idempotent(hunter_report_paths, tmp_path, monkeypatch):
+    reports, baseline = hunter_report_paths
     monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
     _write(baseline, {"fingerprints": {"aa:bb": {"vendor": "x"}}})
 
@@ -238,15 +252,15 @@ def test_snapshot_baseline_is_idempotent(_reports, tmp_path, monkeypatch):
     assert third["snapshot_count"] == 2
 
 
-def test_snapshot_baseline_no_baseline(_reports, tmp_path, monkeypatch):
-    reports, baseline = _reports  # baseline file not written
+def test_snapshot_baseline_no_baseline(hunter_report_paths, tmp_path, monkeypatch):
+    reports, baseline = hunter_report_paths  # baseline file not written
     monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
     result = hunter_reports.snapshot_baseline()
     assert result["status"] == "no_baseline"
 
 
-def test_snapshot_baseline_prunes_to_max(_reports, tmp_path, monkeypatch):
-    reports, baseline = _reports
+def test_snapshot_baseline_prunes_to_max(hunter_report_paths, tmp_path, monkeypatch):
+    reports, baseline = hunter_report_paths
     monkeypatch.setenv("HUNTER_BASELINE_HISTORY_DIR", str(tmp_path / "history"))
     for i in range(5):
         _write(baseline, {"fingerprints": {f"aa:bb:{i}": {"vendor": "x"}}})

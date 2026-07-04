@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
 import ScanDetailsModal from '../components/ScanDetailsModal'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, History } from 'lucide-react'
 import { useUserPreferences } from '../contexts/UserPreferencesContext'
 import ScanHistoryTable from '../components/ScanHistoryTable'
 

@@ -54,11 +54,14 @@ addopts = [
     "--cov=src",
     "--cov-report=html",
     "--cov-report=term-missing",
-    "--cov-fail-under=38"
+    "--cov-fail-under=58"
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning"
+]
+markers = [
+    "local: tests that depend on this machine (real network, nmap, lab hosts, committed scan artifacts)",
 ]
 
 [tool.black]

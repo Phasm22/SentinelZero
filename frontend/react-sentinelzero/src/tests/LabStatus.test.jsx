@@ -20,6 +20,10 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => socketMock),
 }))
 
+vi.mock('../components/AnimatedValue', () => ({
+  default: ({ value, suffix = '' }) => <span>{value}{suffix}</span>,
+}))
+
 const sampleSnapshot = {
   overall_status: 'degraded',
   health_percentage: 66.7,
@@ -50,7 +54,7 @@ const renderLabStatus = () => render(
 
 const hasOperationalCount = (expected) => (_, node) => {
   const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-  return text.includes(`${expected} systems operational`) || text.includes(expected)
+  return text.includes(`${expected}`) && text.includes('operational')
 }
 
 describe('LabStatus', () => {
@@ -69,13 +73,13 @@ describe('LabStatus', () => {
     await waitFor(() => {
       expect(screen.getAllByText((_, node) => {
         const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-        return text.includes('2/3') && text.includes('systems operational')
+        return text.includes('2/3') && text.includes('operational')
       }).length).toBeGreaterThan(0)
     })
 
     expect(global.fetch).toHaveBeenCalledWith(`${window.location.origin}/api/whatsup/summary`, expect.any(Object))
     expect(screen.getAllByText(hasOperationalCount('2/3')).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Lab Network Overview/i)).toBeInTheDocument()
+    expect(screen.getByText(/^Lab$/)).toBeInTheDocument()
     expect(screen.getByText(/Host Details/i)).toBeInTheDocument()
   })
 
@@ -110,7 +114,7 @@ describe('LabStatus', () => {
     await waitFor(() => {
       expect(screen.getAllByText((_, node) => {
         const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-        return text.includes('3/3') && text.includes('systems operational')
+        return text.includes('3/3') && text.includes('operational')
       }).length).toBeGreaterThan(0)
     })
   })

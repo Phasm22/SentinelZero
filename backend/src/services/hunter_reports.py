@@ -589,3 +589,71 @@ def hunter_overview(limit: int = 20) -> dict[str, Any]:
         },
     }
     return overview
+
+
+def _baseline_history_dir() -> Path:
+    raw = os.environ.get("HUNTER_BASELINE_HISTORY_DIR")
+    if raw:
+        return Path(raw)
+    return Path(os.path.expanduser("~/agent/state/baseline_history"))
+
+
+def _list_baseline_snapshots(history_dir: Path) -> list[Path]:
+    if not history_dir.exists():
+        return []
+    return sorted(p for p in history_dir.glob("snapshot-*.json") if p.is_file())
+
+
+def baseline_status() -> dict[str, Any]:
+    baseline_path = next((p for p in baseline_paths() if p.exists()), None)
+    history_dir = _baseline_history_dir()
+    snapshots = _list_baseline_snapshots(history_dir)
+    if baseline_path is None:
+        return {
+            "exists": False,
+            "path_used": None,
+            "size_bytes": 0,
+            "sha256": None,
+            "modified_at": None,
+            "snapshot_count": len(snapshots),
+        }
+
+    content = baseline_path.read_bytes()
+    modified = datetime.fromtimestamp(baseline_path.stat().st_mtime, tz=timezone.utc).isoformat()
+    return {
+        "exists": True,
+        "path_used": str(baseline_path),
+        "size_bytes": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "modified_at": modified,
+        "snapshot_count": len(snapshots),
+    }
+
+
+def snapshot_baseline(max_snapshots: int = 30) -> dict[str, Any]:
+    baseline_path = next((p for p in baseline_paths() if p.exists()), None)
+    history_dir = _baseline_history_dir()
+    history_dir.mkdir(parents=True, exist_ok=True)
+    snapshots = _list_baseline_snapshots(history_dir)
+
+    if baseline_path is None:
+        return {"status": "no_baseline", "snapshot_count": len(snapshots)}
+
+    content = baseline_path.read_bytes()
+    digest = hashlib.sha256(content).hexdigest()
+    if snapshots:
+        latest_digest = hashlib.sha256(snapshots[-1].read_bytes()).hexdigest()
+        if latest_digest == digest:
+            return {"status": "unchanged", "snapshot_count": len(snapshots)}
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    destination = history_dir / f"snapshot-{timestamp}.json"
+    shutil.copy2(baseline_path, destination)
+    snapshots = _list_baseline_snapshots(history_dir)
+
+    while len(snapshots) > max_snapshots:
+        snapshots[0].unlink(missing_ok=True)
+        snapshots = _list_baseline_snapshots(history_dir)
+
+    return {"status": "snapshotted", "snapshot_count": len(snapshots)}
+

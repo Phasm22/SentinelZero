@@ -39,6 +39,7 @@ from src.routes.incident_routes import create_incident_blueprint
 from src.routes.hunter_routes import create_hunter_blueprint
 from src.services.whats_up import whats_up_monitor
 from src.services.whats_up import get_monitor as get_whats_up_monitor
+from src.services.whats_up import refresh_whats_up_snapshot
 from src.services.cleanup import scheduled_cleanup_job
 from src.services.scan_runtime import ScanRuntime, register_socket_handlers
 from src.services.observability import configure_logging, ensure_request_id, log_event
@@ -422,6 +423,9 @@ def create_app(test_config=None):
         threading.Timer(1.0, startup_cleanup).start()  # Cleanup first
         threading.Timer(2.0, start_background_services).start()
         threading.Timer(10.0, lambda: _backfill_host_context(app, db)).start()
+    elif not app.config.get('TESTING') and os.environ.get('SENTINEL_MOCK_SCANNER', '').lower() in ('1', 'true', 'yes'):
+        # CI/e2e: skip nmap cleanup and What's Up thread when using mock scanner
+        pass
 
     return app
 

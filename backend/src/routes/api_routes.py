@@ -479,11 +479,14 @@ def create_api_blueprint(db):
             if not scan.raw_xml_path:
                 return jsonify({'error': 'No XML file path recorded for this scan'}), 404
             
-            if not os.path.exists(scan.raw_xml_path):
+            from ..config.paths import resolve_scan_path
+
+            resolved = resolve_scan_path(scan.raw_xml_path)
+            if not resolved or not resolved.exists():
                 return jsonify({'error': f'XML file not found at path: {scan.raw_xml_path}'}), 404
             
             try:
-                with open(scan.raw_xml_path, 'r', encoding='utf-8') as f:
+                with open(resolved, 'r', encoding='utf-8') as f:
                     xml_content = f.read()
                 
                 # Return as plain text for frontend processing

@@ -1,47 +1,53 @@
 """Deterministic network health monitoring service."""
+import json
+import os
 import socket
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable, Optional
 
 import requests
 
-LOOPBACKS = [
-    {"name": "LAN Gateway", "ip": "172.16.0.1", "description": "Network gateway health", "interface": "enp6s18"},
-    {"name": "LAN Sentinel", "ip": "172.16.0.254", "description": "LAN health probe (172.16.0.0/22)", "interface": "dummy0"},
-    {"name": "Home Sentinel", "ip": "192.168.68.254", "description": "Home network probe via dummy interface", "interface": "dummy0"},
-    {"name": "Localhost", "ip": "127.0.0.1", "description": "SentinelZero health probe", "interface": "lo"},
-]
-
-SERVICES = [
-    {"name": "Primary DNS", "ip": "172.16.0.13", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Cloudflare DNS", "ip": "1.1.1.1", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Google DNS", "ip": "8.8.8.8", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Internet Test", "ip": "8.8.8.8", "port": 53, "type": "ping", "path": "/"},
-    {"name": "Network Gateway", "ip": "172.16.0.1", "port": 80, "type": "ping", "path": "/"},
-]
-
-INFRASTRUCTURE = [
-    {"name": "Network Gateway", "ip": "172.16.0.1", "type": "ping"},
-    {"name": "Primary DNS", "ip": "172.16.0.13", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Cloudflare DNS", "ip": "1.1.1.1", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Google DNS", "ip": "8.8.8.8", "port": 53, "type": "dns", "query": "google.com"},
-    {"name": "Internet Connectivity", "ip": "8.8.8.8", "type": "ping"},
-    {"name": "Proxmox Node (proxBig.prox)", "ip": "172.16.0.10", "type": "ping"},
-    {"name": "Proxmox Cluster (yin.prox)", "ip": "172.16.0.11", "type": "ping"},
-    {"name": "Proxmox Cluster (yang.prox)", "ip": "172.16.0.12", "type": "ping"},
-    {"name": "Homebridge", "ip": "192.168.68.79", "type": "ping"},
-    {"name": "Ubuntu Server", "ip": "192.168.71.30", "type": "ping"},
-    {"name": "Home Net DNS", "ip": "192.168.71.25", "type": "ping"},
-    {"name": "Backup Home DNS", "ip": "192.168.71.30", "type": "ping"},
-    {"name": "Code Server (code-server.prox)", "ip": "172.16.0.106", "type": "ping"},
-    {"name": "VPN to Home Network", "ip": "192.168.71.40", "type": "ping"},
-    {"name": "Main Lab Windows VM (winvm.prox)", "ip": "172.16.0.100", "type": "ping"},
-]
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_CONFIG_PATH = _BACKEND_ROOT / "whatsup_config.json"
 
 DEFAULT_CONNECTIVITY_PORTS = (22, 80, 443, 53, 3389, 8080, 8443)
 DEFAULT_MONITOR_INTERVAL = 30
+
+
+def _config_path() -> Path:
+    override = os.environ.get("SENTINEL_WHATSUP_CONFIG")
+    if override:
+        path = Path(override)
+        if not path.is_absolute():
+            path = _BACKEND_ROOT / path
+        return path
+    return _DEFAULT_CONFIG_PATH
+
+
+def load_whatsup_config() -> dict:
+    """Load loopback/service/infrastructure probe lists from JSON config."""
+    path = _config_path()
+    try:
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle) or {}
+                return {
+                    "loopbacks": list(data.get("loopbacks") or []),
+                    "services": list(data.get("services") or []),
+                    "infrastructure": list(data.get("infrastructure") or []),
+                }
+    except Exception as exc:
+        print(f"[WARN] Failed to load What's Up config from {path}: {exc}")
+
+    return {"loopbacks": [], "services": [], "infrastructure": []}
+
+
+def _default_lists():
+    cfg = load_whatsup_config()
+    return cfg["loopbacks"], cfg["services"], cfg["infrastructure"]
 
 
 class NetworkProbe:
@@ -124,12 +130,7 @@ class NetworkProbe:
 
 
 def _probe_in_parallel(probe_one, items, max_workers=12):
-    """Run probe_one over items concurrently, preserving input order.
-
-    Under eventlet monkey-patching these are green threads, so blocking socket
-    waits overlap and total time is ~max(item) instead of sum(item). Any item
-    that raises is recorded as a failed probe rather than aborting the batch.
-    """
+    """Run probe_one over items concurrently, preserving input order."""
     items = list(items)
     if not items:
         return []
@@ -138,7 +139,7 @@ def _probe_in_parallel(probe_one, items, max_workers=12):
     def _safe(item):
         try:
             return probe_one(item)
-        except Exception as e:  # never let one probe sink the whole snapshot
+        except Exception as e:
             return {
                 'name': item.get('name') if isinstance(item, dict) else str(item),
                 'ip': item.get('ip') if isinstance(item, dict) else None,
@@ -156,17 +157,14 @@ class WhatsUpMonitor:
 
     def __init__(self, probe=None, loopbacks=None, services=None, infrastructure=None):
         self.probe = probe or NetworkProbe()
-        self.loopbacks = list(LOOPBACKS if loopbacks is None else loopbacks)
-        self.services = list(SERVICES if services is None else services)
-        self.infrastructure = list(INFRASTRUCTURE if infrastructure is None else infrastructure)
+        default_loopbacks, default_services, default_infra = _default_lists()
+        self.loopbacks = list(default_loopbacks if loopbacks is None else loopbacks)
+        self.services = list(default_services if services is None else services)
+        self.infrastructure = list(default_infra if infrastructure is None else infrastructure)
         self._last_snapshot = None
         self._lock = threading.Lock()
 
     def collect_snapshot(self):
-        # Run the three probe layers concurrently. Under eventlet monkey-patching
-        # these are green threads and the blocking socket waits overlap, so total
-        # time is ~max(layer) instead of sum(layer). Falls back gracefully if a
-        # layer raises.
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=3) as pool:
             f_loop = pool.submit(self._collect_loopbacks)
@@ -383,6 +381,16 @@ def whats_up_monitor(socketio, app, interval=DEFAULT_MONITOR_INTERVAL, stop_even
             break
         if stop_event is None:
             time.sleep(interval)
+
+
+def refresh_whats_up_snapshot(app=None):
+    """Scheduler job: warm What's Up cache without emitting over Socket.IO."""
+    monitor = get_monitor()
+    if app is not None:
+        with app.app_context():
+            monitor.collect_snapshot()
+    else:
+        monitor.collect_snapshot()
 
 
 def get_monitor():
