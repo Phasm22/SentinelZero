@@ -9,6 +9,7 @@ from agent import ASSETS, BASE_URL, NETWORK_TOPOLOGY, _http
 
 from .executors.local import LocalExecutor
 from .handoff import HuntReportWriter
+from .baseline import load_baseline, save_baseline, upsert_fingerprint
 from .missions import Mission
 from .seed import SeedResult
 
@@ -23,6 +24,11 @@ class HunterRuntime:
     no_trigger_scan: bool = False
     findings: list[dict[str, Any]] = field(default_factory=list)
     worker_summaries: list[str] = field(default_factory=list)
+    device_context: dict[str, dict[str, Any]] = field(default_factory=dict)
+    baseline: dict[str, Any] = field(default_factory=dict)
+    fingerprints: list[dict[str, Any]] = field(default_factory=list)
+    fingerprint_diffs: list[dict[str, Any]] = field(default_factory=list)
+    probe_results: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def _load_assets(self) -> dict[str, Any]:
         try:
@@ -46,6 +52,12 @@ class HunterRuntime:
         r = _http.get(f"{BASE_URL}/api/sensor/latest/{source}", timeout=10)
         r.raise_for_status()
         return r.json()
+
+    def get_device_context(self, ip: str) -> dict[str, Any]:
+        ctx = self.device_context.get(ip)
+        if ctx is None:
+            return {"ip": ip, "known": False}
+        return {"ip": ip, "known": True, **ctx}
 
     def get_sensor_agents(self) -> dict[str, Any]:
         r = _http.get(f"{BASE_URL}/api/sensor/agents", timeout=10)
@@ -90,12 +102,19 @@ class HunterRuntime:
             return {"error": "port_scan_iot is only available for assess profile missions"}
         if ip not in self._flagged_ips():
             return {"error": f"Target {ip} is not a flagged host for assess profile"}
+        return self.probe_iot_direct(ip)
+
+    def probe_iot_direct(self, ip: str) -> dict[str, Any]:
+        """Run IoT UDP probe without LLM flag gate (deterministic assess pipeline)."""
         return self.executor.port_scan_iot(ip)
 
     def submit_finding(self, finding: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(finding, dict):
             return {"error": "finding must be an object"}
-        self.findings.append(finding)
+        normalized = dict(finding)
+        if not normalized.get("ip") and normalized.get("ip_address"):
+            normalized["ip"] = str(normalized.pop("ip_address"))
+        self.findings.append(normalized)
         return {"status": "ok", "index": len(self.findings) - 1}
 
     def request_scan(self, scan_type: str, cidr: str) -> dict[str, Any]:
@@ -111,6 +130,23 @@ class HunterRuntime:
         return r.json()
 
     def finalize_hunt_report(self) -> dict[str, Any]:
+        baseline_payload = self.baseline if isinstance(self.baseline, dict) else {}
+        if not baseline_payload:
+            baseline_payload = load_baseline()
+        baseline_updates = 0
+        for ip, probe_result in self.probe_results.items():
+            device_hint = str((self.device_context.get(ip) or {}).get("device_hint") or ip)
+            upsert_fingerprint(
+                baseline_payload,
+                ip=ip,
+                probe_result=probe_result,
+                mission_id=self.mission.mission_id,
+                device_hint=device_hint,
+            )
+            baseline_updates += 1
+
+        known = sum(1 for ctx in self.device_context.values() if ctx.get("in_registry"))
+        unknown = len(self.device_context) - known
         writer = HuntReportWriter(
             mission=self.mission,
             seed_result=self.seed_result,
@@ -118,8 +154,16 @@ class HunterRuntime:
             findings=self.findings,
             worker_summaries=self.worker_summaries,
             reports_dir=self.reports_dir,
+            fingerprints=self.fingerprints,
+            fingerprint_diffs=self.fingerprint_diffs,
+            baseline_updated_count=baseline_updates,
+            device_context_summary={"known": known, "unknown": unknown, "total": len(self.device_context)},
         )
-        return writer.write(no_trigger_scan=self.no_trigger_scan, request_scan=self.request_scan)
+        result = writer.write(no_trigger_scan=self.no_trigger_scan, request_scan=self.request_scan)
+        if baseline_updates:
+            save_baseline(baseline_payload)
+            self.baseline = baseline_payload
+        return result
 
 
 def _base_tool_schemas() -> list[dict[str, Any]]:
@@ -130,6 +174,18 @@ def _base_tool_schemas() -> list[dict[str, Any]]:
             "name": "get_network_topology",
             "description": "Read static network topology context from network.json.",
             "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_device_context",
+            "description": "Return merged device context for one host in this mission.",
+            "parameters": {
+                "type": "object",
+                "properties": {"ip": {"type": "string"}},
+                "required": ["ip"],
+            },
         },
     },
     {
@@ -217,14 +273,26 @@ def _base_tool_schemas() -> list[dict[str, Any]]:
             },
         },
     },
-    {
+        {
         "type": "function",
         "function": {
             "name": "submit_finding",
             "description": "Append one structured finding to the report buffer.",
             "parameters": {
                 "type": "object",
-                "properties": {"finding": {"type": "object"}},
+                "properties": {
+                    "finding": {
+                        "type": "object",
+                        "properties": {
+                            "ip": {"type": "string", "description": "Host IP address"},
+                            "category": {"type": "string"},
+                            "description": {"type": "string"},
+                            "severity": {"type": "string"},
+                            "open_ports": {"type": "array"},
+                        },
+                        "required": ["ip", "description"],
+                    }
+                },
                 "required": ["finding"],
             },
         },
@@ -262,17 +330,27 @@ def tool_schemas_for_runtime(runtime: HunterRuntime) -> list[dict[str, Any]]:
     return tools
 
 
+def _coerce_finding_input(inputs: dict[str, Any]) -> dict[str, Any]:
+    finding = inputs.get("finding")
+    if isinstance(finding, dict):
+        return finding
+    if isinstance(inputs, dict) and inputs.get("ip"):
+        return inputs
+    raise KeyError("finding")
+
+
 def dispatch_tool(runtime: HunterRuntime, name: str, inputs: dict[str, Any]) -> Any:
     handlers = {
         "get_network_topology": lambda d: runtime.get_network_topology(),
         "get_asset_context": lambda d: runtime.get_asset_context(str(d["ip"])),
         "get_network_context": lambda d: runtime.get_network_context(str(d["source"])),
         "get_sensor_agents": lambda d: runtime.get_sensor_agents(),
+        "get_device_context": lambda d: runtime.get_device_context(str(d["ip"])),
         "get_latest_scan_hosts": lambda d: runtime.get_latest_scan_hosts(str(d["network"])),
         "discover_hosts": lambda d: runtime.discover_hosts(str(d["cidr"])),
         "port_scan_light": lambda d: runtime.port_scan_light(str(d["ip"])),
         "port_scan_iot": lambda d: runtime.port_scan_iot(str(d["ip"])),
-        "submit_finding": lambda d: runtime.submit_finding(d["finding"]),
+        "submit_finding": lambda d: runtime.submit_finding(_coerce_finding_input(d)),
         "request_scan": lambda d: runtime.request_scan(str(d["scan_type"]), str(d["cidr"])),
         "finalize_hunt_report": lambda d: runtime.finalize_hunt_report(),
     }

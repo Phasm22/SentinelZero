@@ -18,6 +18,10 @@ class HuntReportWriter:
     findings: list[dict[str, Any]]
     worker_summaries: list[str]
     reports_dir: Path
+    fingerprints: list[dict[str, Any]] | None = None
+    fingerprint_diffs: list[dict[str, Any]] | None = None
+    baseline_updated_count: int = 0
+    device_context_summary: dict[str, Any] | None = None
 
     def _recommended_hosts(self) -> tuple[list[str], int]:
         recommended: list[str] = []
@@ -65,6 +69,13 @@ class HuntReportWriter:
                 "last_scan_id": self.seed_result.last_scan_id,
             },
             "findings": self.findings,
+            "fingerprints": self.fingerprints or [],
+            "fingerprint_diffs": self.fingerprint_diffs or [],
+            "baseline_updated": {
+                "updated": self.baseline_updated_count > 0,
+                "count": self.baseline_updated_count,
+            },
+            "device_context_summary": self.device_context_summary or {},
             "hosts_recommended_for_scan": recommended,
             "hosts_recommended_total": recommended_total,
             "hosts_recommended_capped": recommended_capped,

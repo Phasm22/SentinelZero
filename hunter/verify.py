@@ -15,6 +15,9 @@ def verify_findings(
     seed: SeedResult,
     assets: dict[str, Any],
     ranked: list[dict[str, Any]],
+    *,
+    baseline: dict[str, Any] | None = None,
+    device_context: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     seen_ips: set[str] = set()
@@ -26,9 +29,12 @@ def verify_findings(
         ip = str(item.get("ip") or "").strip()
         if not ip:
             continue
-        if ip in seen_ips:
+        finding_type = str(item.get("type") or "")
+        preserve = finding_type in {"new_device", "new_udp_port", "lost_udp_port", "expected_udp_violation", "iot_observation"}
+        if ip in seen_ips and not preserve:
             continue
-        seen_ips.add(ip)
+        if not preserve:
+            seen_ips.add(ip)
 
         asset = assets.get(ip) or {}
         notes = str(asset.get("notes") or "")
@@ -44,6 +50,8 @@ def verify_findings(
         verified = dict(item)
         if ip not in passive and ranked_lookup.get(ip, 0) < 4:
             verified.setdefault("confidence", "low")
+        if finding_type in {"new_device", "new_udp_port", "expected_udp_violation"}:
+            verified.setdefault("recommended_action", "trigger_iot_scan")
         out.append(verified)
 
     return out

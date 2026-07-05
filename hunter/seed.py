@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -20,6 +20,7 @@ class SeedResult:
     stale: list[str]
     last_scan_id: int | None
     last_scan_timestamp: str | None
+    device_context: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -33,6 +34,7 @@ class SeedResult:
             "stale": self.stale,
             "last_scan_id": self.last_scan_id,
             "last_scan_timestamp": self.last_scan_timestamp,
+            "device_context": self.device_context,
         }
 
 
@@ -160,6 +162,7 @@ def build_seed_result(
     pihole_latest: dict[str, Any],
     scans_payload: dict[str, Any] | list[dict[str, Any]],
     stale_days: int = 7,
+    device_context: dict[str, dict[str, Any]] | None = None,
 ) -> SeedResult:
     registry_hosts = _load_registry(assets_path, allowed_cidrs)
 
@@ -189,5 +192,6 @@ def build_seed_result(
         stale=stale,
         last_scan_id=(latest or {}).get("id"),
         last_scan_timestamp=((latest or {}).get("completed_at") or (latest or {}).get("timestamp")),
+        device_context=device_context or {},
     )
 

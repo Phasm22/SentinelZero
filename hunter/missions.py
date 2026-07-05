@@ -23,6 +23,7 @@ class Mission:
     handoff_min_new_hosts: int
     handoff_max_recommended_hosts: int | None
     allowed_cidrs: list[str]
+    assess_max_hosts: int = 10
 
 
 def _normalize_allowed_cidrs(target_network: str, allowed: list[str] | None) -> list[str]:
@@ -66,6 +67,7 @@ def load_mission(path: Path) -> Mission:
 
     max_turns = int(data.get("max_turns", 40))
     parallel_workers = int(data.get("parallel_workers", 1))
+    assess_max_hosts = max(int(data.get("assess_max_hosts", 10)), 1)
 
     handoff = data.get("handoff") or {}
     if not isinstance(handoff, dict):
@@ -97,6 +99,7 @@ def load_mission(path: Path) -> Mission:
         handoff_min_new_hosts=handoff_min_new_hosts,
         handoff_max_recommended_hosts=handoff_max_recommended_hosts,
         allowed_cidrs=allowed_cidrs,
+        assess_max_hosts=assess_max_hosts,
     )
 
 

@@ -9,9 +9,12 @@ from pathlib import Path
 
 from agent import ASSETS, BASE_URL, _http
 from hunter.executors.local import LocalExecutor
+from hunter.baseline import get_fingerprint, load_baseline
+from hunter.device_context import build_device_context
+from hunter.fingerprint import build_fingerprint_findings
 from hunter.loop import run_hunter_loop
 from hunter.missions import Mission, load_mission, mission_path
-from hunter.rank import rank_candidates
+from hunter.rank import rank_candidates_with_context
 from hunter.seed import build_seed_result
 from hunter.tools import HunterRuntime
 from hunter.verify import verify_findings
@@ -47,6 +50,8 @@ def _load_assets() -> dict:
 
 def _build_runtime(mission: Mission, *, no_trigger_scan: bool) -> HunterRuntime:
     opnsense, pihole, scans = _fetch_seed_sources(mission)
+    assets = _load_assets()
+    baseline = load_baseline()
     seed = build_seed_result(
         mission_id=mission.mission_id,
         target_network=mission.target_network,
@@ -56,7 +61,9 @@ def _build_runtime(mission: Mission, *, no_trigger_scan: bool) -> HunterRuntime:
         pihole_latest=pihole,
         scans_payload=scans,
     )
-    ranked = [c.to_dict() for c in rank_candidates(seed)]
+    device_context = build_device_context(seed, assets=assets, pihole_latest=pihole, baseline=baseline)
+    seed.device_context = device_context
+    ranked = [c.to_dict() for c in rank_candidates_with_context(seed, device_context=device_context)]
     executor = LocalExecutor(iface=mission.iface, allowed_cidrs=mission.allowed_cidrs)
     return HunterRuntime(
         mission=mission,
@@ -65,7 +72,53 @@ def _build_runtime(mission: Mission, *, no_trigger_scan: bool) -> HunterRuntime:
         ranked_candidates=ranked,
         reports_dir=_reports_dir(),
         no_trigger_scan=no_trigger_scan,
+        device_context=device_context,
+        baseline=baseline,
     )
+
+
+def _run_assess_probes(runtime: HunterRuntime, *, verbose: bool = False) -> None:
+    if runtime.mission.profile != "assess":
+        return
+    targets = [
+        str(item.get("ip") or "").strip()
+        for item in runtime.ranked_candidates
+        if str(item.get("ip") or "").strip() and int(item.get("score") or 0) >= 4
+    ]
+    seen: set[str] = set()
+    selected: list[str] = []
+    for ip in targets:
+        if ip in seen:
+            continue
+        seen.add(ip)
+        selected.append(ip)
+    for ip in selected[: runtime.mission.assess_max_hosts]:
+        probe = runtime.probe_iot_direct(ip)
+        if isinstance(probe, dict) and probe.get("error"):
+            runtime.worker_summaries.append(f"port_scan_iot skipped for {ip}: {probe['error']}")
+            continue
+        runtime.probe_results[ip] = probe
+        open_ports = list(probe.get("open_ports") or [])
+        runtime.fingerprints.append({"ip": ip, "udp_ports": open_ports, "count": int(probe.get("count") or 0)})
+        baseline_entry = get_fingerprint(runtime.baseline, ip)
+        diffs = build_fingerprint_findings(
+            ip=ip,
+            probe_result=probe,
+            baseline_entry=baseline_entry,
+            device_context=runtime.device_context.get(ip),
+        )
+        runtime.fingerprint_diffs.extend(diffs)
+        for diff in diffs:
+            runtime.submit_finding(diff)
+        runtime.submit_finding({
+            "ip": ip,
+            "type": "iot_observation",
+            "description": f"Observed {len(open_ports)} UDP IoT-profile ports for {ip}.",
+            "open_ports": open_ports,
+            "profile": "iot",
+        })
+        if verbose:
+            print(f"[hunter] assess probe {ip} count={len(open_ports)}", file=sys.stderr)
 
 
 def main() -> None:
@@ -92,12 +145,15 @@ def main() -> None:
         print(json.dumps(output, indent=2))
         return
 
+    _run_assess_probes(runtime, verbose=args.verbose)
     result = run_hunter_loop(runtime, verbose=args.verbose)
     runtime.findings = verify_findings(
         runtime.findings,
         runtime.seed_result,
         _load_assets(),
         runtime.ranked_candidates,
+        baseline=runtime.baseline,
+        device_context=runtime.device_context,
     )
     if not isinstance(result, dict):
         result = {"status": "unknown", "raw": str(result)}

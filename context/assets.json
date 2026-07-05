@@ -112,6 +112,7 @@
     "role": "iot-gateway",
     "trust_zone": "home",
     "expected_ports": [8581, 80, 443],
+    "expected_udp_ports": [5353, 1900],
     "notes": "Homebridge — HomeKit bridge for smart home devices. Port 8581 is the Homebridge web UI."
   },
   "192.168.71.25": {
