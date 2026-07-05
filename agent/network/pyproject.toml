@@ -1,0 +1,13 @@
+[project]
+name = "sentinel-network-sensors"
+version = "0.1.0"
+description = "SentinelZero ntopng and Pi-hole network sensor daemons"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32.0",
+    "urllib3>=2.0.0",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+package = false

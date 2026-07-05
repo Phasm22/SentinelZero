@@ -1,0 +1,16 @@
+.venv/
+venv/
+network/.venv/
+sensor/.venv/
+reports/
+state/
+**/__pycache__/
+.pytest_cache/
+*.pyc
+.coverage
+uv.lock
+network/config.yaml
+network/config-opnsense.yaml
+network/config-pihole-home.yaml
+network/config-pihole-lab.yaml
+

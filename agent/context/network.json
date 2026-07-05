@@ -1,0 +1,84 @@
+{
+  "_note": "Static network topology context for the SentinelZero analysis agent. Update this when the network changes.",
+
+  "subnets": {
+    "172.16.0.0/22": {
+      "name": "lab",
+      "range": "172.16.0.0 – 172.16.3.255",
+      "gateway": "172.16.0.1",
+      "dns": "172.16.0.13",
+      "trust_zone": "infrastructure",
+      "description": "Homelab network. All infrastructure lives here. OPNsense is the border router and NATting gateway."
+    },
+    "192.168.68.0/22": {
+      "name": "home",
+      "range": "192.168.68.0 – 192.168.71.255",
+      "gateway": "192.168.68.1",
+      "dns": "192.168.71.25",
+      "trust_zone": "home",
+      "description": "Home network. Mixed IoT, consumer devices, dev PC. The home router (192.168.68.1) has a static route pointing 172.16.0.0/22 traffic to OPNsense's WAN interface. Treat all 192.168.x.x traffic as semi-trusted."
+    }
+  },
+
+  "topology": {
+    "internet_path": "Lab host → OPNsense (NAT) → Home Router (192.168.68.1) → ISP",
+    "home_to_lab":   "Home device → Home Router → [static route] → OPNsense WAN → Lab host",
+    "opnsense_role": "OPNsense NATts the entire lab behind its WAN IP on the home network. It is the single choke point for all lab traffic. Its WAN gateway is 192.168.68.1 (home router).",
+    "opnsense_interfaces": {
+      "vtnet0 (lan)":  "LabNetwork — 172.16.0.1/22. All lab devices connect here.",
+      "vtnet1 (wan)":  "HomeNetwork — DHCP from home router. Uplink to internet.",
+      "opt1":          "Unknown/unused — verify in OPNsense UI.",
+      "opt2":          "Unknown/unused — verify in OPNsense UI."
+    }
+  },
+
+  "proxmox": {
+    "standalone": {
+      "proxbig": {
+        "ip": "172.16.0.10",
+        "role": "Independent Proxmox hypervisor. Not part of any cluster. Manages its own VMs independently."
+      }
+    },
+    "cluster_yin_yang": {
+      "members": ["172.16.0.11", "172.16.0.12"],
+      "note": "yin (172.16.0.11) and yang (172.16.0.12) form a Proxmox HA cluster. VMs can live-migrate between them. A new port appearing on one may be a migrated VM, not a new service."
+    },
+    "vm_mac_vendor": "Proxmox VMs present with MAC vendor 'Proxmox Server Solutions GmbH' (bc:24:11 prefix). This is normal and expected in ARP and DHCP data."
+  },
+
+  "known_unknowns": {
+    "172.16.0.9": {
+      "name": "labSwitch",
+      "note": "Referenced in OPNsense gateway monitor but currently unreachable (100% loss). May be a managed switch or decommissioned device."
+    },
+    "172.16.0.107": {
+      "name": "windowsVM2",
+      "note": "Second Windows VM. Static DHCP entry, currently offline. Not yet in active use."
+    },
+    "172.16.0.184": {
+      "name": "opsbox",
+      "note": "Unknown host. Appears in ARP table with Proxmox MAC prefix — likely a VM. Not formally registered. Investigate: what is this VM, who created it, what is it running?"
+    },
+    "172.16.0.198": {
+      "name": "sentinelzero-dhcp",
+      "note": "SentinelZero's dynamic DHCP address (enp6s18). The stable IP is 172.16.0.254 on dummy0. Suricata IDS alerts for outbound SSH scanning from this IP are expected false positives — nmap probing port 22 during normal scans. Suppress SID 2003068 for this source in OPNsense IDS policy."
+    },
+    "172.16.0.180": {
+      "name": "sentinel-hunter",
+      "note": "Dedicated hunter VM on lab/home dual interfaces. Discovery and light probe scans from this source can trigger Suricata SSH scan signatures; suppress SID 2003068 for this source as scanner-expected noise."
+    }
+  },
+
+  "iot_context": {
+    "home_network_pattern": "The home network (192.168.68.0/22) contains generic consumer IoT devices. New devices appearing on 192.168.68.x or 192.168.71.x are lower concern than unknown devices appearing on the lab network (172.16.0.0/22).",
+    "lab_device_expectations": "All lab devices should be in the DHCP static table or asset registry. An IP appearing in the ARP table but not in DHCP leases or the asset registry should be investigated."
+  },
+
+  "sensors": {
+    "opnsense":     "172.16.0.1 — OPNsense REST API. ARP table, DHCP leases, IDS alerts, gateway health, interface stats.",
+    "opnsense_ntopng": "172.16.0.1:3000 — ntopng on OPNsense. Flow analysis, L7 protocol breakdown, host scores.",
+    "pihole_lab":   "172.16.0.13 — Pi-hole lab DNS. Top queries, top blocked, DNS client list.",
+    "pihole_home":  "192.168.71.25 — Pi-hole home DNS. Same collectors, home network segment.",
+    "endpoint":     "172.16.0.10, 172.16.0.11, 172.16.0.12, 192.168.68.202 — endpoint daemons with process/port correlation."
+  }
+}

@@ -1,0 +1,65 @@
+[Unit]
+Description=SentinelZero Endpoint Sensor
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sentinel-sensor
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/sentinel-sensor/.venv/bin/python \
+    /opt/sentinel-sensor/sensor.py \
+    --config /etc/sentinel-sensor/config.yaml
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-sensor
+
+# ── Hardening ──────────────────────────────────────────────────────────────
+# Running as root for capabilities only — these directives still constrain the
+# process even under root and drop everything not explicitly needed.
+NoNewPrivileges=true
+
+# CAP_NET_ADMIN: psutil net_connections() on some kernels
+# CAP_DAC_READ_SEARCH: read /var/log/auth.log without being in adm group
+AmbientCapabilities=CAP_NET_ADMIN CAP_DAC_READ_SEARCH
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_DAC_READ_SEARCH
+
+# Filesystem isolation
+# strict = /usr /boot read-only. Config in /etc is read-only, which is correct.
+ProtectSystem=strict
+# Sensor has no reason to touch /home
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+# Sensor state dir needs write access
+ReadWritePaths=/var/lib/sentinel-sensor
+
+# Kernel protections
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+
+# Privilege restrictions
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Syscall and namespace filtering
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

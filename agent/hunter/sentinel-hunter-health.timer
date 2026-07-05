@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SentinelZero Hunter healthcheck daily
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Unit=sentinel-hunter-health.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

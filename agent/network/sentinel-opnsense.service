@@ -1,0 +1,54 @@
+[Unit]
+Description=SentinelZero OPNsense Gateway Sensor
+After=network-online.target sentinelzero.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+WorkingDirectory=/home/sentinel/agent/network
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/home/sentinel/agent/network/wait-for-backend.sh
+ExecStart=/home/sentinel/agent/network/.venv/bin/python \
+    /home/sentinel/agent/network/opnsense_sensor.py \
+    --config /home/sentinel/agent/network/config-opnsense.yaml
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=15
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-opnsense
+
+# ── Hardening ──────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateDevices=true
+
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=true
+LockPersonality=true
+
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

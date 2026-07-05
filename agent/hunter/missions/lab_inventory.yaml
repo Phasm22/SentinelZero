@@ -1,0 +1,20 @@
+id: lab_inventory
+objective: >
+  Build authoritative lab host inventory. Prioritize IPs seen in OPNsense ARP or DHCP
+  but missing from asset registry or latest completed scan. Gather evidence and submit
+  findings; do not assign verdict labels.
+target_network: 172.16.0.0/22
+profile: white
+executor: local
+iface: enp6s18
+max_turns: 40
+parallel_workers: 1
+handoff:
+  trigger_discovery_scan: true
+  scan_type: "Discovery Scan"
+  min_new_hosts: 1
+  max_recommended_hosts: 15
+scope:
+  allowed_cidrs:
+    - 172.16.0.0/22
+

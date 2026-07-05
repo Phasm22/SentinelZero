@@ -1,0 +1,13 @@
+[project]
+name = "sentinel-sensor"
+version = "0.1.0"
+description = "SentinelZero endpoint sensor daemon"
+requires-python = ">=3.12"
+dependencies = [
+    "psutil>=7.0.0",
+    "requests>=2.32.0",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+package = false
