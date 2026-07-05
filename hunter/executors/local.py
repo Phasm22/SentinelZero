@@ -90,12 +90,17 @@ class LocalExecutor:
                 if state is None or state.get("state") != "open":
                     continue
                 service = port.find("service")
-                open_ports.append({
+                port_entry: dict[str, Any] = {
                     "port": int(port.get("portid", "0")),
                     "protocol": port.get("protocol", "tcp"),
                     "service": (service.get("name") if service is not None else "") or "unknown",
-                    "version": (service.get("version") if service is not None else "") or "",
-                })
+                    "product": (service.get("product") if service is not None else None) or None,
+                    "version": (service.get("version") if service is not None else None) or None,
+                }
+                extrainfo = (service.get("extrainfo") if service is not None else None) or None
+                if extrainfo:
+                    port_entry["extrainfo"] = extrainfo
+                open_ports.append(port_entry)
         except ET.ParseError as exc:
             return {"error": f"nmap XML parse failed: {exc}"}
 
@@ -123,13 +128,18 @@ class LocalExecutor:
                 if state_value not in {"open", "open|filtered"}:
                     continue
                 service = port.find("service")
-                open_ports.append({
+                port_entry: dict[str, Any] = {
                     "port": int(port.get("portid", "0")),
                     "protocol": port.get("protocol", "udp"),
                     "state": state_value,
                     "service": (service.get("name") if service is not None else "") or "unknown",
-                    "version": (service.get("version") if service is not None else "") or "",
-                })
+                    "product": (service.get("product") if service is not None else None) or None,
+                    "version": (service.get("version") if service is not None else None) or None,
+                }
+                extrainfo = (service.get("extrainfo") if service is not None else None) or None
+                if extrainfo:
+                    port_entry["extrainfo"] = extrainfo
+                open_ports.append(port_entry)
         except ET.ParseError as exc:
             return {"error": f"nmap XML parse failed: {exc}"}
 
