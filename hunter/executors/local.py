@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ipaddress
+import os
+import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -35,10 +37,16 @@ class LocalExecutor:
     allowed_cidrs: list[str]
     timeout_seconds: int = 180
 
-    def _run(self, argv: list[str], timeout_seconds: int | None = None) -> subprocess.CompletedProcess:
-        cmd = ["nmap", "-e", self.iface, *argv]
+    def _nmap_bin(self) -> str:
+        return shutil.which("nmap") or "nmap"
+
+    def _run(self, argv: list[str], timeout_seconds: int | None = None, *, privileged: bool = False) -> subprocess.CompletedProcess:
+        nmap = self._nmap_bin()
+        base = [nmap, "-e", self.iface, *argv]
+        if privileged and os.geteuid() != 0:
+            base = ["sudo", "-n", nmap, "-e", self.iface, *argv]
         return subprocess.run(
-            cmd,
+            base,
             capture_output=True,
             text=True,
             timeout=timeout_seconds or self.timeout_seconds,
@@ -113,6 +121,7 @@ class LocalExecutor:
         result = self._run(
             ["-sU", "-p", IOT_UDP_PORTS, "--max-retries", "2", "--host-timeout", "4m", "-oX", "-", ip],
             timeout_seconds=max(self.timeout_seconds, 300),
+            privileged=True,
         )
         if result.returncode != 0 and not result.stdout:
             return {"error": result.stderr.strip() or "nmap iot scan failed"}

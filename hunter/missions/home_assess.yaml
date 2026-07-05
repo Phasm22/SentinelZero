@@ -1,13 +1,15 @@
 id: home_assess
 objective: >
-  Perform constrained follow-up probing on already flagged home hosts only.
-  Use assess profile tools for additional IoT UDP evidence without broad sweeps.
+  Perform constrained follow-up probing on flagged home hosts to build persistent
+  IoT UDP fingerprints and detect drift (new device, new UDP ports, expected-port violations)
+  without broad network sweeps.
 target_network: 192.168.68.0/22
 profile: assess
 executor: local
 iface: enp6s19
 max_turns: 40
 parallel_workers: 1
+assess_max_hosts: 10
 handoff:
   trigger_discovery_scan: false
   scan_type: "Discovery Scan"

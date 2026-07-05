@@ -40,6 +40,7 @@ SENSOR_API_KEY=
 OLLAMA_BASE_URL=http://192.168.68.202:11434/v1
 OLLAMA_MODEL=qwen2.5:14b
 HUNTER_REPORTS_DIR=/home/hunter/agent/reports
+HUNTER_STATE_DIR=/home/hunter/agent/state
 HUNTER_LAB_IFACE=enp6s18
 HUNTER_HOME_IFACE=enp6s19
 EOF
@@ -47,15 +48,26 @@ EOF
   chown root:hunter "${CONFIG_DIR}/agent.env"
 fi
 
+if ! grep -q '^HUNTER_STATE_DIR=' "${CONFIG_DIR}/agent.env" 2>/dev/null; then
+  echo 'HUNTER_STATE_DIR=/home/hunter/agent/state' >> "${CONFIG_DIR}/agent.env"
+fi
+
+cat > /etc/sudoers.d/sentinel-hunter-nmap <<'EOF'
+hunter ALL=(root) NOPASSWD: /usr/bin/nmap
+EOF
+chmod 440 /etc/sudoers.d/sentinel-hunter-nmap
+
 install -m 0644 "${HUNTER_DIR}/sentinel-hunter@.service" /etc/systemd/system/sentinel-hunter@.service
 install -m 0644 "${HUNTER_DIR}/sentinel-hunter@lab_inventory.timer" /etc/systemd/system/sentinel-hunter@lab_inventory.timer
 install -m 0644 "${HUNTER_DIR}/sentinel-hunter@home_inventory.timer" /etc/systemd/system/sentinel-hunter@home_inventory.timer
+install -m 0644 "${HUNTER_DIR}/sentinel-hunter@home_assess.timer" /etc/systemd/system/sentinel-hunter@home_assess.timer
 install -m 0644 "${HUNTER_DIR}/sentinel-hunter-health.service" /etc/systemd/system/sentinel-hunter-health.service
 install -m 0644 "${HUNTER_DIR}/sentinel-hunter-health.timer" /etc/systemd/system/sentinel-hunter-health.timer
 chmod 0755 "${HUNTER_DIR}/healthcheck.sh"
+install -d -m 0750 -o hunter -g hunter /home/hunter/agent/state
 
 systemctl daemon-reload
-systemctl enable --now sentinel-hunter@lab_inventory.timer sentinel-hunter@home_inventory.timer sentinel-hunter-health.timer
+systemctl enable --now sentinel-hunter@lab_inventory.timer sentinel-hunter@home_inventory.timer sentinel-hunter@home_assess.timer sentinel-hunter-health.timer
 
 echo "Hunter install complete."
 echo "Next: set SENSOR_API_KEY in ${CONFIG_DIR}/agent.env and restart timers if needed."
