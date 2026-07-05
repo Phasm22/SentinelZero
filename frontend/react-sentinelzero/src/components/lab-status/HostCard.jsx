@@ -166,12 +166,12 @@ const HostCard = ({ host, hideLayerBadge = false }) => {
 
   const getLayerClasses = (color) => {
     const colors = {
-      blue: 'border-blue-500/30 dark:border-blue-500/30 hover:border-blue-500/50 dark:hover:border-blue-500/50',
-      purple: 'border-purple-500/30 dark:border-purple-500/30 hover:border-purple-500/50 dark:hover:border-purple-500/50',
-      cyan: 'border-cyan-500/30 dark:border-cyan-500/30 hover:border-cyan-500/50 dark:hover:border-cyan-500/50',
-      network: 'border-slate-400/40 dark:border-slate-400/40 hover:border-slate-300/60 dark:hover:border-slate-300/60',
-      proxmox: 'border-orange-500/40 dark:border-orange-500/40 hover:border-orange-400/60 dark:hover:border-orange-400/60',
-      gray: 'border-gray-500/30 dark:border-gray-500/30 hover:border-gray-500/50 dark:hover:border-gray-500/50'
+      blue: 'border-blue-500/30 hover:border-blue-500/50',
+      purple: 'border-purple-500/30 hover:border-purple-500/50',
+      cyan: 'border-cyan-500/30 hover:border-cyan-500/50',
+      network: 'border-slate-400/40 hover:border-slate-300/60',
+      proxmox: 'border-orange-500/40 hover:border-orange-400/60',
+      gray: 'border-gray-500/30 hover:border-gray-500/50',
     }
     return colors[color]
   }
@@ -181,7 +181,7 @@ const HostCard = ({ host, hideLayerBadge = false }) => {
   const connectionDetails = getConnectionDetails()
 
   return (
-    <div className={`group bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/90 dark:to-gray-900/70 backdrop-blur-xl border rounded-lg shadow-sm transition-all duration-200 hover:shadow-md ${getLayerClasses(layerColor)}`}>
+    <div className={`group bg-gradient-to-br from-gray-800/90 to-gray-900/70 backdrop-blur-xl border border-white/10 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md ${getLayerClasses(layerColor)}`}>
       <div 
         className="p-3 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
@@ -198,36 +198,39 @@ const HostCard = ({ host, hideLayerBadge = false }) => {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-              status === 'healthy' ? 'bg-green-500 dark:bg-green-400' : 'bg-red-500 dark:bg-red-400'
+              status === 'healthy' ? 'bg-green-400' : 'bg-red-400'
             }`} />
-            <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400 shrink-0" />
-            <h3 className="text-gray-900 dark:text-white font-semibold truncate text-sm">
+            <Icon className="w-4 h-4 text-gray-400 shrink-0" />
+            <h3 className="text-gray-100 font-semibold truncate text-sm">
               {host.name || host.ip}
             </h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate hidden sm:inline">
+            <span className="text-xs text-gray-400 font-mono truncate hidden sm:inline">
               {ip}
             </span>
             <span className={`text-xs font-mono shrink-0 ${
-              responseTime < 5 ? 'text-green-600 dark:text-green-400' :
-              responseTime < 20 ? 'text-yellow-600 dark:text-yellow-400' :
-              'text-red-600 dark:text-red-400'
+              responseTime < 5 ? 'text-green-400' :
+              responseTime < 20 ? 'text-yellow-400' :
+              'text-red-400'
             }`}>
               {responseTime.toFixed(0)}ms
             </span>
           </div>
           {expanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-300 shrink-0" />
+            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-300 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
           )}
         </div>
         {!hideLayerBadge && (
           <div className="mt-1.5 flex items-center gap-2 text-xs pl-4">
-            <span className="text-gray-500 dark:text-gray-400 font-mono sm:hidden">{ip}</span>
+            <span className="text-gray-400 font-mono sm:hidden">{ip}</span>
             <span className={`px-1.5 py-0.5 rounded font-mono ${
-              layerColor === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' :
-              layerColor === 'purple' ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300' :
-              'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300'
+              layerColor === 'blue' ? 'bg-blue-500/20 text-blue-300' :
+              layerColor === 'purple' ? 'bg-purple-500/20 text-purple-300' :
+              layerColor === 'cyan' ? 'bg-cyan-500/20 text-cyan-300' :
+              layerColor === 'network' ? 'bg-slate-500/20 text-slate-300' :
+              layerColor === 'proxmox' ? 'bg-orange-500/20 text-orange-300' :
+              'bg-gray-500/20 text-gray-300'
             }`}>
               {connectionDetails[0] || 'ICMP'}
             </span>
@@ -237,44 +240,43 @@ const HostCard = ({ host, hideLayerBadge = false }) => {
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-600/50 p-3 space-y-3">
+        <div className="border-t border-gray-600/50 p-3 space-y-3">
           {connectionDetails.length > 1 && (
             <div className="space-y-1">
-              <h4 className="text-xs font-semibold text-gray-300 dark:text-gray-300 uppercase tracking-wide">
+              <h4 className="card-meta uppercase tracking-wide font-semibold">
                 Connection Details
               </h4>
               {connectionDetails.slice(1).map((detail, index) => (
-                <div key={index} className="text-xs sm:text-sm text-gray-200 dark:text-gray-200 font-mono break-all">
+                <div key={index} className="card-body font-mono break-all">
                   {detail}
                 </div>
               ))}
             </div>
           )}
-          
+
           <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-gray-300 dark:text-gray-300 uppercase tracking-wide">
+            <h4 className="card-meta uppercase tracking-wide font-semibold">
               Performance
             </h4>
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-300 dark:text-gray-300">Response Time</span>
-              <span className="text-green-400 dark:text-green-400 font-mono">{responseTime.toFixed(1)}ms</span>
+            <div className="flex items-center justify-between card-body">
+              <span>Response Time</span>
+              <span className="text-green-400 font-mono">{responseTime.toFixed(1)}ms</span>
             </div>
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-300 dark:text-gray-300">Last Check</span>
-              <div className="flex items-center gap-1 text-gray-200 dark:text-gray-200">
-                <Clock className="w-3 h-3" />
-                <span className="text-xs">30s ago</span>
+            <div className="flex items-center justify-between card-body">
+              <span>Last Check</span>
+              <div className="flex items-center gap-1 text-gray-200">
+                <Clock className="w-3 h-3 text-gray-400" />
+                <span className="card-meta">30s ago</span>
               </div>
             </div>
           </div>
 
-          {/* Show "Open in Browser" button for HTTP/HTTPS services */}
-          {((host.type === 'http' || host.type === 'https') || 
-            (host.layer === 'infrastructure' && host.type === 'http') ||
-            (host.port && (host.port === 80 || host.port === 443 || host.port === 8080))) && (
-            <button 
+          {((host.type === 'http' || host.type === 'https')
+            || (host.layer === 'infrastructure' && host.type === 'http')
+            || (host.port && (host.port === 80 || host.port === 443 || host.port === 8080))) && (
+            <button
               onClick={handleOpenInBrowser}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-500/20 dark:bg-blue-500/20 hover:bg-blue-500/30 dark:hover:bg-blue-500/30 border border-blue-500/30 dark:border-blue-500/30 rounded-md text-xs sm:text-sm text-blue-400 dark:text-blue-400 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-md text-xs sm:text-sm text-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               <span className="hidden sm:inline">Open in Browser</span>

@@ -238,6 +238,11 @@ export const apiService = {
     return response.data
   },
 
+  getHunterMissionLog: async (missionId) => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/missions/${encodeURIComponent(missionId)}/log`)
+    return response.data
+  },
+
   spawnHunterMission: async (seed) => {
     const response = await axios.post(`${API_BASE_URL}/hunter/missions`, seed)
     return response.data

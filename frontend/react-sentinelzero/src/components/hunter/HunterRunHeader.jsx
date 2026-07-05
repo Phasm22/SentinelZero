@@ -1,6 +1,6 @@
 import React from 'react'
 import { Activity, Clock, Radar, ServerCog, Users, Network } from 'lucide-react'
-import { timeAgo, fmtTime, scanStatusMeta, actionTier } from './hunterFormat'
+import { timeAgo, scanStatusMeta, actionTier } from './hunterFormat'
 
 const STATUS_DOT = {
   healthy: 'bg-green-400 shadow-green-400/50',
@@ -8,9 +8,9 @@ const STATUS_DOT = {
   unknown: 'bg-gray-400 shadow-gray-400/50',
 }
 
-const Kpi = ({ icon: Icon, label, value, valueClass = 'text-gray-900 dark:text-gray-100' }) => (
-  <div className="bg-gray-100 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600/30 rounded-lg p-4 flex flex-col gap-1 transition-all duration-200 hover:bg-gray-200/80 dark:hover:bg-gray-700/60">
-    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+const Kpi = ({ icon: Icon, label, value, valueClass = 'text-gray-100' }) => (
+  <div className="bg-gray-700/40 border border-gray-600/30 rounded-lg p-4 flex flex-col gap-1 transition-all duration-200 hover:bg-gray-700/60">
+    <div className="flex items-center gap-2 text-gray-300">
       <Icon className="w-4 h-4 flex-shrink-0" />
       <span className="text-[11px] uppercase tracking-wide whitespace-nowrap">{label}</span>
     </div>
@@ -26,22 +26,22 @@ const HunterRunHeader = ({ run, insight }) => {
   const nowTier = actionTier('now')
 
   return (
-    <div className="bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-gray-200/80 dark:border-white/10 rounded-md shadow-xl p-4 sm:p-6 transition-all duration-200 hover:shadow-2xl">
+    <div className="card-glass p-4 sm:p-6 transition-all duration-200 hover:shadow-2xl">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-400">
             <Radar className="w-4 h-4 text-blue-400" />
             {insight.verdict}
           </div>
-          <h2 className="mt-1 text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+          <h2 className="mt-1 text-xl sm:text-2xl card-title leading-tight">
             {insight.headline}
           </h2>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-300 font-mono">
-            <span className="text-gray-700 dark:text-gray-200">{meta.missionId || 'run'}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 card-body font-mono">
+            <span className="text-gray-200">{meta.missionId || 'run'}</span>
             <span className="text-gray-500">·</span>
             <span>{meta.targetNetwork || 'n/a'}</span>
             <span className="text-gray-500">·</span>
-            <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+            <span className="inline-flex items-center gap-1 text-gray-400">
               <Clock className="w-3.5 h-3.5" />
               {timeAgo(meta.completedAt)}
             </span>
@@ -55,13 +55,13 @@ const HunterRunHeader = ({ run, insight }) => {
                 ? 'bg-green-500/20 border-green-500/30 text-green-300'
                 : scan.status === 'critical'
                 ? 'bg-red-500/20 border-red-500/30 text-red-300'
-                : 'bg-gray-500/20 border-gray-500/30 text-gray-600 dark:text-gray-300'
+                : 'bg-gray-500/20 border-gray-500/30 text-gray-300'
             }`}
           >
             <span className={`w-2 h-2 rounded-full shadow-sm ${STATUS_DOT[scan.status]}`} />
             {scan.label}
           </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full border border-gray-600/50 bg-gray-800/70 text-sm text-gray-700 dark:text-gray-200">
+          <span className="inline-flex items-center px-3 py-1 rounded-full border border-gray-600/50 bg-gray-800/70 text-sm text-gray-200">
             {meta.hostsRecommendedTotal || 0} recommended
           </span>
           {meta.hostsRecommendedCapped && (
@@ -73,10 +73,10 @@ const HunterRunHeader = ({ run, insight }) => {
       </div>
 
       <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Kpi icon={Activity} label="Events" value={run.whatChanged?.eventTotal || 0} valueClass={insight.isInventory ? 'text-gray-500 dark:text-gray-400' : 'text-blue-300'} />
+        <Kpi icon={Activity} label="Events" value={run.whatChanged?.eventTotal || 0} valueClass={insight.isInventory ? 'text-gray-400' : 'text-blue-300'} />
         <Kpi icon={Network} label="Hosts" value={run.whatChanged?.hostTotal || 0} />
         <Kpi icon={ServerCog} label="Known" value={Number.isFinite(known) ? known : '—'} valueClass="text-green-300" />
-        <Kpi icon={Users} label="Unknown" value={Number.isFinite(unknown) ? unknown : '—'} valueClass={unknown ? 'text-amber-600 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100'} />
+        <Kpi icon={Users} label="Unknown" value={Number.isFinite(unknown) ? unknown : '—'} valueClass={unknown ? 'text-amber-300' : 'text-gray-100'} />
       </div>
     </div>
   )

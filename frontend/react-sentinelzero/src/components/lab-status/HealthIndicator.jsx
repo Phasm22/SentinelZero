@@ -1,12 +1,12 @@
 import React from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react'
 
-const HealthIndicator = ({ 
-  status, 
-  size = 'sm', 
-  showText = false, 
+const HealthIndicator = ({
+  status,
+  size = 'sm',
+  showText = false,
   className = '',
-  variant = 'dot' // 'dot', 'pill', 'sparkline'
+  variant = 'dot',
 }) => {
   const getStatusConfig = (status) => {
     switch (status) {
@@ -14,42 +14,42 @@ const HealthIndicator = ({
       case 'up':
       case true:
         return {
-          color: 'text-green-600 dark:text-green-400',
+          color: 'text-green-400',
           bg: 'bg-green-500/20',
           border: 'border-green-500/30',
           icon: CheckCircle,
           text: 'Healthy',
-          glow: 'shadow-green-500/20'
+          glow: 'shadow-green-500/20',
         }
       case 'warning':
         return {
-          color: 'text-yellow-600 dark:text-yellow-400',
+          color: 'text-yellow-400',
           bg: 'bg-yellow-500/20',
           border: 'border-yellow-500/30',
           icon: AlertTriangle,
           text: 'Warning',
-          glow: 'shadow-yellow-500/20'
+          glow: 'shadow-yellow-500/20',
         }
       case 'critical':
       case 'down':
       case false:
         return {
-          color: 'text-red-600 dark:text-red-400',
+          color: 'text-red-400',
           bg: 'bg-red-500/20',
           border: 'border-red-500/30',
           icon: XCircle,
           text: 'Critical',
-          glow: 'shadow-red-500/20'
+          glow: 'shadow-red-500/20',
         }
       case 'unknown':
       default:
         return {
-          color: 'text-gray-500 dark:text-gray-400',
+          color: 'text-gray-400',
           bg: 'bg-gray-500/20',
           border: 'border-gray-500/30',
           icon: Clock,
           text: 'Unknown',
-          glow: 'shadow-gray-500/20'
+          glow: 'shadow-gray-500/20',
         }
     }
   }
@@ -76,7 +76,7 @@ const HealthIndicator = ({
   if (variant === 'dot') {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <div 
+        <div
           className={`${sizeConfig.dot} ${config.bg} ${config.border} border rounded-full shadow-lg ${config.glow} animate-pulse`}
         />
         {showText && (
@@ -108,9 +108,9 @@ const HealthIndicator = ({
           <div
             key={i}
             className={`w-1 ${config.bg} rounded-full transition-all duration-200`}
-            style={{ 
+            style={{
               height: status === 'healthy' ? `${8 + i * 2}px` : '4px',
-              opacity: status === 'healthy' ? 1 : 0.3
+              opacity: status === 'healthy' ? 1 : 0.3,
             }}
           />
         ))}
