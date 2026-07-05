@@ -3,6 +3,7 @@ venv/
 network/.venv/
 sensor/.venv/
 reports/
+state/
 **/__pycache__/
 .pytest_cache/
 *.pyc
