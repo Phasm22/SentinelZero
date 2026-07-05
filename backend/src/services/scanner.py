@@ -18,6 +18,10 @@ from ..config.database import db
 from ..config.paths import make_scan_xml_path, make_named_scan_xml_path, get_scans_dir
 from .insights import generate_and_store_insights
 
+# NSE script ids kept alongside vuln-tagged scripts even though their id doesn't
+# contain "vuln" -- these feed web-recon gap-detection for the Hunter pivot engine.
+HTTP_RECON_SCRIPT_IDS = {"http-title", "http-headers", "http-server-header", "http-generator"}
+
 
 def _target_is_on_link(target_network):
     """True if the target CIDR is directly reachable (ARP-capable) on a local interface,
@@ -382,7 +386,7 @@ def _finalize_scan_from_xml(
 
                     for script_el in port_el.findall('script'):
                         script_id = script_el.attrib.get('id', '')
-                        if 'vuln' not in script_id:
+                        if 'vuln' not in script_id and script_id not in HTTP_RECON_SCRIPT_IDS:
                             continue
                         if script_id == 'vulners' and script_el.attrib.get('output'):
                             host_ip = host_obj.get('ip')
@@ -414,7 +418,7 @@ def _finalize_scan_from_xml(
             if host_ip:
                 for script_el in host.findall('.//script'):
                     script_id = script_el.attrib.get('id', '')
-                    if 'vuln' not in script_id:
+                    if 'vuln' not in script_id and script_id not in HTTP_RECON_SCRIPT_IDS:
                         continue
                     if script_id == 'vulners' and script_el.attrib.get('output'):
                         cpe = None

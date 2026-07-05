@@ -172,6 +172,10 @@ def _build_events(raw: dict[str, Any]) -> list[dict[str, Any]]:
                 "udp_ports": item.get("udp_ports") if isinstance(item.get("udp_ports"), list) else [],
                 "device_hint": str(item.get("device_hint") or "").strip() or None,
                 "confidence": str(item.get("confidence") or "").strip() or None,
+                "server_header": str(item.get("server_header") or "").strip() or None,
+                "title": str(item.get("title") or "").strip() or None,
+                "generator": str(item.get("generator") or "").strip() or None,
+                "missing_security_headers": item.get("missing_security_headers") if isinstance(item.get("missing_security_headers"), list) else [],
             })
             idx += 1
     return events
