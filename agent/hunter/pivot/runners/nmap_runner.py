@@ -4,6 +4,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 from typing import Any
 
+from ..http_recon_parse import HTTP_PORTS
+
 
 FIXTURE_NMAP_XML = """<?xml version="1.0"?>
 <nmaprun>
@@ -67,15 +69,25 @@ def run_nmap_scan(ip: str, *, fixture: bool = False, timeout: int = 120) -> dict
 
 
 def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
-    """Deterministic triage: recommend SMB enum if 445/tcp is open, http_recon if
-    80/tcp or 443/tcp is open."""
+    """Deterministic triage of open ports into recommended pivot runners.
+
+    - ``smb_enum`` when 445/tcp is open.
+    - ``http_recon`` when any HTTP(S) surface port is open (80/443/8080/8443/
+      3128/8006/8581).
+    - ``asset_expectation_check`` whenever any port is open -- drift analysis is
+      port-agnostic and never re-probes the host.
+
+    Only wired actions are ever recommended.
+    """
     open_ports = scan_result.get("open_ports") or []
     port_nums = {int(p.get("port", 0)) for p in open_ports}
     recommendations: list[str] = []
     if 445 in port_nums:
         recommendations.append("smb_enum")
-    if 80 in port_nums or 443 in port_nums:
+    if port_nums & set(HTTP_PORTS):
         recommendations.append("http_recon")
+    if open_ports:
+        recommendations.append("asset_expectation_check")
     return {
         "ip": scan_result.get("ip"),
         "recommendations": recommendations,

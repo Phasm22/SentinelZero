@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-PASSIVE_TOOLS = frozenset({"nmap_scan", "port_scan_light", "http_recon", "triage", "complete"})
+PASSIVE_TOOLS = frozenset({
+    "nmap_scan", "http_recon", "asset_expectation_check", "triage", "complete",
+})
 ACTIVE_TOOLS = frozenset({"smb_enum", "nuclei_active", "credential_spray"})
 
 

@@ -14,6 +14,59 @@ HTTP_RECON_SCRIPT_IDS = frozenset({
 
 _SECURITY_HEADERS = ("Strict-Transport-Security", "Content-Security-Policy")
 
+# Ports the pivot engine treats as HTTP(S) management/content surfaces, in the
+# priority order http_recon should target when several are open on one host.
+HTTP_PORTS: tuple[int, ...] = (443, 8443, 8006, 8581, 80, 8080, 3128)
+
+# Substrings in an http-title that signal an administrative / auth surface --
+# a materially higher-value exposure than a static content page.
+_ADMIN_TITLE_MARKERS = (
+    "login", "sign in", "log in", "admin", "dashboard", "console",
+    "proxmox", "pi-hole", "pihole", "opnsense", "pfsense", "portainer",
+    "homebridge", "router", "gateway", "management", "control panel",
+    "unauthorized", "authentication required",
+)
+
+
+def recommend_http_action(
+    *,
+    port: int,
+    title: str | None,
+    server_header: str | None,
+    generator: str | None,
+    missing_security_headers: list[str] | None,
+) -> str:
+    """Decision-grade triage for an http_recon finding.
+
+    Returns one of ``escalate`` | ``next_scan`` | ``observe`` (never a blue-team
+    verdict). Shared by the live http_recon dispatch and the hydrated-evidence
+    finding so both paths grade identically.
+
+    - ``escalate``: an admin/auth surface is exposed (title markers or the
+      Proxmox web UI on 8006 / Homebridge on 8581), or a TLS surface (443/8443)
+      is missing both HSTS and CSP.
+    - ``next_scan``: the port answered HTTP but no content identifies it --
+      worth a deeper look before deciding.
+    - ``observe``: identified, benign static content.
+    """
+    title_l = (title or "").lower()
+    is_admin_title = any(marker in title_l for marker in _ADMIN_TITLE_MARKERS)
+    is_admin_port = port in (8006, 8581)
+
+    tls_port = port in (443, 8443)
+    missing = {h.lower() for h in (missing_security_headers or [])}
+    tls_no_hardening = tls_port and {
+        "strict-transport-security", "content-security-policy",
+    } <= missing
+
+    if is_admin_title or is_admin_port or tls_no_hardening:
+        return "escalate"
+
+    if not (title or server_header or generator):
+        return "next_scan"
+
+    return "observe"
+
 
 def parse_recon_scripts(scripts: dict[str, str]) -> dict[str, Any]:
     """Turn a {script_id: raw nmap script output} map into structured http_recon fields.
