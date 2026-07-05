@@ -9,12 +9,12 @@ StartLimitBurst=5
 Type=simple
 User=sentinel
 Group=sentinel
-WorkingDirectory=/home/sentinel/agent/network
+WorkingDirectory=/home/sentinel/SentinelZero/agent/network
 EnvironmentFile=-/etc/sentinel-ntopng/sensor.env
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStartPre=/home/sentinel/agent/network/wait-for-backend.sh
-ExecStart=/home/sentinel/agent/network/.venv/bin/python \
-    /home/sentinel/agent/network/ntopng_sensor.py \
+ExecStartPre=/home/sentinel/SentinelZero/agent/network/wait-for-backend.sh
+ExecStart=/home/sentinel/SentinelZero/agent/network/.venv/bin/python \
+    /home/sentinel/SentinelZero/agent/network/ntopng_sensor.py \
     --config /etc/sentinel-ntopng/config.yaml
 Restart=on-failure
 RestartSec=15

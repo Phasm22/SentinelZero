@@ -33,6 +33,28 @@ jobs:
       - name: Run backend tests (CI-safe)
         run: uv run pytest tests/ -m "not local" -v --cov=src --cov=app.py --cov-report=term
 
+  agent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Run agent tests (CI-safe)
+        run: PYTHONPATH=. uv run pytest -m "not live_home" -v
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

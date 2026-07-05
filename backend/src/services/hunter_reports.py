@@ -12,14 +12,16 @@ from typing import Any
 
 MISSION_STALE_MINUTES = 15
 
+_REPO_AGENT_DIR = Path(__file__).resolve().parents[3] / "agent"
+
 DEFAULT_REPORT_DIRS = (
     "/home/hunter/agent/reports",
-    "/home/sentinel/agent/reports",
+    str(_REPO_AGENT_DIR / "reports"),
 )
 
 DEFAULT_BASELINE_PATHS = (
     "/home/hunter/agent/state/iot_fingerprints.json",
-    "/home/sentinel/agent/state/iot_fingerprints.json",
+    str(_REPO_AGENT_DIR / "state" / "iot_fingerprints.json"),
 )
 
 NOVELTY_WEIGHTS = {

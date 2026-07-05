@@ -9,6 +9,7 @@ import subprocess
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from ..models.scan import Scan
 from ..config.database import db
@@ -21,7 +22,8 @@ from . import hunter_reports
 
 logger = logging.getLogger(__name__)
 
-_AGENT_DIR    = os.environ.get("SENTINEL_AGENT_DIR", os.path.expanduser("~/agent"))
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_AGENT_DIR    = os.environ.get("SENTINEL_AGENT_DIR", str(_REPO_ROOT / "agent"))
 _AGENT_SCRIPT = os.path.join(_AGENT_DIR, "agent.py")
 _AGENT_PYTHON = os.path.join(_AGENT_DIR, ".venv", "bin", "python")
 

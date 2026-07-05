@@ -9,12 +9,12 @@ StartLimitBurst=5
 Type=simple
 User=sentinel
 Group=sentinel
-WorkingDirectory=/home/sentinel/agent/network
+WorkingDirectory=/home/sentinel/SentinelZero/agent/network
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStartPre=/home/sentinel/agent/network/wait-for-backend.sh
-ExecStart=/home/sentinel/agent/network/.venv/bin/python \
-    /home/sentinel/agent/network/opnsense_sensor.py \
-    --config /home/sentinel/agent/network/config-opnsense.yaml
+ExecStartPre=/home/sentinel/SentinelZero/agent/network/wait-for-backend.sh
+ExecStart=/home/sentinel/SentinelZero/agent/network/.venv/bin/python \
+    /home/sentinel/SentinelZero/agent/network/opnsense_sensor.py \
+    --config /home/sentinel/SentinelZero/agent/network/config-opnsense.yaml
 Restart=on-failure
 RestartSec=15
 TimeoutStopSec=15
