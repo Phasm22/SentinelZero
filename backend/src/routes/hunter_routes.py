@@ -64,6 +64,20 @@ def create_hunter_blueprint():
         status_code = 202 if result.get("status") == "started" else 400
         if result.get("status") == "skipped":
             status_code = 503
+        if result.get("status") == "duplicate":
+            status_code = 409
         return jsonify(result), status_code
+
+    @bp.route("/hunter/missions/<mission_id>/log", methods=["GET"])
+    def get_hunter_mission_log(mission_id: str):
+        mission = hunter_reports.mission_by_id(mission_id)
+        if mission is None:
+            return jsonify({"error": "Mission not found"}), 404
+        log_text = hunter_reports.read_mission_log(mission_id)
+        return jsonify({
+            "missionId": mission_id,
+            "log": log_text or "",
+            "hasLog": bool(log_text),
+        })
 
     return bp

@@ -406,6 +406,88 @@ def _build_pivot_chain(raw: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _mission_logs_dir() -> Path:
+    reports = os.environ.get("HUNTER_REPORTS_DIR", "")
+    if reports:
+        return Path(reports) / "mission-logs"
+    for root in report_dirs():
+        candidate = root / "mission-logs"
+        if candidate.exists():
+            return candidate
+    return Path(DEFAULT_REPORT_DIRS[0]) / "mission-logs"
+
+
+def _mission_seeds_dir() -> Path:
+    return _mission_logs_dir() / "seeds"
+
+
+def _read_mission_seed(mission_id: str) -> dict[str, Any] | None:
+    cleaned = str(mission_id or "").strip()
+    if not cleaned:
+        return None
+    seed_path = _mission_seeds_dir() / f"{cleaned}.json"
+    if not seed_path.exists():
+        return None
+    payload = _read_json_file(seed_path)
+    return payload if isinstance(payload, dict) else None
+
+
+def _mission_seed_matches(seed: dict[str, Any], candidate_seed: dict[str, Any] | None) -> bool:
+    if not candidate_seed:
+        return False
+    insight_id = str(seed.get("insight_id") or "").strip()
+    if insight_id:
+        return str(candidate_seed.get("insight_id") or "").strip() == insight_id
+    seed_ip = str(seed.get("ip") or "").strip()
+    seed_type = str(seed.get("type") or "").strip()
+    if not seed_ip or not seed_type:
+        return False
+    return (
+        str(candidate_seed.get("ip") or "").strip() == seed_ip
+        and str(candidate_seed.get("type") or "").strip() == seed_type
+    )
+
+
+_BLOCKING_MISSION_STATES = frozenset({"running", "queued", "done"})
+
+
+def find_blocking_mission(seed: dict[str, Any]) -> dict[str, Any] | None:
+    """Return an existing mission that blocks spawning the same insight again."""
+    if not isinstance(seed, dict):
+        return None
+    for path in _iter_status_files(limit=500):
+        payload = _read_json_file(path)
+        if payload is None:
+            continue
+        mission_id = str(payload.get("mission_id") or "").strip()
+        if not mission_id:
+            continue
+        candidate_seed = _read_mission_seed(mission_id)
+        if not _mission_seed_matches(seed, candidate_seed):
+            continue
+        state = _effective_mission_state(payload)
+        if state in _BLOCKING_MISSION_STATES:
+            normalized = _normalize_mission_status(payload, status_name=path.name)
+            normalized["state"] = state
+            return normalized
+    return None
+
+
+def read_mission_log(mission_id: str, *, tail_bytes: int = 65536) -> str | None:
+    cleaned = str(mission_id or "").strip()
+    if not cleaned:
+        return None
+    log_path = _mission_logs_dir() / f"{cleaned}.log"
+    if not log_path.exists() or not log_path.is_file():
+        return None
+    size = log_path.stat().st_size
+    with log_path.open("rb") as handle:
+        if size > tail_bytes:
+            handle.seek(-tail_bytes, os.SEEK_END)
+        data = handle.read()
+    return data.decode("utf-8", errors="replace")
+
+
 def _iter_status_files(limit: int = 50) -> list[Path]:
     files: list[Path] = []
     for root in report_dirs():
@@ -456,6 +538,7 @@ def _normalize_mission_status(raw: dict[str, Any], *, status_name: str) -> dict[
         if matches:
             report_glob = matches[0].name
             break
+    seed = _read_mission_seed(mission_id) or {}
     return {
         "missionId": mission_id,
         "statusFile": status_name,
@@ -466,6 +549,9 @@ def _normalize_mission_status(raw: dict[str, Any], *, status_name: str) -> dict[
         "lastTask": raw.get("last_task"),
         "error": raw.get("error"),
         "reportId": report_glob,
+        "insightId": seed.get("insight_id"),
+        "host": seed.get("ip"),
+        "type": seed.get("type"),
     }
 
 

@@ -17,6 +17,7 @@ from . import config_service
 from .diff import compute_scan_diff
 from .asset_registry import is_home_network
 from .scan_scope import network_short_label
+from . import hunter_reports
 
 logger = logging.getLogger(__name__)
 
@@ -620,6 +621,16 @@ def spawn_mission(seed: dict) -> dict:
 
     if not isinstance(seed, dict) or not str(seed.get("ip") or "").strip():
         return {"status": "error", "reason": "seed must include ip"}
+
+    existing = hunter_reports.find_blocking_mission(seed)
+    if existing is not None:
+        state = existing.get("state") or "unknown"
+        return {
+            "status": "duplicate",
+            "mission_id": existing.get("missionId"),
+            "state": state,
+            "reason": f"A pivot mission for this insight is already {state}",
+        }
 
     pivot_script = _pivot_script()
     if not os.path.exists(pivot_script):
