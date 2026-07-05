@@ -687,14 +687,17 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             if scan_type_normalized == 'full tcp':
                 # Balanced deep scan: broader ports + service/OS without full -p- (T2-class) sweep
                 port_spec = _FULL_TCP_PORT_SPEC
+                # No --open here: a host with zero open ports in port_spec is still a live
+                # host and must appear in the report. --open makes nmap drop such hosts from
+                # the XML entirely, which undercounts hosts on scans of large subnets.
                 if _priv_fallback:
                     cmd += [
-                        '-sT', '-p', port_spec, '--open',
+                        '-sT', '-p', port_spec,
                         '-T3', '--max-retries', '2', '--host-timeout', '8m',
                     ]
                 else:
                     cmd += [
-                        '-sS', '-p', port_spec, '--open',
+                        '-sS', '-p', port_spec,
                         '-T3', '--max-retries', '2', '--host-timeout', '8m',
                         '--min-rate', '150', '--max-rate', '600',
                     ]
