@@ -21,9 +21,11 @@ from .runners.asset_expectation_runner import (
 )
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
+from .runners.rpc_audit_runner import run_rpc_audit
 from .runners.smb_enum_runner import run_smb_enum
 from .runners.ssh_audit_runner import run_ssh_audit
 from .runners.tls_recon_runner import run_tls_recon
+from .rpc_audit_parse import RPC_PORTS, recommend_rpc_action
 from .scope import ScopeGuard
 from .ssh_audit_parse import SSH_PORTS, recommend_ssh_action
 from .status import write_status
@@ -42,6 +44,7 @@ Available actions (respond with JSON only):
 {"action":"http_recon","ip":"<target>"}
 {"action":"tls_recon","ip":"<target>"}
 {"action":"ssh_audit","ip":"<target>"}
+{"action":"rpc_audit","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -64,6 +67,10 @@ Rules:
   exchange / cipher / MAC algorithms via passive nmap NSE and flags deprecated crypto. It is
   posture identification, never authentication or brute force. Do not call complete while an
   open SSH surface has not been examined by ssh_audit.
+- Run rpc_audit when 111/tcp is open -- it lists the RPC programs registered with the
+  portmapper (NFS, mountd, nlockmgr, NIS) via passive nmap NSE. It is enumeration only, never
+  mounting or exploitation. Do not call complete while an open RPC surface has not been
+  examined by rpc_audit.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -190,6 +197,10 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
         port_nums & set(SSH_PORTS)
     ):
         return True
+    if "rpc_audit" not in types and runtime.hydrated_rpc_audit is None and (
+        port_nums & set(RPC_PORTS)
+    ):
+        return True
     return False
 
 
@@ -275,6 +286,33 @@ def _build_ssh_finding(
     }
 
 
+def _build_rpc_finding(
+    ip: str, port: int, audit: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_rpc_exposure finding, shared by the live rpc_audit dispatch and
+    the hydrated-evidence path so both grade identically."""
+    services = audit.get("services") or []
+    sensitive = audit.get("sensitive_services") or []
+    programs_parsed = bool(audit.get("programs_parsed"))
+    return {
+        "ip": ip,
+        "type": "pivot_rpc_exposure",
+        "description": (
+            f"rpc exposure on {ip}:{port}: services={services} "
+            f"sensitive={sensitive}"
+        ),
+        "port": port,
+        "open_ports": open_ports,
+        "programs": audit.get("programs") or [],
+        "services": services,
+        "sensitive_services": sensitive,
+        "recommended_action": recommend_rpc_action(
+            sensitive_services=sensitive,
+            programs_parsed=programs_parsed,
+        ),
+    }
+
+
 def _build_asset_finding(
     ip: str, result: dict[str, Any], open_ports: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -329,6 +367,7 @@ class PivotRuntime:
     hydrated_http_recon: dict[str, Any] | None = None
     hydrated_tls_recon: dict[str, Any] | None = None
     hydrated_ssh_audit: dict[str, Any] | None = None
+    hydrated_rpc_audit: dict[str, Any] | None = None
 
 
 def _log(runtime: PivotRuntime, msg: str) -> None:
@@ -507,6 +546,24 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "rpc_audit":
+        result = run_rpc_audit(ip, port=111, fixture=cfg.fixture)
+        desc = f"rpc_audit on {ip}:111: services={result.get('services')}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="rpc_audit",
+            description=desc,
+            action="rpc_audit",
+            result=result,
+        )
+        finding = _build_rpc_finding(ip, 111, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -561,6 +618,12 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in SSH_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "ssh_audit", "ip": ip}
+    if (
+        "rpc_audit" not in types
+        and runtime.hydrated_rpc_audit is None
+        and any(int(p.get("port", 0)) in RPC_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "rpc_audit", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -593,7 +656,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
     if config.fixture:
         hydrated = config.fixture_hydration or {
             "open_ports": [], "http_recon": None, "tls_recon": None, "ssh_audit": None,
-            "source_scan_id": board.scan_id,
+            "rpc_audit": None, "source_scan_id": board.scan_id,
         }
     else:
         hydrated = hydrate_seed(board.seed_ip, board.scan_id)
@@ -705,6 +768,26 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
         )
         runtime.board.findings.append(ssh_finding)
         runtime.terminal_findings.append(ssh_finding)
+    if hydrated.get("rpc_audit"):
+        runtime.hydrated_rpc_audit = hydrated["rpc_audit"]
+        # Reused rpc_audit evidence terminates to a typed finding here rather than
+        # dead-ending at the generic pivot_recon fallback. Event type is
+        # "rpc_exposure" (not "rpc_audit") because no live NSE run occurred.
+        rpc_finding = _build_rpc_finding(
+            board.seed_ip, 111, hydrated["rpc_audit"], board.open_ports
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=runtime.board.last_event_id,
+            ip=board.seed_ip,
+            type="rpc_exposure",
+            description=rpc_finding["description"],
+            action="rpc_exposure",
+            result=hydrated["rpc_audit"],
+        )
+        runtime.board.findings.append(rpc_finding)
+        runtime.terminal_findings.append(rpc_finding)
 
     write_status(
         config.reports_dir,
@@ -725,6 +808,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
                 "hydrated_http_recon": runtime.hydrated_http_recon,
                 "hydrated_tls_recon": runtime.hydrated_tls_recon,
                 "hydrated_ssh_audit": runtime.hydrated_ssh_audit,
+                "hydrated_rpc_audit": runtime.hydrated_rpc_audit,
                 "instructions": "Begin pivot chain from seed host.",
             }, indent=2),
         },
@@ -778,7 +862,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             # complementary passive surface (e.g. tls_recon on a 443 host that
             # http_recon already touched) is still unexamined.
             if (
-                action in ("smb_enum", "http_recon", "tls_recon", "ssh_audit")
+                action in ("smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit")
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)
             ):

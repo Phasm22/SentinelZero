@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 from ..http_recon_parse import HTTP_PORTS
+from ..rpc_audit_parse import RPC_PORTS
 from ..ssh_audit_parse import SSH_PORTS
 from ..tls_recon_parse import TLS_PORTS
 
@@ -79,6 +80,7 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
     - ``tls_recon`` when a TLS surface port is open (443/8443) -- cert/cipher
       posture, complementary to http_recon's content identification.
     - ``ssh_audit`` when 22/tcp is open -- host key + algorithm posture.
+    - ``rpc_audit`` when 111/tcp is open -- RPC program inventory (NFS/mountd/NIS).
     - ``asset_expectation_check`` whenever any port is open -- drift analysis is
       port-agnostic and never re-probes the host.
 
@@ -95,6 +97,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
         recommendations.append("tls_recon")
     if port_nums & set(SSH_PORTS):
         recommendations.append("ssh_audit")
+    if port_nums & set(RPC_PORTS):
+        recommendations.append("rpc_audit")
     if open_ports:
         recommendations.append("asset_expectation_check")
     return {

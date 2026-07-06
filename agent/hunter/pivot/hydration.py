@@ -5,6 +5,7 @@ from typing import Any
 from agent import BASE_URL, _http
 
 from .http_recon_parse import HTTP_RECON_SCRIPT_IDS, parse_recon_scripts
+from .rpc_audit_parse import RPC_AUDIT_SCRIPT_IDS, parse_rpc_scripts
 from .ssh_audit_parse import SSH_AUDIT_SCRIPT_IDS, parse_ssh_scripts
 from .tls_recon_parse import TLS_RECON_SCRIPT_IDS, parse_tls_scripts
 
@@ -18,7 +19,7 @@ def hydrate_seed(ip: str, scan_id: int | None) -> dict[str, Any]:
     """
     empty: dict[str, Any] = {
         "open_ports": [], "http_recon": None, "tls_recon": None, "ssh_audit": None,
-        "source_scan_id": scan_id,
+        "rpc_audit": None, "source_scan_id": scan_id,
     }
     if not scan_id:
         return empty
@@ -62,10 +63,18 @@ def hydrate_seed(ip: str, scan_id: int | None) -> dict[str, Any]:
     }
     ssh_audit = parse_ssh_scripts(ssh_scripts) if ssh_scripts else None
 
+    rpc_scripts = {
+        v.get("id"): v.get("output", "")
+        for v in host_vulns
+        if v.get("id") in RPC_AUDIT_SCRIPT_IDS
+    }
+    rpc_audit = parse_rpc_scripts(rpc_scripts) if rpc_scripts else None
+
     return {
         "open_ports": open_ports,
         "http_recon": http_recon,
         "tls_recon": tls_recon,
         "ssh_audit": ssh_audit,
+        "rpc_audit": rpc_audit,
         "source_scan_id": scan_id,
     }
