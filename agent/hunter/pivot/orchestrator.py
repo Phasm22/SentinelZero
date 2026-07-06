@@ -19,7 +19,10 @@ from .runners.asset_expectation_runner import (
     recommend_asset_action,
     run_asset_expectation_check,
 )
+from .baseline_diff_parse import recommend_baseline_action
 from .dns_recon_parse import DNS_PORTS, recommend_dns_action
+from .opnsense_correlate_parse import recommend_opnsense_action
+from .sensor_correlate_parse import recommend_sensor_action
 from .iot_udp_parse import (
     MDNS_UDP_PORT,
     UPNP_UDP_PORT,
@@ -36,7 +39,10 @@ from .runners.mdns_discover_runner import run_mdns_discover
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.proxmox_recon_runner import run_proxmox_recon
 from .runners.rdp_recon_runner import run_rdp_recon
+from .runners.baseline_diff_runner import run_baseline_diff
+from .runners.opnsense_correlate_runner import run_opnsense_correlate
 from .runners.rpc_audit_runner import run_rpc_audit
+from .runners.sensor_correlate_runner import run_sensor_correlate
 from .runners.upnp_discover_runner import run_upnp_discover
 from .upnp_discover_parse import UPNP_PORTS, recommend_upnp_action
 from .runners.smb_enum_runner import run_smb_enum
@@ -68,6 +74,9 @@ Available actions (respond with JSON only):
 {"action":"iot_udp_probe","ip":"<target>"}
 {"action":"upnp_discover","ip":"<target>"}
 {"action":"mdns_discover","ip":"<target>"}
+{"action":"sensor_correlate","ip":"<target>"}
+{"action":"opnsense_correlate","ip":"<target>"}
+{"action":"baseline_diff","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -113,6 +122,11 @@ Rules:
 - upnp_discover sends a unicast SSDP M-SEARCH and mdns_discover a unicast mDNS service query
   to the seed host -- both are passive discovery of the device's advertised services, never a
   control action (no IGD port mapping). Run each once its UDP port is known open.
+- sensor_correlate, opnsense_correlate and baseline_diff correlate the host against ground
+  truth held elsewhere -- the endpoint sensor telemetry, the OPNsense ARP/DHCP/IDS feed, and
+  the hunter UDP baseline. They read the backend API and local state (no probe of the target)
+  and run automatically before the mission completes, so call them only to inform an earlier
+  decision.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -533,6 +547,87 @@ def _build_mdns_finding(
     }
 
 
+def _build_sensor_finding(ip: str, recon: dict[str, Any]) -> dict[str, Any]:
+    """Typed pivot_sensor_correlation finding from an endpoint-sensor correlate."""
+    has_sensor = bool(recon.get("has_sensor"))
+    external = recon.get("external_peers") or []
+    auth = int(recon.get("auth_event_count") or 0)
+    if not has_sensor:
+        desc = f"no endpoint sensor covers {ip}"
+    elif external or auth:
+        desc = f"endpoint sensor on {ip}: {auth} auth event(s), external peers={external}"
+    else:
+        desc = f"endpoint sensor on {ip}: clean ({len(recon.get('listening_ports') or [])} listening)"
+    return {
+        "ip": ip,
+        "type": "pivot_sensor_correlation",
+        "description": desc,
+        "has_sensor": has_sensor,
+        "agent_id": recon.get("agent_id"),
+        "role": recon.get("role"),
+        "listening_ports": recon.get("listening_ports") or [],
+        "established_peers": recon.get("established_peers") or [],
+        "external_peers": external,
+        "auth_event_count": auth,
+        "recommended_action": recommend_sensor_action(
+            has_sensor=has_sensor, auth_event_count=auth, external_peers=external,
+        ),
+    }
+
+
+def _build_opnsense_finding(ip: str, recon: dict[str, Any]) -> dict[str, Any]:
+    """Typed pivot_opnsense_correlation finding from an OPNsense correlate."""
+    has_data = bool(recon.get("has_data"))
+    ids = int(recon.get("ids_alert_count") or 0)
+    if not has_data:
+        desc = f"no OPNsense sensor data for {ip}"
+    elif ids:
+        desc = f"OPNsense IDS: {ids} alert(s) referencing {ip} ({recon.get('ids_signatures')})"
+    else:
+        desc = f"OPNsense: {ip} known (mac={recon.get('mac')}, host={recon.get('dhcp_hostname')})"
+    return {
+        "ip": ip,
+        "type": "pivot_opnsense_correlation",
+        "description": desc,
+        "has_data": has_data,
+        "mac": recon.get("mac"),
+        "manufacturer": recon.get("manufacturer"),
+        "arp_hostname": recon.get("arp_hostname"),
+        "dhcp_hostname": recon.get("dhcp_hostname"),
+        "lease_type": recon.get("lease_type"),
+        "ids_alert_count": ids,
+        "ids_signatures": recon.get("ids_signatures") or [],
+        "recommended_action": recommend_opnsense_action(
+            has_data=has_data, ids_alert_count=ids,
+        ),
+    }
+
+
+def _build_baseline_finding(ip: str, recon: dict[str, Any]) -> dict[str, Any]:
+    """Typed pivot_baseline_drift finding from a baseline_diff."""
+    present = bool(recon.get("baseline_present"))
+    new_ports = recon.get("new_udp_ports") or []
+    if not present:
+        desc = f"no baseline fingerprint for {ip} (first observation)"
+    elif new_ports:
+        desc = f"baseline drift on {ip}: new UDP port(s) {new_ports}"
+    else:
+        desc = f"{ip} UDP fingerprint matches baseline"
+    return {
+        "ip": ip,
+        "type": "pivot_baseline_drift",
+        "description": desc,
+        "baseline_present": present,
+        "new_udp_ports": new_ports,
+        "removed_udp_ports": recon.get("removed_udp_ports") or [],
+        "matched_udp_ports": recon.get("matched_udp_ports") or [],
+        "observation_count": recon.get("observation_count"),
+        "recommended_action": recommend_baseline_action(
+            baseline_present=present, new_udp_ports=new_ports,
+        ),
+    }
+
+
 def _build_asset_finding(
     ip: str, result: dict[str, Any], open_ports: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -573,6 +668,7 @@ class PivotMissionConfig:
     fixture: bool = False
     allow_active: bool = False
     verbose: bool = False
+    enable_correlation: bool = False
     fixture_hydration: dict[str, Any] | None = None
 
 
@@ -899,6 +995,42 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "sensor_correlate":
+        result = run_sensor_correlate(ip, fixture=cfg.fixture)
+        finding = _build_sensor_finding(ip, result)
+        _append_event(
+            runtime, task_id=f"task-{uuid.uuid4().hex[:8]}", parent_event_id=parent,
+            ip=ip, type="sensor_correlate", description=finding["description"],
+            action="sensor_correlate", result=result,
+        )
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
+    if action == "opnsense_correlate":
+        result = run_opnsense_correlate(ip, fixture=cfg.fixture)
+        finding = _build_opnsense_finding(ip, result)
+        _append_event(
+            runtime, task_id=f"task-{uuid.uuid4().hex[:8]}", parent_event_id=parent,
+            ip=ip, type="opnsense_correlate", description=finding["description"],
+            action="opnsense_correlate", result=result,
+        )
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
+    if action == "baseline_diff":
+        result = run_baseline_diff(ip, runtime.board.udp_ports, fixture=cfg.fixture)
+        finding = _build_baseline_finding(ip, result)
+        _append_event(
+            runtime, task_id=f"task-{uuid.uuid4().hex[:8]}", parent_event_id=parent,
+            ip=ip, type="baseline_diff", description=finding["description"],
+            action="baseline_diff", result=result,
+        )
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -1009,6 +1141,44 @@ def _llm_next_action(runtime: PivotRuntime, messages: list[dict[str, Any]]) -> d
     if parsed and parsed.get("action"):
         return parsed
     return {"action": "complete", "summary": text or "LLM returned no actionable JSON"}
+
+
+def _run_correlation_pass(runtime: PivotRuntime) -> None:
+    """Run the read-only correlation runners on the seed host and append their
+    typed findings. Each is skipped if it already ran this mission (e.g. the LLM
+    invoked it). Failures degrade silently -- correlation is enrichment."""
+    cfg = runtime.config
+    ip = runtime.board.seed_ip
+    types = {e.type for e in runtime.event_log.all_events()}
+
+    specs = [
+        ("sensor_correlate", lambda: run_sensor_correlate(ip, fixture=cfg.fixture),
+         _build_sensor_finding),
+        ("opnsense_correlate", lambda: run_opnsense_correlate(ip, fixture=cfg.fixture),
+         _build_opnsense_finding),
+        ("baseline_diff", lambda: run_baseline_diff(
+            ip, runtime.board.udp_ports, fixture=cfg.fixture), _build_baseline_finding),
+    ]
+    for action, run, build in specs:
+        if action in types:
+            continue
+        try:
+            result = run()
+        except Exception as exc:
+            result = {"ip": ip, "error": str(exc)}
+        finding = build(ip, result)
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=runtime.board.last_event_id,
+            ip=ip,
+            type=action,
+            description=finding["description"],
+            action=action,
+            result=result,
+        )
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
 
 
 def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
@@ -1264,6 +1434,13 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
                 break
         else:
             result_summary = f"Exceeded max_turns={config.max_turns}"
+
+        # Correlation post-pass: enrich the seed host with sensor/OPNsense/baseline
+        # ground truth. These read the backend API and local baseline file (no probe
+        # of the target), so they run automatically at the end when enabled rather
+        # than competing for LLM turns.
+        if config.enable_correlation:
+            _run_correlation_pass(runtime)
 
         if not runtime.terminal_findings and runtime.board.open_ports:
             ip = runtime.board.seed_ip

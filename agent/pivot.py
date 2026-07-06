@@ -52,6 +52,8 @@ def main() -> None:
     parser.add_argument("--iface", default="enp6s18")
     parser.add_argument("--fixture", action="store_true", help="Use fixture runners (no live nmap)")
     parser.add_argument("--allow-active", action="store_true", help="Allow active tools without approval")
+    parser.add_argument("--no-correlate", action="store_true",
+                        help="Skip the sensor/OPNsense/baseline correlation post-pass")
     parser.add_argument("--max-turns", type=int, default=15)
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
@@ -73,6 +75,7 @@ def main() -> None:
         fixture=args.fixture,
         allow_active=args.allow_active,
         verbose=args.verbose,
+        enable_correlation=not args.no_correlate,
     )
     result = run_pivot_mission(config)
     print(json.dumps(result, indent=2))
