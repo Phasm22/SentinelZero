@@ -2,7 +2,8 @@ from __future__ import annotations
 
 PASSIVE_TOOLS = frozenset({
     "nmap_scan", "http_recon", "tls_recon", "ssh_audit", "rpc_audit", "proxmox_recon",
-    "rdp_recon", "dns_recon", "asset_expectation_check", "triage", "complete",
+    "rdp_recon", "dns_recon", "iot_udp_probe", "upnp_discover", "mdns_discover",
+    "asset_expectation_check", "triage", "complete",
 })
 ACTIVE_TOOLS = frozenset({"smb_enum", "nuclei_active", "credential_spray"})
 

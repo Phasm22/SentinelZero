@@ -44,7 +44,10 @@ class LocalExecutor:
         nmap = self._nmap_bin()
         base = [nmap, "-e", self.iface, *argv]
         if privileged and os.geteuid() != 0:
-            base = ["sudo", "-n", nmap, "-e", self.iface, *argv]
+            # nmap carries cap_net_raw+cap_net_admin (set by install.sh); --privileged
+            # tells it to trust those file caps instead of demanding euid 0, so raw
+            # UDP/SYN scans work unprivileged without a passwordless-sudo dependency.
+            base = [nmap, "--privileged", "-e", self.iface, *argv]
         return subprocess.run(
             base,
             capture_output=True,

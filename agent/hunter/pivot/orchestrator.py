@@ -20,14 +20,25 @@ from .runners.asset_expectation_runner import (
     run_asset_expectation_check,
 )
 from .dns_recon_parse import DNS_PORTS, recommend_dns_action
+from .iot_udp_parse import (
+    MDNS_UDP_PORT,
+    UPNP_UDP_PORT,
+    recommend_iot_action,
+    summarize_iot,
+)
+from .mdns_discover_parse import MDNS_PORTS, recommend_mdns_action
 from .proxmox_recon_parse import PROXMOX_PORTS, recommend_proxmox_action
 from .rdp_recon_parse import RDP_PORTS, recommend_rdp_action
 from .runners.dns_recon_runner import run_dns_recon
 from .runners.http_recon_runner import run_http_recon
+from .runners.iot_udp_runner import run_iot_udp_probe
+from .runners.mdns_discover_runner import run_mdns_discover
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.proxmox_recon_runner import run_proxmox_recon
 from .runners.rdp_recon_runner import run_rdp_recon
 from .runners.rpc_audit_runner import run_rpc_audit
+from .runners.upnp_discover_runner import run_upnp_discover
+from .upnp_discover_parse import UPNP_PORTS, recommend_upnp_action
 from .runners.smb_enum_runner import run_smb_enum
 from .runners.ssh_audit_runner import run_ssh_audit
 from .runners.tls_recon_runner import run_tls_recon
@@ -54,6 +65,9 @@ Available actions (respond with JSON only):
 {"action":"proxmox_recon","ip":"<target>"}
 {"action":"rdp_recon","ip":"<target>"}
 {"action":"dns_recon","ip":"<target>"}
+{"action":"iot_udp_probe","ip":"<target>"}
+{"action":"upnp_discover","ip":"<target>"}
+{"action":"mdns_discover","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -92,6 +106,13 @@ Rules:
   (version.bind) and test whether it recursively resolves external names for us (open
   resolver). It is a normal DNS lookup, never a zone transfer or cache-poisoning attempt. Do
   not call complete while an open DNS surface has not been examined by dns_recon.
+- iot_udp_probe sweeps IoT/consumer UDP ports (SNMP, UPnP 1900, mDNS 5353, RTSP) via an
+  unprivileged nmap -sU scan. Run it on hosts that look like IoT/consumer/embedded devices or
+  when the TCP fingerprint is sparse. If it reports 1900/udp or 5353/udp open, follow with
+  upnp_discover or mdns_discover respectively.
+- upnp_discover sends a unicast SSDP M-SEARCH and mdns_discover a unicast mDNS service query
+  to the seed host -- both are passive discovery of the device's advertised services, never a
+  control action (no IGD port mapping). Run each once its UDP port is known open.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -233,6 +254,13 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
     # dns_recon is a live native-DNS probe with no seed-scan equivalent, so it has
     # no hydrated form -- gate purely on whether it has run this mission.
     if "dns_recon" not in types and (port_nums & set(DNS_PORTS)):
+        return True
+    # upnp/mdns discovery follow iot_udp_probe: pending only once that UDP sweep
+    # has confirmed their port open (tracked on board.udp_ports).
+    udp_open = {int(p.get("port", 0)) for p in runtime.board.udp_ports if p.get("state") == "open"}
+    if "upnp_discover" not in types and (udp_open & set(UPNP_PORTS)):
+        return True
+    if "mdns_discover" not in types and (udp_open & set(MDNS_PORTS)):
         return True
     return False
 
@@ -432,6 +460,76 @@ def _build_dns_finding(
             recursion_available=recursion,
             recursion_tested=bool(recon.get("recursion_tested")),
         ),
+    }
+
+
+def _build_iot_finding(
+    ip: str, scan: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_iot_exposure finding from an iot_udp_probe result."""
+    summary = summarize_iot(scan)
+    exposed = summary["exposed_services"]
+    desc = (
+        f"IoT UDP exposure on {ip}: {exposed}" if exposed
+        else f"no notable IoT UDP services confirmed on {ip}"
+    )
+    return {
+        "ip": ip,
+        "type": "pivot_iot_exposure",
+        "description": desc,
+        "open_ports": open_ports,
+        "udp_ports": summary["udp_ports"],
+        "exposed_services": exposed,
+        "upnp_open": summary["upnp_open"],
+        "mdns_open": summary["mdns_open"],
+        "recommended_action": recommend_iot_action(scan),
+    }
+
+
+def _build_upnp_finding(
+    ip: str, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_upnp_exposure finding from an upnp_discover result."""
+    responded = bool(recon.get("responded"))
+    servers = recon.get("servers") or []
+    desc = (
+        f"UPnP device on {ip}:1900 (servers={servers})" if responded
+        else f"{ip}:1900 did not answer SSDP M-SEARCH"
+    )
+    return {
+        "ip": ip,
+        "type": "pivot_upnp_exposure",
+        "description": desc,
+        "port": 1900,
+        "open_ports": open_ports,
+        "responded": responded,
+        "servers": servers,
+        "locations": recon.get("locations") or [],
+        "service_types": recon.get("service_types") or [],
+        "recommended_action": recommend_upnp_action(responded=responded),
+    }
+
+
+def _build_mdns_finding(
+    ip: str, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_mdns_exposure finding from an mdns_discover result."""
+    responded = bool(recon.get("responded"))
+    services = recon.get("services") or []
+    desc = (
+        f"mDNS responder on {ip}:5353 advertising {len(services)} service type(s)"
+        if responded else f"{ip}:5353 did not answer an mDNS query"
+    )
+    return {
+        "ip": ip,
+        "type": "pivot_mdns_exposure",
+        "description": desc,
+        "port": 5353,
+        "open_ports": open_ports,
+        "responded": responded,
+        "services": services,
+        "names": recon.get("names") or [],
+        "recommended_action": recommend_mdns_action(responded=responded),
     }
 
 
@@ -744,6 +842,63 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "iot_udp_probe":
+        result = run_iot_udp_probe(
+            ip, fixture=cfg.fixture, iface=cfg.iface, allowed_cidrs=cfg.allowed_cidrs
+        )
+        runtime.board.udp_ports = result.get("open_ports") or []
+        desc = f"iot_udp_probe on {ip}: {len(runtime.board.udp_ports)} open UDP port(s)"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="iot_udp_probe",
+            description=desc,
+            action="iot_udp_probe",
+            result=result,
+        )
+        finding = _build_iot_finding(ip, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
+    if action == "upnp_discover":
+        result = run_upnp_discover(ip, fixture=cfg.fixture)
+        desc = f"upnp_discover on {ip}:1900: responded={result.get('responded')}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="upnp_discover",
+            description=desc,
+            action="upnp_discover",
+            result=result,
+        )
+        finding = _build_upnp_finding(ip, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
+    if action == "mdns_discover":
+        result = run_mdns_discover(ip, fixture=cfg.fixture)
+        desc = f"mdns_discover on {ip}:5353: responded={result.get('responded')}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="mdns_discover",
+            description=desc,
+            action="mdns_discover",
+            result=result,
+        )
+        finding = _build_mdns_finding(ip, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -820,6 +975,24 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in DNS_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "dns_recon", "ip": ip}
+    # UDP discovery: iot_udp_probe sweeps a bare device (no primary TCP service),
+    # then upnp/mdns follow once their UDP port is confirmed open.
+    tcp_ports = {int(p.get("port", 0)) for p in runtime.board.open_ports}
+    primary_tcp = (
+        set(HTTP_PORTS) | set(TLS_PORTS) | set(SSH_PORTS) | set(RPC_PORTS)
+        | set(RDP_PORTS) | set(DNS_PORTS) | set(PROXMOX_PORTS) | {445}
+    )
+    if (
+        "iot_udp_probe" not in types
+        and runtime.board.open_ports
+        and not (tcp_ports & primary_tcp)
+    ):
+        return {"action": "iot_udp_probe", "ip": ip}
+    udp_open = {int(p.get("port", 0)) for p in runtime.board.udp_ports if p.get("state") == "open"}
+    if "upnp_discover" not in types and (udp_open & set(UPNP_PORTS)):
+        return {"action": "upnp_discover", "ip": ip}
+    if "mdns_discover" not in types and (udp_open & set(MDNS_PORTS)):
+        return {"action": "mdns_discover", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -1081,7 +1254,8 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             if (
                 action in (
                     "smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit",
-                    "proxmox_recon", "rdp_recon", "dns_recon",
+                    "proxmox_recon", "rdp_recon", "dns_recon", "iot_udp_probe",
+                    "upnp_discover", "mdns_discover",
                 )
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)

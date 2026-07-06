@@ -18,6 +18,7 @@ class Blackboard:
     last_event_id: str | None = None
     current_ip: str = ""
     open_ports: list[dict[str, Any]] = field(default_factory=list)
+    udp_ports: list[dict[str, Any]] = field(default_factory=list)
     findings: list[dict[str, Any]] = field(default_factory=list)
     worker_summaries: list[str] = field(default_factory=list)
     completed: bool = False
