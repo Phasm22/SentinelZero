@@ -22,8 +22,10 @@ from .runners.asset_expectation_runner import (
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.smb_enum_runner import run_smb_enum
+from .runners.tls_recon_runner import run_tls_recon
 from .scope import ScopeGuard
 from .status import write_status
+from .tls_recon_parse import TLS_PORTS, recommend_tls_action
 
 SYSTEM = """You are SentinelZero Hunter Pivot Engine.
 
@@ -36,6 +38,7 @@ Available actions (respond with JSON only):
 {"action":"nmap_scan","ip":"<target>"}
 {"action":"smb_enum","ip":"<target>"}
 {"action":"http_recon","ip":"<target>"}
+{"action":"tls_recon","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -46,13 +49,21 @@ Rules:
   -- it identifies page content (title, server header, generator, missing security
   headers) via passive nmap NSE scripts. It is content identification, not enumeration:
   never follow it with path brute-forcing tools.
+- Run tls_recon when a TLS port is open (443,8443) -- it captures the certificate
+  subject/issuer/SAN, validity window, self-signed status, offered TLS versions, and the
+  weakest cipher grade via passive nmap NSE scripts. It is posture identification, never
+  exploitation.
+- http_recon and tls_recon are COMPLEMENTARY on a TLS port (443/8443): http_recon reports
+  page content, tls_recon reports the certificate/cipher posture. On a host with 443 or 8443
+  open, run BOTH before completing -- do not treat http_recon alone as sufficient. Do not
+  call complete while an open HTTP or TLS surface has not been examined by its runner.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
   carries drift context.
 - If a "seed_hydration" event already reused open ports (and, when present, http_recon
-  data) from a prior scan, do NOT re-run nmap_scan/http_recon for evidence you already
-  have -- go straight to triage/complete on what's known.
+  or tls_recon data) from a prior scan, do NOT re-run nmap_scan/http_recon/tls_recon for
+  evidence you already have -- go straight to triage/complete on what's known.
 - Call complete when you have enough evidence for a terminal finding.
 """
 
@@ -144,6 +155,74 @@ def _build_http_finding(
     }
 
 
+def _select_tls_port(open_ports: list[dict[str, Any]]) -> int | None:
+    """Pick the highest-value open TLS surface port, in TLS_PORTS priority order."""
+    port_nums = {int(p.get("port", 0)) for p in open_ports}
+    for candidate in TLS_PORTS:
+        if candidate in port_nums:
+            return candidate
+    return None
+
+
+def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
+    """True if an applicable passive service runner has not yet run for the open
+    ports. A TLS port (443/8443) is *also* an HTTP surface, so a host with 443
+    warrants both http_recon (content) and tls_recon (cert/cipher) -- terminating
+    after the first would leave the complementary posture unexamined."""
+    types = {e.type for e in runtime.event_log.all_events()}
+    port_nums = {int(p.get("port", 0)) for p in runtime.board.open_ports}
+    if "http_recon" not in types and runtime.hydrated_http_recon is None and (
+        port_nums & set(HTTP_PORTS)
+    ):
+        return True
+    if "tls_recon" not in types and runtime.hydrated_tls_recon is None and (
+        port_nums & set(TLS_PORTS)
+    ):
+        return True
+    return False
+
+
+def _build_tls_finding(
+    ip: str, port: int, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_tls_posture finding, shared by the live tls_recon dispatch and
+    the hydrated-evidence path so both grade identically."""
+    subject_cn = recon.get("subject_cn")
+    self_signed = bool(recon.get("self_signed"))
+    expired = bool(recon.get("expired"))
+    weak_protocols = recon.get("weak_protocols") or []
+    cipher_grade = recon.get("cipher_grade")
+    cert_parsed = bool(recon.get("cert_parsed"))
+    return {
+        "ip": ip,
+        "type": "pivot_tls_posture",
+        "description": (
+            f"tls posture on {ip}:{port}: cn={subject_cn!r} "
+            f"self_signed={self_signed} expired={expired} grade={cipher_grade}"
+        ),
+        "port": port,
+        "open_ports": open_ports,
+        "subject_cn": subject_cn,
+        "issuer_cn": recon.get("issuer_cn"),
+        "sans": recon.get("sans") or [],
+        "not_before": recon.get("not_before"),
+        "not_after": recon.get("not_after"),
+        "days_to_expiry": recon.get("days_to_expiry"),
+        "self_signed": self_signed,
+        "expired": expired,
+        "tls_versions": recon.get("tls_versions") or [],
+        "weak_protocols": weak_protocols,
+        "cipher_grade": cipher_grade,
+        "recommended_action": recommend_tls_action(
+            expired=expired,
+            self_signed=self_signed,
+            weak_protocols=weak_protocols,
+            cipher_grade=cipher_grade,
+            cert_parsed=cert_parsed,
+        ),
+    }
+
+
 def _build_asset_finding(
     ip: str, result: dict[str, Any], open_ports: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -196,6 +275,7 @@ class PivotRuntime:
     pending_approval: str | None = None
     terminal_findings: list[dict[str, Any]] = field(default_factory=list)
     hydrated_http_recon: dict[str, Any] | None = None
+    hydrated_tls_recon: dict[str, Any] | None = None
 
 
 def _log(runtime: PivotRuntime, msg: str) -> None:
@@ -328,6 +408,28 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "tls_recon":
+        target_port = _select_tls_port(runtime.board.open_ports) or 443
+        result = run_tls_recon(ip, port=target_port, fixture=cfg.fixture)
+        desc = (
+            f"tls_recon on {ip}:{target_port}: cn={result.get('subject_cn')!r} "
+            f"self_signed={result.get('self_signed')}"
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="tls_recon",
+            description=desc,
+            action="tls_recon",
+            result=result,
+        )
+        finding = _build_tls_finding(ip, target_port, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -365,6 +467,12 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
     ):
         return {"action": "smb_enum", "ip": ip}
     if (
+        "tls_recon" not in types
+        and runtime.hydrated_tls_recon is None
+        and any(int(p.get("port", 0)) in TLS_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "tls_recon", "ip": ip}
+    if (
         "http_recon" not in types
         and runtime.hydrated_http_recon is None
         and any(int(p.get("port", 0)) in HTTP_PORTS for p in runtime.board.open_ports)
@@ -401,7 +509,8 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
 
     if config.fixture:
         hydrated = config.fixture_hydration or {
-            "open_ports": [], "http_recon": None, "source_scan_id": board.scan_id,
+            "open_ports": [], "http_recon": None, "tls_recon": None,
+            "source_scan_id": board.scan_id,
         }
     else:
         hydrated = hydrate_seed(board.seed_ip, board.scan_id)
@@ -472,6 +581,27 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
         )
         runtime.board.findings.append(http_finding)
         runtime.terminal_findings.append(http_finding)
+    if hydrated.get("tls_recon"):
+        runtime.hydrated_tls_recon = hydrated["tls_recon"]
+        # Reused tls_recon evidence terminates to a typed finding here rather than
+        # dead-ending at the generic pivot_recon fallback. Event type is
+        # "tls_posture" (not "tls_recon") because no live NSE run occurred.
+        tls_port = _select_tls_port(board.open_ports) or 443
+        tls_finding = _build_tls_finding(
+            board.seed_ip, tls_port, hydrated["tls_recon"], board.open_ports
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=runtime.board.last_event_id,
+            ip=board.seed_ip,
+            type="tls_posture",
+            description=tls_finding["description"],
+            action="tls_posture",
+            result=hydrated["tls_recon"],
+        )
+        runtime.board.findings.append(tls_finding)
+        runtime.terminal_findings.append(tls_finding)
 
     write_status(
         config.reports_dir,
@@ -490,6 +620,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
                 "target_network": config.target_network,
                 "hydrated_open_ports": board.open_ports,
                 "hydrated_http_recon": runtime.hydrated_http_recon,
+                "hydrated_tls_recon": runtime.hydrated_tls_recon,
                 "instructions": "Begin pivot chain from seed host.",
             }, indent=2),
         },
@@ -539,11 +670,15 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             messages.append({"role": "assistant", "content": json.dumps(action_payload)})
             messages.append({"role": "user", "content": json.dumps(exec_result, indent=2)})
 
-            if runtime.terminal_findings and action == "smb_enum":
-                result_summary = f"SMB pivot complete for {ip}"
-                break
-            if runtime.terminal_findings and action == "http_recon":
-                result_summary = f"HTTP recon pivot complete for {ip}"
+            # A service runner yields a terminal finding, but don't stop while a
+            # complementary passive surface (e.g. tls_recon on a 443 host that
+            # http_recon already touched) is still unexamined.
+            if (
+                action in ("smb_enum", "http_recon", "tls_recon")
+                and runtime.terminal_findings
+                and not _has_pending_passive_service(runtime)
+            ):
+                result_summary = f"Pivot complete for {ip}"
                 break
         else:
             result_summary = f"Exceeded max_turns={config.max_turns}"

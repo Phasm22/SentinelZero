@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 from ..http_recon_parse import HTTP_PORTS
+from ..tls_recon_parse import TLS_PORTS
 
 
 FIXTURE_NMAP_XML = """<?xml version="1.0"?>
@@ -74,6 +75,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
     - ``smb_enum`` when 445/tcp is open.
     - ``http_recon`` when any HTTP(S) surface port is open (80/443/8080/8443/
       3128/8006/8581).
+    - ``tls_recon`` when a TLS surface port is open (443/8443) -- cert/cipher
+      posture, complementary to http_recon's content identification.
     - ``asset_expectation_check`` whenever any port is open -- drift analysis is
       port-agnostic and never re-probes the host.
 
@@ -86,6 +89,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
         recommendations.append("smb_enum")
     if port_nums & set(HTTP_PORTS):
         recommendations.append("http_recon")
+    if port_nums & set(TLS_PORTS):
+        recommendations.append("tls_recon")
     if open_ports:
         recommendations.append("asset_expectation_check")
     return {
