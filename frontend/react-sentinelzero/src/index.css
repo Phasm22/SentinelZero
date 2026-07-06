@@ -170,6 +170,60 @@ html.dark body {
   .table tr:hover {
     @apply bg-gray-50 dark:bg-gray-700;
   }
+
+  /* Settings-style glass cards — same look in light and dark over the blob background */
+  .card-glass {
+    @apply bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl;
+  }
+
+  .card-glass-inner {
+    @apply rounded-lg border border-gray-600/30 bg-gray-700/30;
+  }
+
+  .card-glass-item {
+    @apply rounded-lg border border-white/10 bg-gray-900/40 transition-colors;
+  }
+
+  .card-glass-item:hover {
+    @apply border-blue-400/35 bg-gray-800/70;
+  }
+
+  .card-glass-item-active {
+    @apply bg-gradient-to-br from-gray-700/70 to-gray-800/60 border-blue-500/50 ring-1 ring-blue-500/40 shadow-lg;
+  }
+
+  /* Typography on gray glass cards (Settings reference) */
+  .card-title {
+    @apply font-title font-bold text-gray-100;
+  }
+
+  .card-heading {
+    @apply font-semibold text-gray-200;
+  }
+
+  .card-label {
+    @apply text-sm font-medium text-gray-300;
+  }
+
+  .card-body {
+    @apply text-sm text-gray-300 leading-relaxed;
+  }
+
+  .card-meta {
+    @apply text-xs text-gray-400;
+  }
+
+  .card-muted {
+    @apply text-xs text-gray-500;
+  }
+
+  .card-value {
+    @apply font-mono text-gray-100;
+  }
+
+  .card-inner-tile {
+    @apply rounded-lg border border-gray-600/30 bg-gray-700/30;
+  }
 }
 
 @layer utilities {

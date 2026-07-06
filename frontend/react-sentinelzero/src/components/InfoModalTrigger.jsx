@@ -20,7 +20,7 @@ const InfoModalTrigger = ({
           e.stopPropagation()
           setOpen(true)
         }}
-        className={`inline-flex items-center justify-center rounded-full text-gray-400 hover:text-blue-300 hover:bg-white/5 transition-colors p-0.5 ${className}`}
+        className={`inline-flex items-center justify-center rounded-full text-gray-500 hover:text-blue-300 hover:bg-white/5 transition-colors p-0.5 ${className}`}
         aria-label={ariaLabel}
         data-testid={testId}
       >

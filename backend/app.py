@@ -47,6 +47,7 @@ from src.services.observability import configure_logging, ensure_request_id, log
 # Import models to register them with SQLAlchemy
 from src.models import Scan, Alert, SensorAgent, SensorTelemetry, IncidentEmbedding
 from src.services import sensor_service
+from src.services import db_maintenance
 
 # Global instances
 db = None
@@ -288,6 +289,19 @@ def create_app(test_config=None):
                 'interval',
                 hours=6,
                 id='hunter_baseline_snapshot',
+                replace_existing=True,
+                next_run_time=datetime.utcnow(),
+                max_instances=1,
+                coalesce=True,
+            )
+            # Truncate the SQLite WAL every 10 min so the -wal sidecar cannot
+            # balloon (it reached 9.7 GB before this job existed). Self-contained
+            # raw-sqlite3 job — no app context needed. See db_maintenance.
+            scheduler.add_job(
+                db_maintenance.checkpoint_wal,
+                'interval',
+                minutes=10,
+                id='wal_checkpoint',
                 replace_existing=True,
                 next_run_time=datetime.utcnow(),
                 max_instances=1,

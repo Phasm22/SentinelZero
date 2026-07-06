@@ -4,34 +4,33 @@ import HostCard from './HostCard'
 const HostGrid = ({ detailedData, filter }) => {
   if (!detailedData) return null
 
-  // Combine and filter data based on selected filter
   const getFilteredHosts = () => {
     const allHosts = []
-    
+
     if (filter === 'all' || filter === 'loopbacks') {
-      allHosts.push(...(detailedData.loopbacks || []).map(host => ({ 
-        ...host, 
+      allHosts.push(...(detailedData.loopbacks || []).map(host => ({
+        ...host,
         layer: 'loopbacks',
-        layerName: 'Loopback'
+        layerName: 'Loopback',
       })))
     }
-    
+
     if (filter === 'all' || filter === 'services') {
-      allHosts.push(...(detailedData.services || []).map(host => ({ 
-        ...host, 
+      allHosts.push(...(detailedData.services || []).map(host => ({
+        ...host,
         layer: 'services',
-        layerName: 'Service'
+        layerName: 'Service',
       })))
     }
-    
+
     if (filter === 'all' || filter === 'infrastructure') {
-      allHosts.push(...(detailedData.infrastructure || []).map(host => ({ 
-        ...host, 
+      allHosts.push(...(detailedData.infrastructure || []).map(host => ({
+        ...host,
         layer: 'infrastructure',
-        layerName: 'Infrastructure'
+        layerName: 'Infrastructure',
       })))
     }
-    
+
     return allHosts
   }
 
@@ -40,41 +39,37 @@ const HostGrid = ({ detailedData, filter }) => {
   if (hosts.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-400 dark:text-gray-400 text-lg">No hosts found for the selected filter</div>
+        <div className="card-meta text-lg">No hosts found for the selected filter</div>
       </div>
     )
   }
 
-  // Separate network scanners from other hosts
   const networkScanners = hosts.filter(host => {
     const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
     const name = host.name || 'Unknown'
-    return ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/) || 
-           name.includes('Cloudflare') || 
-           name.includes('Google DNS') || 
-           name.includes('Internet Test')
+    return ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/)
+           || name.includes('Cloudflare')
+           || name.includes('Google DNS')
+           || name.includes('Internet Test')
   })
 
   const otherHosts = hosts.filter(host => {
     const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
     const name = host.name || 'Unknown'
-    return !ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/) && 
-           !name.includes('Cloudflare') && 
-           !name.includes('Google DNS') && 
-           !name.includes('Internet Test')
+    return !ip.match(/^(1\.1\.1\.|8\.8\.8\.|208\.67\.)/)
+           && !name.includes('Cloudflare')
+           && !name.includes('Google DNS')
+           && !name.includes('Internet Test')
   })
 
-  // Group remaining hosts by proper network categories and layer purpose
   const groupedHosts = otherHosts.reduce((groups, host) => {
     const ip = host.ip || host.ping?.ip || host.dns?.ip || 'unknown'
     const name = host.name || 'Unknown'
     let segment = 'Other'
-    
-    // Determine proper network segment based on IP and function
+
     if (ip === '127.0.0.1') {
       segment = 'Localhost'
     } else if (ip.startsWith('172.16.')) {
-      // Lab network (172.16.0.0/22) - categorize by function
       if (name.toLowerCase().includes('proxmox')) {
         segment = 'Proxmox Infrastructure'
       } else if (name.toLowerCase().includes('code-server') || name.toLowerCase().includes('winvm')) {
@@ -83,43 +78,35 @@ const HostGrid = ({ detailedData, filter }) => {
         segment = 'Lab Network (172.16.x.x)'
       }
     } else if (ip.startsWith('192.168.68.')) {
-      // Home network (192.168.68.0/22)  
       segment = 'Home Network (192.168.68.x)'
     } else if (ip.startsWith('192.168.71.')) {
-      // Additional lab services (192.168.71.x)
       segment = 'Lab Services (192.168.71.x)'
     } else if (ip.startsWith('10.16.')) {
-      // VPN network
       segment = 'VPN (10.16.x.x)'
-    } else {
-      // Check by host function/name for special cases
-      if (name.toLowerCase().includes('dns') || host.type === 'dns') {
-        segment = 'DNS Services'
-      } else if (name.toLowerCase().includes('vpn')) {
-        segment = 'VPN Services'
-      }
+    } else if (name.toLowerCase().includes('dns') || host.type === 'dns') {
+      segment = 'DNS Services'
+    } else if (name.toLowerCase().includes('vpn')) {
+      segment = 'VPN Services'
     }
-    
+
     if (!groups[segment]) groups[segment] = []
     groups[segment].push(host)
     return groups
   }, {})
 
-  // Define the display order for network segments
   const segmentOrder = [
-    'Proxmox Infrastructure',     // Proxmox cluster nodes
-    'Lab VMs & Services',         // Lab VMs and services
-    'Lab Network (172.16.x.x)',  // Other lab network devices
-    'Lab Services (192.168.71.x)', // Additional lab services
-    'Home Network (192.168.68.x)', // Home network
-    'VPN (10.16.x.x)',            // VPN endpoints
-    'Localhost',                  // Local system
-    'DNS Services',               // DNS-specific services
-    'VPN Services',               // VPN-specific services  
-    'Other'                       // Everything else
+    'Proxmox Infrastructure',
+    'Lab VMs & Services',
+    'Lab Network (172.16.x.x)',
+    'Lab Services (192.168.71.x)',
+    'Home Network (192.168.68.x)',
+    'VPN (10.16.x.x)',
+    'Localhost',
+    'DNS Services',
+    'VPN Services',
+    'Other',
   ]
 
-  // Sort the grouped hosts by the defined order
   const sortedGroups = segmentOrder
     .filter(segment => groupedHosts[segment] && groupedHosts[segment].length > 0)
     .map(segment => [segment, groupedHosts[segment]])
@@ -131,15 +118,15 @@ const HostGrid = ({ detailedData, filter }) => {
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl sm:text-2xl card-title">
           Host Details
-          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-600 dark:text-gray-300">
+          <span className="ml-2 sm:ml-3 text-xs sm:text-sm font-normal text-gray-300">
             ({hosts.length} {hosts.length === 1 ? 'host' : 'hosts'})
           </span>
         </h2>
-        
+
         {filter !== 'all' && (
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-2 sm:px-3 py-1 rounded-lg border border-gray-200 dark:border-white/20 self-start capitalize">
+          <div className="card-meta bg-gray-800/70 px-2 sm:px-3 py-1 rounded-lg border border-gray-600/50 self-start capitalize">
             Filtered: {filter}
           </div>
         )}
@@ -148,17 +135,17 @@ const HostGrid = ({ detailedData, filter }) => {
       {sortedGroups.map(([segment, segmentHosts]) => (
         <div key={segment} className="space-y-2">
           <div className="flex items-center gap-3 sticky top-0 z-10 bg-transparent py-1">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-200">{segment}</h3>
-            <div className="flex-1 h-px bg-gradient-to-r from-gray-300 dark:from-gray-600 to-transparent" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+            <h3 className="text-sm sm:text-base card-heading">{segment}</h3>
+            <div className="flex-1 h-px bg-gradient-to-r from-gray-600/60 to-transparent" />
+            <span className="card-meta font-mono">
               {segmentHosts.length}
             </span>
           </div>
-          
+
           <div className="space-y-2">
             {segmentHosts.map((host, index) => (
-              <HostCard 
-                key={`${host.ip}-${host.name}-${index}`} 
+              <HostCard
+                key={`${host.ip}-${host.name}-${index}`}
                 host={host}
                 hideLayerBadge={filter !== 'all'}
               />

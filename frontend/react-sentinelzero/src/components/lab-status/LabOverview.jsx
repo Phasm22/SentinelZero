@@ -1,6 +1,5 @@
 import React from 'react'
 import { Server, Wifi, Globe, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
-import HealthIndicator from './HealthIndicator'
 import AnimatedValue from '../AnimatedValue'
 import LabPanel from './LabPanel'
 
@@ -55,20 +54,20 @@ const LabOverview = ({ healthData, detailedData }) => {
           return (
             <div
               key={segment.name}
-              className="flex items-center gap-2 rounded-lg border border-gray-200/80 dark:border-gray-600/40 bg-gray-50/80 dark:bg-gray-800/40 px-3 py-2 min-w-[8rem] flex-1"
+              className="card-inner-tile flex items-center gap-2 px-3 py-2 min-w-[8rem] flex-1"
             >
-              <Icon className="w-4 h-4 text-gray-600 dark:text-gray-300 shrink-0" />
+              <Icon className="w-4 h-4 text-gray-300 shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{segment.name}</div>
-                <div className="text-xs font-mono text-gray-600 dark:text-gray-300">
+                <div className="card-heading text-sm">{segment.name}</div>
+                <div className="card-meta font-mono">
                   <AnimatedValue value={segment.health.count} />/{segment.health.total}
                 </div>
               </div>
               <StatusIcon className={`w-4 h-4 shrink-0 ${
-                segment.health.status === 'healthy' ? 'text-green-600 dark:text-green-400' :
-                segment.health.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
-                segment.health.status === 'critical' ? 'text-red-600 dark:text-red-400' :
-                'text-gray-500 dark:text-gray-400'
+                segment.health.status === 'healthy' ? 'text-green-400' :
+                segment.health.status === 'warning' ? 'text-yellow-400' :
+                segment.health.status === 'critical' ? 'text-red-400' :
+                'text-gray-400'
               }`} />
             </div>
           )

@@ -1,0 +1,44 @@
+# SentinelZero Sensor Configuration
+# Copy to /etc/sentinel-sensor/config.yaml and edit before starting the service.
+
+# Unique identifier for this node — used as the DB primary key.
+# Use a stable, human-readable slug: hostname-NNN
+agent_id: "proxbig-001"
+
+# URL of the SentinelZero backend API
+api_url: "http://172.16.0.254:5000"
+
+# Pre-shared API key — must match SENSOR_API_KEY in the backend .env file
+# Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
+api_key: "CHANGE_ME"
+
+# Seconds between collection cycles
+interval: 60
+
+# Host role — controls which role-specific modules are loaded
+# Options: proxmox-node | linux-vm | linux-server
+role: "proxmox-node"
+
+# Optional: override auto-detected values (leave blank to auto-detect)
+host_ip: ""    # auto-detected by connecting to api_url host
+hostname: ""   # auto-detected via socket.getfqdn()
+
+# Optional metadata tags (JSON list)
+tags: []
+
+# Toggle individual collectors (all default true)
+collectors:
+  system: true
+  processes: true
+  connections: true
+  auth: true
+  services: true
+  proxmox: false    # set true on role: proxmox-node hosts
+
+# Path to auth log (distro-specific)
+# Debian/Ubuntu: /var/log/auth.log
+# RHEL/CentOS:   /var/log/secure
+auth_log_path: "/var/log/auth.log"
+
+# Log verbosity: DEBUG | INFO | WARNING | ERROR
+log_level: "INFO"

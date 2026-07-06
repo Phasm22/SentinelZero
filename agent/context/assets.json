@@ -1,0 +1,139 @@
+{
+  "172.16.0.1": {
+    "name": "OPNsense",
+    "role": "firewall-gateway",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 80, 443, 3000, 8080],
+    "notes": "Lab network border router and NAT gateway. ntopng on port 3000. WAN gateway is 192.168.68.1 (home router). All lab traffic passes through here."
+  },
+  "172.16.0.9": {
+    "name": "labSwitch",
+    "role": "network-switch",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 80, 443],
+    "notes": "Lab switch. Currently unreachable per OPNsense gateway monitor (100% loss). May be decommissioned or powered off."
+  },
+  "172.16.0.10": {
+    "name": "proxBig.prox",
+    "role": "proxmox-hypervisor",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 8006, 3128, 5900, 5901],
+    "cluster": "standalone",
+    "notes": "Standalone Proxmox hypervisor — not clustered. Manages its own VMs independently. Port 8006 is web UI, 3128 is SPICE proxy."
+  },
+  "172.16.0.11": {
+    "name": "yin.prox",
+    "role": "proxmox-node",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 8006, 3128, 5900, 5901],
+    "cluster": "yin-yang",
+    "notes": "Proxmox HA cluster node (paired with yang, 172.16.0.12). VMs can live-migrate between yin and yang — a new port may be a migrated VM, not a new service."
+  },
+  "172.16.0.12": {
+    "name": "yang.prox",
+    "role": "proxmox-node",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 8006, 3128, 5900, 5901],
+    "cluster": "yin-yang",
+    "notes": "Proxmox HA cluster node (paired with yin, 172.16.0.11). Same expected ports and VM migration context as yin."
+  },
+  "172.16.0.13": {
+    "name": "piholelab",
+    "role": "dns-pihole",
+    "trust_zone": "infrastructure",
+    "expected_ports": [22, 53, 80, 443],
+    "notes": "Primary DNS for the lab network (172.16.0.0/22). Pi-hole admin UI on 80/443. Static DHCP entry confirmed in OPNsense."
+  },
+  "172.16.0.100": {
+    "name": "winvm.prox",
+    "role": "windows-vm",
+    "trust_zone": "lab",
+    "expected_ports": [3389, 445, 139],
+    "notes": "Windows lab VM on proxBig. RDP and SMB are expected. Hostname 'WindowsVM' in OPNsense DHCP. Proxmox MAC prefix (bc:24:11). Sensor not yet deployed."
+  },
+  "172.16.0.106": {
+    "name": "code-server.prox",
+    "role": "linux-vm",
+    "trust_zone": "lab",
+    "expected_ports": [22, 8080, 8443],
+    "notes": "Code server VM. Currently OFFLINE per OPNsense DHCP. Port 8080/8443 for code-server web UI when running."
+  },
+  "172.16.0.107": {
+    "name": "windowsVM2",
+    "role": "windows-vm",
+    "trust_zone": "lab",
+    "expected_ports": [3389, 445, 139],
+    "notes": "Second Windows lab VM. Currently OFFLINE per OPNsense DHCP. Static DHCP entry exists but host is not active."
+  },
+  "172.16.0.184": {
+    "name": "opsbox",
+    "role": "unknown-vm",
+    "trust_zone": "unknown",
+    "expected_ports": [],
+    "notes": "UNREGISTERED HOST. Appears in OPNsense ARP table with Proxmox MAC prefix — almost certainly a VM. No static DHCP entry, not formally registered. Investigate: who created this VM, what is it running, is it authorized?"
+  },
+  "172.16.0.198": {
+    "name": "sentinelzero-dhcp",
+    "role": "security-monitor",
+    "trust_zone": "management",
+    "expected_ports": [22, 5000],
+    "notes": "SentinelZero's dynamic DHCP address on enp6s18. The stable management IP is 172.16.0.254 (dummy0). IDS alerts for SSH scanning from this IP are expected — that is nmap scanning port 22 as part of normal network scans. Suppress Suricata SID 2003068 for this source or add it to a scan whitelist."
+  },
+  "172.16.0.180": {
+    "name": "sentinel-hunter",
+    "role": "security-monitor",
+    "trust_zone": "management",
+    "expected_ports": [22],
+    "notes": "Dedicated hunter VM. Dual-homed on enp6s18 (172.16.0.180) and enp6s19 (192.168.68.53). Runs autonomous seed/rank/probe loops and triggers scan handoffs."
+  },
+  "172.16.0.254": {
+    "name": "sentinelzero",
+    "role": "security-monitor",
+    "trust_zone": "management",
+    "expected_ports": [22, 5000],
+    "notes": "SentinelZero monitoring host. Port 5000 is the backend API. Proxmox MAC prefix confirms it runs as a VM. Any unexpected port here = immediate escalation."
+  },
+  "192.168.68.202": {
+    "name": "palindrome",
+    "role": "linux-pc",
+    "trust_zone": "user",
+    "expected_ports": [22],
+    "notes": "Dev PC on home network (Ubuntu 24.04). SSH only expected. Endpoint sensor deployed. Any port beyond SSH is unusual and should be corroborated by process timeline."
+  },
+  "192.168.68.1": {
+    "name": "home-router",
+    "role": "router",
+    "trust_zone": "home-infrastructure",
+    "expected_ports": [22, 80, 443, 53],
+    "notes": "Home network router. Upstream gateway for OPNsense WAN. Has a static route for 172.16.0.0/22 → OPNsense. Confirmed as OPNsense WAN_DHCP and LAN_GW gateway address."
+  },
+  "192.168.68.79": {
+    "name": "homebridge",
+    "role": "iot-gateway",
+    "trust_zone": "home",
+    "expected_ports": [8581, 80, 443],
+    "expected_udp_ports": [5353, 1900],
+    "notes": "Homebridge — HomeKit bridge for smart home devices. Port 8581 is the Homebridge web UI."
+  },
+  "192.168.71.25": {
+    "name": "pihole-home",
+    "role": "dns-pihole",
+    "trust_zone": "home-infrastructure",
+    "expected_ports": [22, 53, 80, 443],
+    "notes": "DNS / Pi-hole for home network (192.168.68.0/22 range). Endpoint sensor deployed."
+  },
+  "192.168.71.30": {
+    "name": "ubuntu-server",
+    "role": "linux-server",
+    "trust_zone": "home-infrastructure",
+    "expected_ports": [22, 53],
+    "notes": "Ubuntu server on home network. Also acts as backup DNS for the home segment."
+  },
+  "192.168.71.40": {
+    "name": "vpn-endpoint",
+    "role": "vpn-gateway",
+    "trust_zone": "home-infrastructure",
+    "expected_ports": [1194, 51820],
+    "notes": "VPN endpoint. OpenVPN on 1194, WireGuard on 51820."
+  }
+}

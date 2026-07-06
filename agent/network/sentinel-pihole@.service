@@ -1,0 +1,59 @@
+[Unit]
+Description=SentinelZero Pi-hole Sensor (%i)
+After=network-online.target sentinelzero.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+WorkingDirectory=/home/sentinel/SentinelZero/agent/network
+EnvironmentFile=-/etc/sentinel-pihole-%i/sensor.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/home/sentinel/SentinelZero/agent/network/wait-for-backend.sh
+ExecStart=/home/sentinel/SentinelZero/agent/network/.venv/bin/python \
+    /home/sentinel/SentinelZero/agent/network/pihole_sensor.py \
+    --config /home/sentinel/SentinelZero/agent/network/config-pihole-%i.yaml
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=15
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-pihole@%i
+
+# ── Hardening ──────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+
+# Filesystem isolation
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateDevices=true
+
+# Kernel protections
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+
+# Privilege restrictions — sensor needs no capabilities
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Syscall and namespace filtering
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

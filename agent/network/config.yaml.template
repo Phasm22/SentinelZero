@@ -1,0 +1,50 @@
+# SentinelZero ntopng Sensor Configuration
+# Copy to /etc/sentinel-ntopng/config.yaml and fill in values below.
+
+# Unique identifier for this sensor in SentinelZero
+agent_id: "opnsense-ntopng"
+
+# SentinelZero backend
+api_url: "http://172.16.0.254:5000"
+api_key: "CHANGE_ME"  # SENSOR_API_KEY from backend/.env
+
+# ntopng instance
+ntopng_url: "https://172.16.0.1:3000"
+verify_ssl: false  # set true if you have a valid cert
+
+# Auth — session-based (recommended): set ntopng_user + ntopng_password
+# The sensor logs in via /authorize.html and maintains the session cookie.
+# This is the same auth the ntopng web UI uses.
+ntopng_user: "admin"
+ntopng_password: "CHANGE_ME"
+# Alternative: API token (Settings → Users → admin → API Token, if available)
+ntopng_token: ""
+
+# Interface IDs to monitor (check ntopng UI — usually 1 for the main interface)
+# To list all: curl -k "https://172.16.0.1:3000/lua/rest/v1/get/ntopng/interfaces.lua?token=<token>"
+interface_ids:
+  - 1
+
+# Polling interval in seconds
+interval: 60
+
+# How this sensor identifies itself to SentinelZero
+role: "network-sensor"
+host_ip: "172.16.0.1"    # OPNsense / ntopng host IP
+hostname: "opnsense"
+
+# Tags — used by the LLM context layer to distinguish network vs endpoint sensors
+# Do not remove category:network — the InsightsGenerator uses it for routing
+tags:
+  - "category:network"
+  - "source:ntopng"
+
+# Toggle individual collectors
+collectors:
+  interface_stats: true   # throughput, flow counts, TCP health, anomaly counts
+  l7_stats: true          # top 25 protocols by bytes (application breakdown)
+  l4_counters: true       # TCP / UDP / ICMP distribution
+  alerts: true            # currently engaged security alerts
+  active_hosts: true      # total host count + flagged hosts (score > 0)
+
+log_level: "INFO"

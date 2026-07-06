@@ -7,7 +7,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-_DEFAULT_PATH = Path(os.path.expanduser("~/agent/context/assets.json"))
+# Repo-relative default: backend/src/services/asset_registry.py -> repo root is
+# parents[3], and the shared registry lives at <repo>/agent/context/assets.json.
+# The previous ~/agent/context/assets.json default did not exist on this host
+# (the repo is ~/SentinelZero/agent), so the registry silently loaded empty and
+# every host read as unregistered. Override with SENTINEL_ASSETS_PATH.
+_DEFAULT_PATH = Path(__file__).resolve().parents[3] / "agent" / "context" / "assets.json"
 
 # Trust zones where missing registry / sensor is actionable on lab scans.
 _LAB_STRICT_TRUST_ZONES = frozenset({

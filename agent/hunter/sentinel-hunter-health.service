@@ -1,0 +1,19 @@
+[Unit]
+Description=SentinelZero Hunter healthcheck
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hunter
+Group=hunter
+WorkingDirectory=/home/hunter/agent
+EnvironmentFile=/etc/sentinel-hunter/agent.env
+ExecStart=/home/hunter/agent/hunter/healthcheck.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-hunter-health
+
+[Install]
+WantedBy=multi-user.target
+

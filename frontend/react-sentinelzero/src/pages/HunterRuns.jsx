@@ -11,9 +11,14 @@ import HunterPivotChain from '../components/hunter/HunterPivotChain'
 import InfoModalTrigger from '../components/InfoModalTrigger'
 import { HunterRunsPageHelp } from '../components/hunter/hunterHelpContent'
 import { deriveRunInsight } from '../components/hunter/hunterFormat'
+import {
+  TIME_RANGE_OPTIONS,
+  filterMissionsByTimeRange,
+  filterRunsByTimeRange,
+} from '../components/hunter/hunterTimeFilter'
 
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-gradient-to-br from-white/95 to-gray-50/90 dark:from-gray-800/80 dark:to-gray-900/60 backdrop-blur-lg border border-gray-200/80 dark:border-white/10 rounded-md shadow-xl p-4 sm:p-6 ${className}`}>
+  <div className={`card-glass p-4 sm:p-6 ${className}`}>
     {children}
   </div>
 )
@@ -22,6 +27,7 @@ const HunterRuns = () => {
   const [overview, setOverview] = useState(null)
   const [missions, setMissions] = useState([])
   const [selectedRunId, setSelectedRunId] = useState(null)
+  const [timeRange, setTimeRange] = useState('7d')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -49,10 +55,30 @@ const HunterRuns = () => {
     }
   }, [])
 
-  const runs = overview?.runs || []
+  const allRuns = overview?.runs || []
+  const filteredRuns = useMemo(
+    () => filterRunsByTimeRange(allRuns, timeRange),
+    [allRuns, timeRange]
+  )
+  const filteredMissions = useMemo(
+    () => filterMissionsByTimeRange(missions, timeRange),
+    [missions, timeRange]
+  )
+
+  useEffect(() => {
+    if (!filteredRuns.length) {
+      setSelectedRunId(null)
+      return
+    }
+    const stillVisible = filteredRuns.some((run) => run?.huntRun?.runId === selectedRunId)
+    if (!stillVisible) {
+      setSelectedRunId(filteredRuns[0]?.huntRun?.runId || null)
+    }
+  }, [filteredRuns, selectedRunId])
+
   const selectedRun = useMemo(
-    () => runs.find((run) => run?.huntRun?.runId === selectedRunId) || runs[0] || null,
-    [runs, selectedRunId]
+    () => filteredRuns.find((run) => run?.huntRun?.runId === selectedRunId) || filteredRuns[0] || null,
+    [filteredRuns, selectedRunId]
   )
   const insight = useMemo(() => (selectedRun ? deriveRunInsight(selectedRun) : null), [selectedRun])
 
@@ -61,7 +87,7 @@ const HunterRuns = () => {
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <Card className="flex items-center justify-center gap-3">
           <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-400" />
-          <span className="text-gray-600 dark:text-gray-300">Loading hunter runs…</span>
+          <span className="text-gray-300">Loading hunter runs…</span>
         </Card>
       </div>
     )
@@ -70,7 +96,7 @@ const HunterRuns = () => {
   if (error) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Card className="border-red-700/40 !bg-red-900/20 text-red-200">
+        <Card className="border-red-500/30 !bg-red-900/20 text-red-300">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             <span>{error}</span>
@@ -82,8 +108,28 @@ const HunterRuns = () => {
 
   if (!selectedRun) {
     return (
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Card className="text-gray-600 dark:text-gray-300">No hunter runs found.</Card>
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Radar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Hunter Runs</h1>
+          </div>
+          <label className="flex items-center gap-2 card-label">
+            <span className="card-meta uppercase tracking-wide">Show</span>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-gray-100"
+            >
+              {TIME_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <Card className="text-gray-300">
+          No hunter runs found for the selected time range.
+        </Card>
       </div>
     )
   }
@@ -102,19 +148,33 @@ const HunterRuns = () => {
           >
             <HunterRunsPageHelp />
           </InfoModalTrigger>
-          <span className="rounded-full border border-gray-300 dark:border-gray-600/50 bg-gray-100 dark:bg-gray-800/70 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-300">
-            {overview?.meta?.run_count || runs.length} runs
+          <span className="rounded-full border border-gray-600/50 bg-gray-800/70 px-2.5 py-0.5 text-xs text-gray-300">
+            {filteredRuns.length} runs
           </span>
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Baseline hosts: <span className="font-mono text-gray-800 dark:text-gray-200">{overview?.meta?.baseline_fingerprint_hosts ?? '—'}</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 card-label">
+            <span className="card-meta uppercase tracking-wide">Show</span>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-gray-100"
+            >
+              {TIME_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <div className="card-body">
+            Baseline hosts: <span className="font-mono text-gray-200">{overview?.meta?.baseline_fingerprint_hosts ?? '—'}</span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-4">
         <div className="xl:col-span-1 space-y-4">
-          <HunterTimeline runs={runs} selectedRunId={selectedRun.huntRun?.runId} onSelect={setSelectedRunId} />
-          <HunterMissionStatus missions={missions} />
+          <HunterTimeline runs={filteredRuns} selectedRunId={selectedRun.huntRun?.runId} onSelect={setSelectedRunId} />
+          <HunterMissionStatus missions={filteredMissions} onSelectRun={setSelectedRunId} />
         </div>
 
         <section className="space-y-4 sm:space-y-6 xl:col-span-3">

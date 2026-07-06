@@ -1,0 +1,37 @@
+[Unit]
+Description=SentinelZero Hunter mission (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hunter
+Group=hunter
+WorkingDirectory=/home/hunter/agent
+EnvironmentFile=/etc/sentinel-hunter/agent.env
+ExecStart=/home/hunter/agent/.venv/bin/python /home/hunter/agent/hunter.py --mission %i
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-hunter
+NoNewPrivileges=false
+PrivateTmp=true
+PrivateDevices=true
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=false
+LockPersonality=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
+

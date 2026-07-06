@@ -51,20 +51,20 @@ const LabHealthBar = ({ healthData, filter, setFilter }) => {
     <LabPanel>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
+          <Activity className="w-6 h-6 text-blue-400 shrink-0" />
           <HealthIndicator status={overallStatus} variant="pill" size="md" showText />
-          <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <span className="text-lg font-semibold text-gray-100">
             <AnimatedValue value={totalUp} />
-            <span className="text-gray-600 dark:text-gray-300">/{totalChecks}</span>
-            <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300">operational</span>
+            <span className="text-gray-300">/{totalChecks}</span>
+            <span className="ml-2 text-sm font-normal text-gray-300">operational</span>
           </span>
-          <span className="text-sm font-bold text-green-600 dark:text-green-400">
+          <span className="text-sm font-bold text-green-400">
             <AnimatedValue value={Math.round((totalUp / totalChecks) * 100)} suffix="%" />
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <Clock className="w-4 h-4 shrink-0" />
-          <span>Updated {getTimeAgo(safe.timestamp)}</span>
+        <div className="flex items-center gap-2 card-body">
+          <Clock className="w-4 h-4 shrink-0 text-gray-400" />
+          <span className="text-gray-400">Updated {getTimeAgo(safe.timestamp)}</span>
         </div>
       </div>
 
@@ -80,8 +80,8 @@ const LabHealthBar = ({ healthData, filter, setFilter }) => {
               onClick={() => setFilter(key)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-blue-600 text-white dark:bg-blue-500/30 dark:text-blue-100 border border-blue-600 dark:border-blue-400/50'
-                  : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 dark:bg-gray-800/60 dark:text-gray-300 dark:border-gray-600/50 dark:hover:bg-gray-700/60'
+                  ? 'bg-blue-500/30 text-blue-100 border border-blue-400/50'
+                  : 'bg-gray-700/40 text-gray-300 border border-gray-600/50 hover:bg-gray-700/60'
               }`}
             >
               {Icon && <Icon className="w-3.5 h-3.5" />}

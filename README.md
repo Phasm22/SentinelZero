@@ -70,6 +70,7 @@ SentinelZero/
 │   │   └── config/           # Configuration
 │   └── app.py                # Main application
 ├── frontend/react-sentinelzero/ # React frontend
+├── agent/                     # Hunter agent + pivot engine (LLM-driven scan analysis)
 ├── start-prod.sh             # Production deployment
 ├── start-dev.sh              # Development environment
 └── sentinelzero.service      # Systemd service

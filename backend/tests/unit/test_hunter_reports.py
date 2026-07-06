@@ -155,6 +155,8 @@ def test_normalize_pivot_report_includes_hunt_pivot_chain():
 def test_list_missions_reads_status_sidecars(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     reports_dir = tmp_path / "reports"
     reports_dir.mkdir(parents=True)
+    seeds_dir = reports_dir / "mission-logs" / "seeds"
+    seeds_dir.mkdir(parents=True)
     (reports_dir / "hunt-pivot-live.status.json").write_text(
         json.dumps({
             "mission_id": "pivot-live",
@@ -166,11 +168,59 @@ def test_list_missions_reads_status_sidecars(tmp_path: Path, monkeypatch: pytest
         }),
         encoding="utf-8",
     )
+    (seeds_dir / "pivot-live.json").write_text(
+        json.dumps({
+            "insight_id": "insight-42",
+            "ip": "172.16.0.10",
+            "type": "new_port",
+        }),
+        encoding="utf-8",
+    )
     monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
     missions = hunter_reports.list_missions(limit=10)
     assert len(missions) == 1
     assert missions[0]["missionId"] == "pivot-live"
     assert missions[0]["state"] in {"running", "stalled"}
+    assert missions[0]["insightId"] == "insight-42"
+    assert missions[0]["host"] == "172.16.0.10"
+    assert missions[0]["type"] == "new_port"
+
+
+def test_find_blocking_mission_by_insight_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir(parents=True)
+    seeds_dir = reports_dir / "mission-logs" / "seeds"
+    seeds_dir.mkdir(parents=True)
+    (reports_dir / "hunt-pivot-done.status.json").write_text(
+        json.dumps({
+            "mission_id": "pivot-done",
+            "state": "done",
+            "started_at": "2026-07-03T20:00:00Z",
+            "updated_at": "2026-07-03T20:05:00Z",
+        }),
+        encoding="utf-8",
+    )
+    (seeds_dir / "pivot-done.json").write_text(
+        json.dumps({"insight_id": "insight-99", "ip": "172.16.0.20", "type": "new_host"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
+    blocked = hunter_reports.find_blocking_mission({"insight_id": "insight-99", "ip": "172.16.0.20", "type": "new_host"})
+    assert blocked is not None
+    assert blocked["missionId"] == "pivot-done"
+    assert blocked["state"] == "done"
+    allowed = hunter_reports.find_blocking_mission({"insight_id": "insight-other", "ip": "172.16.0.30", "type": "new_host"})
+    assert allowed is None
+
+
+def test_read_mission_log_returns_tail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    reports_dir = tmp_path / "reports"
+    logs_dir = reports_dir / "mission-logs"
+    logs_dir.mkdir(parents=True)
+    (logs_dir / "pivot-abc.log").write_text("line one\nline two\n", encoding="utf-8")
+    monkeypatch.setenv("HUNTER_REPORTS_DIR", str(reports_dir))
+    assert hunter_reports.read_mission_log("pivot-abc") == "line one\nline two\n"
+    assert hunter_reports.read_mission_log("missing") is None
 
 
 def test_hunter_overview_reads_reports_and_baseline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

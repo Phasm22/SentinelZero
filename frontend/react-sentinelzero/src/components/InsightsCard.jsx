@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { PlusCircle, AlertTriangle, CheckCircle, Clock, Filter, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { apiService } from '../utils/api'
 import { useToast } from '../contexts/ToastContext'
@@ -69,6 +69,7 @@ const formatVerdictPending = (insight) => {
 
 const PIVOT_ELIGIBLE_TYPES = new Set([
   'new_host', 'new_port', 'service_change', 'new_vuln_critical', 'new_vuln_high',
+  'registry_gap', 'inventory_gap', 'sensor_gap', 'correlated',
 ])
 
 const isPivotEligible = (insight) => {
@@ -94,10 +95,27 @@ const getPivotIneligibleHint = (insight) => {
   }
 
   if (!PIVOT_ELIGIBLE_TYPES.has(insight.type)) {
-    return `Escalated, but ${insight.type.replace(/_/g, ' ')} is not pivot-eligible (inventory/gap types).`
+    return `Escalated, but ${insight.type.replace(/_/g, ' ')} is not a pivot-eligible finding type.`
   }
 
   return 'Escalated, but does not meet pivot criteria (Lab + single IP + eligible type).'
+}
+
+const BLOCKING_MISSION_STATES = new Set(['running', 'queued', 'done'])
+
+const getPivotMissionState = (insight, missionsByInsightId) => {
+  const mission = missionsByInsightId.get(insight.id)
+  if (!mission) return null
+  const state = mission.state || 'unknown'
+  if (!BLOCKING_MISSION_STATES.has(state)) return null
+  return state
+}
+
+const getPivotButtonLabel = (state, isSpawning) => {
+  if (isSpawning) return 'Starting pivot…'
+  if (state === 'running' || state === 'queued') return 'Pivot running…'
+  if (state === 'done') return 'Pivot completed'
+  return 'Start pivot mission'
 }
 
 const InsightsCard = () => {
@@ -109,9 +127,37 @@ const InsightsCard = () => {
   const [expandedId, setExpandedId] = useState(null)
   const [verdictsTick, setVerdictsTick] = useState(0)
   const [spawningPivotId, setSpawningPivotId] = useState(null)
+  const [pivotMissions, setPivotMissions] = useState([])
 
   const { showToast }  = useToast()
   const { socket }     = useSocket()
+
+  const missionsByInsightId = useMemo(() => {
+    const map = new Map()
+    for (const mission of pivotMissions) {
+      if (!mission?.insightId) continue
+      const existing = map.get(mission.insightId)
+      if (!existing) {
+        map.set(mission.insightId, mission)
+        continue
+      }
+      const existingTs = Date.parse(existing.updatedAt || existing.startedAt || 0) || 0
+      const missionTs = Date.parse(mission.updatedAt || mission.startedAt || 0) || 0
+      if (missionTs >= existingTs) {
+        map.set(mission.insightId, mission)
+      }
+    }
+    return map
+  }, [pivotMissions])
+
+  const loadPivotMissions = useCallback(async () => {
+    try {
+      const payload = await apiService.getHunterMissions(50)
+      setPivotMissions(payload?.missions || [])
+    } catch (error) {
+      console.error('Error loading pivot missions:', error)
+    }
+  }, [])
 
   const priorityColors = {
     100: 'text-red-400 bg-red-900/30 border-red-400/30',
@@ -172,6 +218,10 @@ const InsightsCard = () => {
     loadInsights()
   }, [loadInsights, verdictsTick])
 
+  useEffect(() => {
+    loadPivotMissions()
+  }, [loadPivotMissions])
+
   // Socket: refresh when agent posts verdicts
   useEffect(() => {
     if (!socket) return
@@ -203,9 +253,19 @@ const InsightsCard = () => {
 
   const handleSpawnPivot = async (e, insight) => {
     e.stopPropagation()
+    const existingState = getPivotMissionState(insight, missionsByInsightId)
+    if (existingState) {
+      const mission = missionsByInsightId.get(insight.id)
+      showToast(
+        `Pivot mission already ${existingState}${mission?.missionId ? `: ${mission.missionId}` : ''}`,
+        'warning'
+      )
+      return
+    }
     setSpawningPivotId(insight.id)
     try {
       const result = await apiService.spawnHunterMission({
+        insight_id: insight.id,
         ip: insight.host,
         type: insight.type,
         scan_id: insight.scan_id,
@@ -214,9 +274,17 @@ const InsightsCard = () => {
         iface: 'enp6s18',
       })
       showToast(`Pivot mission started: ${result.mission_id}`, 'success')
+      await loadPivotMissions()
     } catch (error) {
-      const msg = error?.response?.data?.reason || error?.response?.data?.error || 'Failed to start pivot mission'
-      showToast(msg, 'danger')
+      const status = error?.response?.status
+      const data = error?.response?.data || {}
+      if (status === 409 && data.status === 'duplicate') {
+        showToast(data.reason || `Pivot mission already ${data.state || 'active'}`, 'warning')
+        await loadPivotMissions()
+      } else {
+        const msg = data.reason || data.error || 'Failed to start pivot mission'
+        showToast(msg, 'danger')
+      }
     } finally {
       setSpawningPivotId(null)
     }
@@ -232,8 +300,8 @@ const InsightsCard = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-br from-green-900/80 to-gray-900/60 border border-green-400/30 rounded-md shadow-xl p-6 mb-8" data-testid="insights-card">
-        <h2 className="text-2xl font-title font-bold text-green-200 mb-4 flex items-center gap-2">
+      <div className="card-glass p-6 mb-8" data-testid="insights-card">
+        <h2 className="text-2xl card-title mb-4 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-green-400" /> Recent Insights
         </h2>
         <div className="animate-pulse space-y-3">
@@ -246,9 +314,9 @@ const InsightsCard = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-green-900/80 to-gray-900/60 border border-green-400/30 rounded-md shadow-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8" data-testid="insights-card">
+    <div className="card-glass p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8" data-testid="insights-card">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-title font-bold text-green-200 flex items-center gap-2">
+        <h2 className="text-lg sm:text-xl lg:text-2xl card-title flex items-center gap-2">
           <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-400" />
           Recent Insights
           <InfoModalTrigger
@@ -273,7 +341,7 @@ const InsightsCard = () => {
 
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-gray-400 hover:text-gray-200 transition-colors"
           data-testid="filter-toggle-btn"
         >
           <Filter className="w-5 h-5" />
@@ -334,7 +402,7 @@ const InsightsCard = () => {
       )}
 
       {insights.length === 0 ? (
-        <div className="text-center py-6 sm:py-8 text-gray-400" data-testid="no-insights">
+        <div className="text-center py-6 sm:py-8 card-meta" data-testid="no-insights">
           <PlusCircle className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 mx-auto mb-2 sm:mb-3 opacity-50" data-testid="no-insights-icon" />
           <p className="text-sm sm:text-base" data-testid="no-insights-text">No insights available yet</p>
           <p className="text-xs sm:text-sm" data-testid="no-insights-hint">Complete a scan to generate insights</p>
@@ -349,7 +417,7 @@ const InsightsCard = () => {
               role="button"
               tabIndex={0}
               aria-expanded={isExpanded}
-              className={`p-2 sm:p-3 rounded-md border transition-colors ${getPriorityColor(insight.priority)} ${!insight.is_read ? 'ring-1 ring-current' : ''} cursor-pointer hover:bg-gray-100/60 dark:hover:bg-white/5 ${isExpanded ? 'bg-gray-100/50 dark:bg-white/5' : ''}`}
+              className={`p-2 sm:p-3 rounded-md border transition-colors ${getPriorityColor(insight.priority)} ${!insight.is_read ? 'ring-1 ring-current' : ''} cursor-pointer hover:bg-white/5 ${isExpanded ? 'bg-white/5' : ''}`}
               onClick={() => toggleExpand(insight.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -367,7 +435,7 @@ const InsightsCard = () => {
                 <div className="flex-1 min-w-0" data-testid="insight-content">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-white font-medium leading-tight text-sm sm:text-base" data-testid="insight-message">{insight.message}</p>
+                      <p className="text-gray-100 font-medium leading-tight text-sm sm:text-base" data-testid="insight-message">{insight.message}</p>
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1" data-testid="insight-meta">
                         <span className="text-xs text-gray-400 truncate" data-testid="insight-host-time">
                           {insight.host} • {formatTime(insight.timestamp)}
@@ -414,7 +482,7 @@ const InsightsCard = () => {
                         <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     )}
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0 card-meta">
                       <span className="hidden sm:inline text-xs">Details</span>
                       {isExpanded ? (
                         <ChevronDown className="w-4 h-4" aria-hidden="true" />
@@ -445,16 +513,20 @@ const InsightsCard = () => {
                   {insight.verdict_evidence && (
                     <p className="text-xs text-gray-400 font-mono leading-relaxed mt-1">{insight.verdict_evidence}</p>
                   )}
-                  {isPivotEligible(insight) && (
+                  {isPivotEligible(insight) && (() => {
+                    const pivotState = getPivotMissionState(insight, missionsByInsightId)
+                    const isSpawning = spawningPivotId === insight.id
+                    const isBlocked = Boolean(pivotState) || isSpawning
+                    return (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={(e) => handleSpawnPivot(e, insight)}
-                        disabled={spawningPivotId === insight.id}
+                        disabled={isBlocked}
                         className="text-xs px-3 py-1.5 rounded border border-purple-500/40 bg-purple-900/30 text-purple-200 hover:bg-purple-900/50 disabled:opacity-50"
                         data-testid={`spawn-pivot-${insight.id}`}
                       >
-                        {spawningPivotId === insight.id ? 'Starting pivot…' : 'Start pivot mission'}
+                        {getPivotButtonLabel(pivotState, isSpawning)}
                       </button>
                       <InfoModalTrigger
                         title="Start Pivot Mission"
@@ -465,7 +537,8 @@ const InsightsCard = () => {
                         <PivotMissionButtonHelp />
                       </InfoModalTrigger>
                     </div>
-                  )}
+                    )
+                  })()}
                   {(() => {
                     const pivotHint = getPivotIneligibleHint(insight)
                     if (!pivotHint) return null
@@ -501,7 +574,7 @@ const InsightsCard = () => {
 
       {summary.total > insights.length && (
         <div className="mt-4 text-center" data-testid="insights-summary">
-          <p className="text-sm text-gray-400" data-testid="insights-count">
+          <p className="card-meta" data-testid="insights-count">
             Showing {insights.length} of {summary.total} insights
           </p>
         </div>

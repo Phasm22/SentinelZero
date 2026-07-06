@@ -18,6 +18,10 @@ from ..config.database import db
 from ..config.paths import make_scan_xml_path, make_named_scan_xml_path, get_scans_dir
 from .insights import generate_and_store_insights
 
+# NSE script ids kept alongside vuln-tagged scripts even though their id doesn't
+# contain "vuln" -- these feed web-recon gap-detection for the Hunter pivot engine.
+HTTP_RECON_SCRIPT_IDS = {"http-title", "http-headers", "http-server-header", "http-generator"}
+
 
 def _target_is_on_link(target_network):
     """True if the target CIDR is directly reachable (ARP-capable) on a local interface,
@@ -382,7 +386,7 @@ def _finalize_scan_from_xml(
 
                     for script_el in port_el.findall('script'):
                         script_id = script_el.attrib.get('id', '')
-                        if 'vuln' not in script_id:
+                        if 'vuln' not in script_id and script_id not in HTTP_RECON_SCRIPT_IDS:
                             continue
                         if script_id == 'vulners' and script_el.attrib.get('output'):
                             host_ip = host_obj.get('ip')
@@ -414,7 +418,7 @@ def _finalize_scan_from_xml(
             if host_ip:
                 for script_el in host.findall('.//script'):
                     script_id = script_el.attrib.get('id', '')
-                    if 'vuln' not in script_id:
+                    if 'vuln' not in script_id and script_id not in HTTP_RECON_SCRIPT_IDS:
                         continue
                     if script_id == 'vulners' and script_el.attrib.get('output'):
                         cpe = None
@@ -683,14 +687,17 @@ def run_nmap_scan(scan_id, scan_type, security_settings=None, socketio=None, app
             if scan_type_normalized == 'full tcp':
                 # Balanced deep scan: broader ports + service/OS without full -p- (T2-class) sweep
                 port_spec = _FULL_TCP_PORT_SPEC
+                # No --open here: a host with zero open ports in port_spec is still a live
+                # host and must appear in the report. --open makes nmap drop such hosts from
+                # the XML entirely, which undercounts hosts on scans of large subnets.
                 if _priv_fallback:
                     cmd += [
-                        '-sT', '-p', port_spec, '--open',
+                        '-sT', '-p', port_spec,
                         '-T3', '--max-retries', '2', '--host-timeout', '8m',
                     ]
                 else:
                     cmd += [
-                        '-sS', '-p', port_spec, '--open',
+                        '-sS', '-p', port_spec,
                         '-T3', '--max-retries', '2', '--host-timeout', '8m',
                         '--min-rate', '150', '--max-rate', '600',
                     ]

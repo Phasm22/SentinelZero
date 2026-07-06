@@ -1,0 +1,27 @@
+agent_id: "opnsense"
+hostname: "opnsense"
+host_ip:  "172.16.0.1"
+role:     "network-sensor"
+tags:
+  - "category:network"
+  - "source:opnsense"
+
+api_url: "http://172.16.0.254:5000"
+api_key: ""   # SENSOR_API_KEY from backend/.env
+
+opnsense_url:    "https://172.16.0.1"
+opnsense_key:    ""   # from OPNsense: System > Access > Users > API keys
+opnsense_secret: ""
+
+verify_ssl: false   # set true if OPNsense has a valid cert
+interval:   60      # seconds between collection cycles
+log_level:  "INFO"
+
+collectors:
+  system_info:     true
+  gateway_status:  true
+  interface_stats: true
+  traffic:         true
+  arp_table:       true
+  dhcp_leases:     true
+  ids_alerts:      true  # requires Intrusion Detection (Suricata) to be enabled

@@ -9,6 +9,7 @@ import subprocess
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from ..models.scan import Scan
 from ..config.database import db
@@ -17,10 +18,12 @@ from . import config_service
 from .diff import compute_scan_diff
 from .asset_registry import is_home_network
 from .scan_scope import network_short_label
+from . import hunter_reports
 
 logger = logging.getLogger(__name__)
 
-_AGENT_DIR    = os.environ.get("SENTINEL_AGENT_DIR", os.path.expanduser("~/agent"))
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_AGENT_DIR    = os.environ.get("SENTINEL_AGENT_DIR", str(_REPO_ROOT / "agent"))
 _AGENT_SCRIPT = os.path.join(_AGENT_DIR, "agent.py")
 _AGENT_PYTHON = os.path.join(_AGENT_DIR, ".venv", "bin", "python")
 
@@ -620,6 +623,16 @@ def spawn_mission(seed: dict) -> dict:
 
     if not isinstance(seed, dict) or not str(seed.get("ip") or "").strip():
         return {"status": "error", "reason": "seed must include ip"}
+
+    existing = hunter_reports.find_blocking_mission(seed)
+    if existing is not None:
+        state = existing.get("state") or "unknown"
+        return {
+            "status": "duplicate",
+            "mission_id": existing.get("missionId"),
+            "state": state,
+            "reason": f"A pivot mission for this insight is already {state}",
+        }
 
     pivot_script = _pivot_script()
     if not os.path.exists(pivot_script):

@@ -18,7 +18,7 @@ const Button = ({
   const baseClasses = `
     inline-flex items-center justify-center font-medium rounded-lg 
     transition-all duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900
     disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100
     active:scale-95 hover:scale-105
     group relative overflow-hidden
@@ -72,15 +72,15 @@ const Button = ({
     
     // Ghost - Subtle actions
     ghost: `
-      bg-transparent hover:bg-gray-700/50 text-gray-300 hover:text-white
-      border border-gray-600 hover:border-gray-500 backdrop-blur-sm
+      bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white
+      border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 backdrop-blur-sm
       focus:ring-gray-500 shadow-sm hover:shadow-md
     `,
     
     // Outline - Outlined actions
     outline: `
-      bg-transparent hover:bg-blue-600/10 text-blue-400 hover:text-blue-300
-      border border-blue-500 hover:border-blue-400 focus:ring-blue-500
+      bg-transparent hover:bg-blue-500/10 text-blue-300 hover:text-blue-200
+      border border-blue-500/40 hover:border-blue-400 focus:ring-blue-500
       shadow-sm hover:shadow-md hover:shadow-blue-500/25
     `,
     

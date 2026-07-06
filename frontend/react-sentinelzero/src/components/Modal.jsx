@@ -41,12 +41,12 @@ const Modal = ({
         aria-labelledby={title ? 'modal-title' : undefined}
       >
         <div
-          className={`relative w-full ${sizes[size]} transform rounded-lg bg-gray-800 border border-gray-700 shadow-2xl transition-all`}
+          className={`relative w-full ${sizes[size]} transform rounded-lg card-glass shadow-2xl transition-all`}
           data-testid="modal-content"
           onClick={(e) => e.stopPropagation()}
         >
           {title && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700" data-testid="modal-header">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-gray-700" data-testid="modal-header">
               <h3 id="modal-title" className="text-lg font-semibold text-gray-100 font-title" data-testid="modal-title">
                 {title}
               </h3>
@@ -54,7 +54,7 @@ const Modal = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-300 transition-colors"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                   data-testid="modal-close-btn"
                   aria-label="Close"
                 >
