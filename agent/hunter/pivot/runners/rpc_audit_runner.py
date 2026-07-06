@@ -52,6 +52,7 @@ def run_rpc_audit(ip: str, port: int = 111, *, fixture: bool = False, timeout: i
     result = subprocess.run(
         [
             "nmap",
+            "-Pn",
             "--script", "rpcinfo",
             "-p", str(port),
             "-oX", "-",

@@ -53,6 +53,7 @@ def run_tls_recon(ip: str, port: int = 443, *, fixture: bool = False, timeout: i
     result = subprocess.run(
         [
             "nmap",
+            "-Pn",
             "--script", "ssl-cert,ssl-enum-ciphers",
             "-p", str(port),
             "-oX", "-",

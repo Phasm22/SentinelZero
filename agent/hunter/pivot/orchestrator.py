@@ -20,9 +20,11 @@ from .runners.asset_expectation_runner import (
     run_asset_expectation_check,
 )
 from .proxmox_recon_parse import PROXMOX_PORTS, recommend_proxmox_action
+from .rdp_recon_parse import RDP_PORTS, recommend_rdp_action
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.proxmox_recon_runner import run_proxmox_recon
+from .runners.rdp_recon_runner import run_rdp_recon
 from .runners.rpc_audit_runner import run_rpc_audit
 from .runners.smb_enum_runner import run_smb_enum
 from .runners.ssh_audit_runner import run_ssh_audit
@@ -48,6 +50,7 @@ Available actions (respond with JSON only):
 {"action":"ssh_audit","ip":"<target>"}
 {"action":"rpc_audit","ip":"<target>"}
 {"action":"proxmox_recon","ip":"<target>"}
+{"action":"rdp_recon","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -78,6 +81,10 @@ Rules:
   identifies a Proxmox VE hypervisor management plane (node name, pve-api-daemon) from the
   response Server header and page title. It is identification, never an authenticated API
   call. Do not call complete while an open 8006 surface has not been examined by proxmox_recon.
+- Run rdp_recon when 3389/tcp is open -- it reads the RDP identity (hostname, domain, OS
+  build) and the security-layer / NLA posture from the handshake via passive nmap NSE. It is
+  identification, never a credential/CredSSP authentication attempt. Do not call complete
+  while an open RDP surface has not been examined by rdp_recon.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -211,6 +218,10 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
     # proxmox_recon is a live single-GET tool with no seed-scan equivalent, so it
     # has no hydrated form -- gate purely on whether it has run this mission.
     if "proxmox_recon" not in types and (port_nums & set(PROXMOX_PORTS)):
+        return True
+    if "rdp_recon" not in types and runtime.hydrated_rdp_recon is None and (
+        port_nums & set(RDP_PORTS)
+    ):
         return True
     return False
 
@@ -354,6 +365,35 @@ def _build_proxmox_finding(
     }
 
 
+def _build_rdp_finding(
+    ip: str, port: int, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_rdp_exposure finding, shared by the live rdp_recon dispatch and
+    the hydrated-evidence path so both grade identically."""
+    parsed = bool(recon.get("parsed"))
+    responded = bool(recon.get("responded", parsed))
+    nla_enabled = bool(recon.get("nla_enabled"))
+    hostname = recon.get("hostname")
+    return {
+        "ip": ip,
+        "type": "pivot_rdp_exposure",
+        "description": (
+            f"rdp exposure on {ip}:{port}: host={hostname!r} nla={nla_enabled} "
+            f"os={recon.get('os_build')}"
+        ),
+        "port": port,
+        "open_ports": open_ports,
+        "hostname": hostname,
+        "domain": recon.get("domain"),
+        "os_build": recon.get("os_build"),
+        "nla_enabled": nla_enabled,
+        "security_layers": recon.get("security_layers") or [],
+        "recommended_action": recommend_rdp_action(
+            responded=responded, nla_enabled=nla_enabled, parsed=parsed
+        ),
+    }
+
+
 def _build_asset_finding(
     ip: str, result: dict[str, Any], open_ports: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -409,6 +449,7 @@ class PivotRuntime:
     hydrated_tls_recon: dict[str, Any] | None = None
     hydrated_ssh_audit: dict[str, Any] | None = None
     hydrated_rpc_audit: dict[str, Any] | None = None
+    hydrated_rdp_recon: dict[str, Any] | None = None
 
 
 def _log(runtime: PivotRuntime, msg: str) -> None:
@@ -623,6 +664,24 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "rdp_recon":
+        result = run_rdp_recon(ip, port=3389, fixture=cfg.fixture)
+        desc = f"rdp_recon on {ip}:3389: host={result.get('hostname')!r} nla={result.get('nla_enabled')}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="rdp_recon",
+            description=desc,
+            action="rdp_recon",
+            result=result,
+        )
+        finding = _build_rdp_finding(ip, 3389, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -688,6 +747,12 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in PROXMOX_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "proxmox_recon", "ip": ip}
+    if (
+        "rdp_recon" not in types
+        and runtime.hydrated_rdp_recon is None
+        and any(int(p.get("port", 0)) in RDP_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "rdp_recon", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -720,7 +785,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
     if config.fixture:
         hydrated = config.fixture_hydration or {
             "open_ports": [], "http_recon": None, "tls_recon": None, "ssh_audit": None,
-            "rpc_audit": None, "source_scan_id": board.scan_id,
+            "rpc_audit": None, "rdp_recon": None, "source_scan_id": board.scan_id,
         }
     else:
         hydrated = hydrate_seed(board.seed_ip, board.scan_id)
@@ -852,6 +917,26 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
         )
         runtime.board.findings.append(rpc_finding)
         runtime.terminal_findings.append(rpc_finding)
+    if hydrated.get("rdp_recon"):
+        runtime.hydrated_rdp_recon = hydrated["rdp_recon"]
+        # Reused rdp_recon evidence terminates to a typed finding here rather than
+        # dead-ending at the generic pivot_recon fallback. Event type is
+        # "rdp_exposure" (not "rdp_recon") because no live NSE run occurred.
+        rdp_finding = _build_rdp_finding(
+            board.seed_ip, 3389, hydrated["rdp_recon"], board.open_ports
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=runtime.board.last_event_id,
+            ip=board.seed_ip,
+            type="rdp_exposure",
+            description=rdp_finding["description"],
+            action="rdp_exposure",
+            result=hydrated["rdp_recon"],
+        )
+        runtime.board.findings.append(rdp_finding)
+        runtime.terminal_findings.append(rdp_finding)
 
     write_status(
         config.reports_dir,
@@ -873,6 +958,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
                 "hydrated_tls_recon": runtime.hydrated_tls_recon,
                 "hydrated_ssh_audit": runtime.hydrated_ssh_audit,
                 "hydrated_rpc_audit": runtime.hydrated_rpc_audit,
+                "hydrated_rdp_recon": runtime.hydrated_rdp_recon,
                 "instructions": "Begin pivot chain from seed host.",
             }, indent=2),
         },
@@ -928,7 +1014,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             if (
                 action in (
                     "smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit",
-                    "proxmox_recon",
+                    "proxmox_recon", "rdp_recon",
                 )
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)

@@ -51,6 +51,7 @@ def run_http_recon(ip: str, port: int = 80, *, fixture: bool = False, timeout: i
     result = subprocess.run(
         [
             "nmap",
+            "-Pn",
             "--script", "http-title,http-headers,http-server-header,http-generator",
             "-p", str(port),
             "-oX", "-",

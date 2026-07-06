@@ -53,6 +53,7 @@ def run_ssh_audit(ip: str, port: int = 22, *, fixture: bool = False, timeout: in
     result = subprocess.run(
         [
             "nmap",
+            "-Pn",
             "--script", "ssh-hostkey,ssh2-enum-algos",
             "--script-args", "ssh_hostkey=full",
             "-p", str(port),

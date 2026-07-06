@@ -6,6 +6,7 @@ from typing import Any
 
 from ..http_recon_parse import HTTP_PORTS
 from ..proxmox_recon_parse import PROXMOX_PORTS
+from ..rdp_recon_parse import RDP_PORTS
 from ..rpc_audit_parse import RPC_PORTS
 from ..ssh_audit_parse import SSH_PORTS
 from ..tls_recon_parse import TLS_PORTS
@@ -15,7 +16,7 @@ from ..tls_recon_parse import TLS_PORTS
 # like 8006 (Proxmox) and 8581 (Homebridge), so the discovery scan sweeps these
 # explicitly and merges -- otherwise those runners never trigger on a live host.
 PIVOT_SERVICE_PORTS: tuple[int, ...] = tuple(sorted(set(
-    HTTP_PORTS + TLS_PORTS + SSH_PORTS + RPC_PORTS + PROXMOX_PORTS + (445,)
+    HTTP_PORTS + TLS_PORTS + SSH_PORTS + RPC_PORTS + PROXMOX_PORTS + RDP_PORTS + (445,)
 )))
 
 
@@ -74,8 +75,10 @@ def run_nmap_scan(ip: str, *, fixture: bool = False, timeout: int = 120) -> dict
     if fixture:
         return parse_nmap_xml(FIXTURE_NMAP_XML.format(ip=ip), ip)
 
+    # -Pn: the pivot always targets a known seed host, so skip host discovery --
+    # ping-filtered hosts (Windows firewall, hardened Linux) must not read as down.
     # Pass 1: default top-1000 discovery (feeds asset-drift + the common runners).
-    top = _run_nmap(["nmap", "-sV", "--open", "-T4", "-oX", "-", ip], timeout)
+    top = _run_nmap(["nmap", "-Pn", "-sV", "--open", "-T4", "-oX", "-", ip], timeout)
     if top.returncode != 0 and not top.stdout:
         return {"ip": ip, "error": top.stderr.strip() or "nmap failed"}
     result = parse_nmap_xml(top.stdout, ip)
@@ -86,7 +89,7 @@ def run_nmap_scan(ip: str, *, fixture: bool = False, timeout: int = 120) -> dict
     # specialized runners (e.g. proxmox_recon on 8006) actually trigger.
     port_spec = ",".join(str(p) for p in PIVOT_SERVICE_PORTS)
     extra = _run_nmap(
-        ["nmap", "-sV", "--open", "-T4", "-p", port_spec, "-oX", "-", ip], timeout
+        ["nmap", "-Pn", "-sV", "--open", "-T4", "-p", port_spec, "-oX", "-", ip], timeout
     )
     if extra.stdout:
         extra_result = parse_nmap_xml(extra.stdout, ip)
@@ -110,6 +113,7 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
     - ``ssh_audit`` when 22/tcp is open -- host key + algorithm posture.
     - ``rpc_audit`` when 111/tcp is open -- RPC program inventory (NFS/mountd/NIS).
     - ``proxmox_recon`` when 8006/tcp is open -- Proxmox hypervisor identification.
+    - ``rdp_recon`` when 3389/tcp is open -- RDP identity + NLA posture.
     - ``asset_expectation_check`` whenever any port is open -- drift analysis is
       port-agnostic and never re-probes the host.
 
@@ -130,6 +134,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
         recommendations.append("rpc_audit")
     if port_nums & set(PROXMOX_PORTS):
         recommendations.append("proxmox_recon")
+    if port_nums & set(RDP_PORTS):
+        recommendations.append("rdp_recon")
     if open_ports:
         recommendations.append("asset_expectation_check")
     return {

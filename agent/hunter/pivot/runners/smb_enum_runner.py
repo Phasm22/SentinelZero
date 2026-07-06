@@ -21,7 +21,7 @@ def run_smb_enum(ip: str, *, fixture: bool = False, timeout: int = 120) -> dict[
 
     # Lightweight share listing via smbclient if available; fall back to nmap script.
     result = subprocess.run(
-        ["nmap", "-p445", "--script", "smb-enum-shares", "-oN", "-", ip],
+        ["nmap", "-Pn", "-p445", "--script", "smb-enum-shares", "-oN", "-", ip],
         capture_output=True,
         text=True,
         timeout=timeout,
