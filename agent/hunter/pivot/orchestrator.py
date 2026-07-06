@@ -19,8 +19,10 @@ from .runners.asset_expectation_runner import (
     recommend_asset_action,
     run_asset_expectation_check,
 )
+from .dns_recon_parse import DNS_PORTS, recommend_dns_action
 from .proxmox_recon_parse import PROXMOX_PORTS, recommend_proxmox_action
 from .rdp_recon_parse import RDP_PORTS, recommend_rdp_action
+from .runners.dns_recon_runner import run_dns_recon
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.proxmox_recon_runner import run_proxmox_recon
@@ -51,6 +53,7 @@ Available actions (respond with JSON only):
 {"action":"rpc_audit","ip":"<target>"}
 {"action":"proxmox_recon","ip":"<target>"}
 {"action":"rdp_recon","ip":"<target>"}
+{"action":"dns_recon","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -85,6 +88,10 @@ Rules:
   build) and the security-layer / NLA posture from the handshake via passive nmap NSE. It is
   identification, never a credential/CredSSP authentication attempt. Do not call complete
   while an open RDP surface has not been examined by rdp_recon.
+- Run dns_recon when 53/tcp is open -- native DNS queries that identify the resolver software
+  (version.bind) and test whether it recursively resolves external names for us (open
+  resolver). It is a normal DNS lookup, never a zone transfer or cache-poisoning attempt. Do
+  not call complete while an open DNS surface has not been examined by dns_recon.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -222,6 +229,10 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
     if "rdp_recon" not in types and runtime.hydrated_rdp_recon is None and (
         port_nums & set(RDP_PORTS)
     ):
+        return True
+    # dns_recon is a live native-DNS probe with no seed-scan equivalent, so it has
+    # no hydrated form -- gate purely on whether it has run this mission.
+    if "dns_recon" not in types and (port_nums & set(DNS_PORTS)):
         return True
     return False
 
@@ -390,6 +401,36 @@ def _build_rdp_finding(
         "security_layers": recon.get("security_layers") or [],
         "recommended_action": recommend_rdp_action(
             responded=responded, nla_enabled=nla_enabled, parsed=parsed
+        ),
+    }
+
+
+def _build_dns_finding(
+    ip: str, port: int, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_dns_exposure finding from a dns_recon result."""
+    recursion = bool(recon.get("recursion_available"))
+    software = recon.get("software")
+    version = recon.get("version")
+    if recursion:
+        desc = f"open DNS resolver on {ip}:{port} (software={software!r}, recursion available)"
+    elif recon.get("responded"):
+        desc = f"DNS server on {ip}:{port} (software={software!r}, recursion refused)"
+    else:
+        desc = f"{ip}:{port} did not answer DNS probes"
+    return {
+        "ip": ip,
+        "type": "pivot_dns_exposure",
+        "description": desc,
+        "port": port,
+        "open_ports": open_ports,
+        "software": software,
+        "version": version,
+        "recursion_available": recursion,
+        "recommended_action": recommend_dns_action(
+            responded=bool(recon.get("responded")),
+            recursion_available=recursion,
+            recursion_tested=bool(recon.get("recursion_tested")),
         ),
     }
 
@@ -682,6 +723,27 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "dns_recon":
+        result = run_dns_recon(ip, port=53, fixture=cfg.fixture)
+        desc = (
+            f"dns_recon on {ip}:53: software={result.get('software')!r} "
+            f"recursion={result.get('recursion_available')}"
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="dns_recon",
+            description=desc,
+            action="dns_recon",
+            result=result,
+        )
+        finding = _build_dns_finding(ip, 53, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -753,6 +815,11 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in RDP_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "rdp_recon", "ip": ip}
+    if (
+        "dns_recon" not in types
+        and any(int(p.get("port", 0)) in DNS_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "dns_recon", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -1014,7 +1081,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             if (
                 action in (
                     "smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit",
-                    "proxmox_recon", "rdp_recon",
+                    "proxmox_recon", "rdp_recon", "dns_recon",
                 )
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)

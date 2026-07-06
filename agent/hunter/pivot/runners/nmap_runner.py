@@ -4,6 +4,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from typing import Any
 
+from ..dns_recon_parse import DNS_PORTS
 from ..http_recon_parse import HTTP_PORTS
 from ..proxmox_recon_parse import PROXMOX_PORTS
 from ..rdp_recon_parse import RDP_PORTS
@@ -16,7 +17,8 @@ from ..tls_recon_parse import TLS_PORTS
 # like 8006 (Proxmox) and 8581 (Homebridge), so the discovery scan sweeps these
 # explicitly and merges -- otherwise those runners never trigger on a live host.
 PIVOT_SERVICE_PORTS: tuple[int, ...] = tuple(sorted(set(
-    HTTP_PORTS + TLS_PORTS + SSH_PORTS + RPC_PORTS + PROXMOX_PORTS + RDP_PORTS + (445,)
+    HTTP_PORTS + TLS_PORTS + SSH_PORTS + RPC_PORTS + PROXMOX_PORTS + RDP_PORTS
+    + DNS_PORTS + (445,)
 )))
 
 
@@ -114,6 +116,7 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
     - ``rpc_audit`` when 111/tcp is open -- RPC program inventory (NFS/mountd/NIS).
     - ``proxmox_recon`` when 8006/tcp is open -- Proxmox hypervisor identification.
     - ``rdp_recon`` when 3389/tcp is open -- RDP identity + NLA posture.
+    - ``dns_recon`` when 53/tcp is open -- resolver software + open-recursion test.
     - ``asset_expectation_check`` whenever any port is open -- drift analysis is
       port-agnostic and never re-probes the host.
 
@@ -136,6 +139,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
         recommendations.append("proxmox_recon")
     if port_nums & set(RDP_PORTS):
         recommendations.append("rdp_recon")
+    if port_nums & set(DNS_PORTS):
+        recommendations.append("dns_recon")
     if open_ports:
         recommendations.append("asset_expectation_check")
     return {
