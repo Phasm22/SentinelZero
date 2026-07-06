@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 from ..http_recon_parse import HTTP_PORTS
+from ..ssh_audit_parse import SSH_PORTS
 from ..tls_recon_parse import TLS_PORTS
 
 
@@ -77,6 +78,7 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
       3128/8006/8581).
     - ``tls_recon`` when a TLS surface port is open (443/8443) -- cert/cipher
       posture, complementary to http_recon's content identification.
+    - ``ssh_audit`` when 22/tcp is open -- host key + algorithm posture.
     - ``asset_expectation_check`` whenever any port is open -- drift analysis is
       port-agnostic and never re-probes the host.
 
@@ -91,6 +93,8 @@ def triage_ports(scan_result: dict[str, Any]) -> dict[str, Any]:
         recommendations.append("http_recon")
     if port_nums & set(TLS_PORTS):
         recommendations.append("tls_recon")
+    if port_nums & set(SSH_PORTS):
+        recommendations.append("ssh_audit")
     if open_ports:
         recommendations.append("asset_expectation_check")
     return {

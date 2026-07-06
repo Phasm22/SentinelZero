@@ -22,8 +22,10 @@ from .runners.asset_expectation_runner import (
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
 from .runners.smb_enum_runner import run_smb_enum
+from .runners.ssh_audit_runner import run_ssh_audit
 from .runners.tls_recon_runner import run_tls_recon
 from .scope import ScopeGuard
+from .ssh_audit_parse import SSH_PORTS, recommend_ssh_action
 from .status import write_status
 from .tls_recon_parse import TLS_PORTS, recommend_tls_action
 
@@ -39,6 +41,7 @@ Available actions (respond with JSON only):
 {"action":"smb_enum","ip":"<target>"}
 {"action":"http_recon","ip":"<target>"}
 {"action":"tls_recon","ip":"<target>"}
+{"action":"ssh_audit","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -57,6 +60,10 @@ Rules:
   page content, tls_recon reports the certificate/cipher posture. On a host with 443 or 8443
   open, run BOTH before completing -- do not treat http_recon alone as sufficient. Do not
   call complete while an open HTTP or TLS surface has not been examined by its runner.
+- Run ssh_audit when 22/tcp is open -- it enumerates the host keys and the offered key
+  exchange / cipher / MAC algorithms via passive nmap NSE and flags deprecated crypto. It is
+  posture identification, never authentication or brute force. Do not call complete while an
+  open SSH surface has not been examined by ssh_audit.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -179,6 +186,10 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
         port_nums & set(TLS_PORTS)
     ):
         return True
+    if "ssh_audit" not in types and runtime.hydrated_ssh_audit is None and (
+        port_nums & set(SSH_PORTS)
+    ):
+        return True
     return False
 
 
@@ -219,6 +230,47 @@ def _build_tls_finding(
             weak_protocols=weak_protocols,
             cipher_grade=cipher_grade,
             cert_parsed=cert_parsed,
+        ),
+    }
+
+
+def _build_ssh_finding(
+    ip: str, port: int, audit: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_ssh_posture finding, shared by the live ssh_audit dispatch and
+    the hydrated-evidence path so both grade identically."""
+    weak_kex = audit.get("weak_kex") or []
+    weak_ciphers = audit.get("weak_ciphers") or []
+    weak_macs = audit.get("weak_macs") or []
+    weak_host_key_algos = audit.get("weak_host_key_algos") or []
+    host_keys = audit.get("host_keys") or []
+    algos_parsed = bool(audit.get("algos_parsed"))
+    weak_total = len(weak_kex) + len(weak_ciphers) + len(weak_macs) + len(weak_host_key_algos)
+    key_types = [k.get("type") for k in host_keys]
+    return {
+        "ip": ip,
+        "type": "pivot_ssh_posture",
+        "description": (
+            f"ssh posture on {ip}:{port}: host_keys={key_types} "
+            f"weak_algorithms={weak_total}"
+        ),
+        "port": port,
+        "open_ports": open_ports,
+        "host_keys": host_keys,
+        "kex_algorithms": audit.get("kex_algorithms") or [],
+        "server_host_key_algorithms": audit.get("server_host_key_algorithms") or [],
+        "encryption_algorithms": audit.get("encryption_algorithms") or [],
+        "mac_algorithms": audit.get("mac_algorithms") or [],
+        "weak_kex": weak_kex,
+        "weak_ciphers": weak_ciphers,
+        "weak_macs": weak_macs,
+        "weak_host_key_algos": weak_host_key_algos,
+        "recommended_action": recommend_ssh_action(
+            weak_kex=weak_kex,
+            weak_ciphers=weak_ciphers,
+            weak_macs=weak_macs,
+            weak_host_key_algos=weak_host_key_algos,
+            algos_parsed=algos_parsed,
         ),
     }
 
@@ -276,6 +328,7 @@ class PivotRuntime:
     terminal_findings: list[dict[str, Any]] = field(default_factory=list)
     hydrated_http_recon: dict[str, Any] | None = None
     hydrated_tls_recon: dict[str, Any] | None = None
+    hydrated_ssh_audit: dict[str, Any] | None = None
 
 
 def _log(runtime: PivotRuntime, msg: str) -> None:
@@ -430,6 +483,30 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "ssh_audit":
+        result = run_ssh_audit(ip, port=22, fixture=cfg.fixture)
+        weak = (
+            len(result.get("weak_kex") or [])
+            + len(result.get("weak_ciphers") or [])
+            + len(result.get("weak_macs") or [])
+            + len(result.get("weak_host_key_algos") or [])
+        )
+        desc = f"ssh_audit on {ip}:22: weak_algorithms={weak}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="ssh_audit",
+            description=desc,
+            action="ssh_audit",
+            result=result,
+        )
+        finding = _build_ssh_finding(ip, 22, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -478,6 +555,12 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in HTTP_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "http_recon", "ip": ip}
+    if (
+        "ssh_audit" not in types
+        and runtime.hydrated_ssh_audit is None
+        and any(int(p.get("port", 0)) in SSH_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "ssh_audit", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -509,7 +592,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
 
     if config.fixture:
         hydrated = config.fixture_hydration or {
-            "open_ports": [], "http_recon": None, "tls_recon": None,
+            "open_ports": [], "http_recon": None, "tls_recon": None, "ssh_audit": None,
             "source_scan_id": board.scan_id,
         }
     else:
@@ -602,6 +685,26 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
         )
         runtime.board.findings.append(tls_finding)
         runtime.terminal_findings.append(tls_finding)
+    if hydrated.get("ssh_audit"):
+        runtime.hydrated_ssh_audit = hydrated["ssh_audit"]
+        # Reused ssh_audit evidence terminates to a typed finding here rather than
+        # dead-ending at the generic pivot_recon fallback. Event type is
+        # "ssh_posture" (not "ssh_audit") because no live NSE run occurred.
+        ssh_finding = _build_ssh_finding(
+            board.seed_ip, 22, hydrated["ssh_audit"], board.open_ports
+        )
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=runtime.board.last_event_id,
+            ip=board.seed_ip,
+            type="ssh_posture",
+            description=ssh_finding["description"],
+            action="ssh_posture",
+            result=hydrated["ssh_audit"],
+        )
+        runtime.board.findings.append(ssh_finding)
+        runtime.terminal_findings.append(ssh_finding)
 
     write_status(
         config.reports_dir,
@@ -621,6 +724,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
                 "hydrated_open_ports": board.open_ports,
                 "hydrated_http_recon": runtime.hydrated_http_recon,
                 "hydrated_tls_recon": runtime.hydrated_tls_recon,
+                "hydrated_ssh_audit": runtime.hydrated_ssh_audit,
                 "instructions": "Begin pivot chain from seed host.",
             }, indent=2),
         },
@@ -674,7 +778,7 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             # complementary passive surface (e.g. tls_recon on a 443 host that
             # http_recon already touched) is still unexamined.
             if (
-                action in ("smb_enum", "http_recon", "tls_recon")
+                action in ("smb_enum", "http_recon", "tls_recon", "ssh_audit")
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)
             ):

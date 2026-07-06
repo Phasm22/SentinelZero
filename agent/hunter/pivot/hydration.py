@@ -5,6 +5,7 @@ from typing import Any
 from agent import BASE_URL, _http
 
 from .http_recon_parse import HTTP_RECON_SCRIPT_IDS, parse_recon_scripts
+from .ssh_audit_parse import SSH_AUDIT_SCRIPT_IDS, parse_ssh_scripts
 from .tls_recon_parse import TLS_RECON_SCRIPT_IDS, parse_tls_scripts
 
 
@@ -16,7 +17,8 @@ def hydrate_seed(ip: str, scan_id: int | None) -> dict[str, Any]:
     exceptions -- an empty result just means "nothing to hydrate, scan fresh".
     """
     empty: dict[str, Any] = {
-        "open_ports": [], "http_recon": None, "tls_recon": None, "source_scan_id": scan_id,
+        "open_ports": [], "http_recon": None, "tls_recon": None, "ssh_audit": None,
+        "source_scan_id": scan_id,
     }
     if not scan_id:
         return empty
@@ -53,9 +55,17 @@ def hydrate_seed(ip: str, scan_id: int | None) -> dict[str, Any]:
     }
     tls_recon = parse_tls_scripts(tls_scripts) if tls_scripts else None
 
+    ssh_scripts = {
+        v.get("id"): v.get("output", "")
+        for v in host_vulns
+        if v.get("id") in SSH_AUDIT_SCRIPT_IDS
+    }
+    ssh_audit = parse_ssh_scripts(ssh_scripts) if ssh_scripts else None
+
     return {
         "open_ports": open_ports,
         "http_recon": http_recon,
         "tls_recon": tls_recon,
+        "ssh_audit": ssh_audit,
         "source_scan_id": scan_id,
     }
