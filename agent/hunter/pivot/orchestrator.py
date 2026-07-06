@@ -19,8 +19,10 @@ from .runners.asset_expectation_runner import (
     recommend_asset_action,
     run_asset_expectation_check,
 )
+from .proxmox_recon_parse import PROXMOX_PORTS, recommend_proxmox_action
 from .runners.http_recon_runner import run_http_recon
 from .runners.nmap_runner import run_nmap_scan, triage_ports
+from .runners.proxmox_recon_runner import run_proxmox_recon
 from .runners.rpc_audit_runner import run_rpc_audit
 from .runners.smb_enum_runner import run_smb_enum
 from .runners.ssh_audit_runner import run_ssh_audit
@@ -45,6 +47,7 @@ Available actions (respond with JSON only):
 {"action":"tls_recon","ip":"<target>"}
 {"action":"ssh_audit","ip":"<target>"}
 {"action":"rpc_audit","ip":"<target>"}
+{"action":"proxmox_recon","ip":"<target>"}
 {"action":"asset_expectation_check","ip":"<target>"}
 {"action":"complete","summary":"<short summary>"}
 
@@ -71,6 +74,10 @@ Rules:
   portmapper (NFS, mountd, nlockmgr, NIS) via passive nmap NSE. It is enumeration only, never
   mounting or exploitation. Do not call complete while an open RPC surface has not been
   examined by rpc_audit.
+- Run proxmox_recon when 8006/tcp is open -- a single unauthenticated HTTPS GET that
+  identifies a Proxmox VE hypervisor management plane (node name, pve-api-daemon) from the
+  response Server header and page title. It is identification, never an authenticated API
+  call. Do not call complete while an open 8006 surface has not been examined by proxmox_recon.
 - Run asset_expectation_check once open ports are known -- it compares them against the
   host's registered expectation (assets.json) and never touches the network. It flags
   unexpected ports and unregistered hosts. Prefer it before completing so the finding
@@ -201,6 +208,10 @@ def _has_pending_passive_service(runtime: PivotRuntime) -> bool:
         port_nums & set(RPC_PORTS)
     ):
         return True
+    # proxmox_recon is a live single-GET tool with no seed-scan equivalent, so it
+    # has no hydrated form -- gate purely on whether it has run this mission.
+    if "proxmox_recon" not in types and (port_nums & set(PROXMOX_PORTS)):
+        return True
     return False
 
 
@@ -309,6 +320,36 @@ def _build_rpc_finding(
         "recommended_action": recommend_rpc_action(
             sensitive_services=sensitive,
             programs_parsed=programs_parsed,
+        ),
+    }
+
+
+def _build_proxmox_finding(
+    ip: str, port: int, recon: dict[str, Any], open_ports: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Typed pivot_hypervisor_exposure finding from a proxmox_recon result."""
+    is_proxmox = bool(recon.get("is_proxmox"))
+    node_name = recon.get("node_name")
+    responded = bool(recon.get("responded"))
+    if is_proxmox:
+        desc = f"Proxmox VE management plane on {ip}:{port} (node={node_name!r})"
+    elif responded:
+        desc = f"{ip}:{port} answered HTTPS but did not identify as Proxmox"
+    else:
+        desc = f"{ip}:{port} did not respond to HTTPS"
+    return {
+        "ip": ip,
+        "type": "pivot_hypervisor_exposure",
+        "description": desc,
+        "port": port,
+        "open_ports": open_ports,
+        "is_proxmox": is_proxmox,
+        "node_name": node_name,
+        "api_daemon": recon.get("api_daemon"),
+        "server_header": recon.get("server_header"),
+        "title": recon.get("title"),
+        "recommended_action": recommend_proxmox_action(
+            is_proxmox=is_proxmox, responded=responded
         ),
     }
 
@@ -564,6 +605,24 @@ def _execute_action(runtime: PivotRuntime, action: str, ip: str) -> dict[str, An
         runtime.terminal_findings.append(finding)
         return result
 
+    if action == "proxmox_recon":
+        result = run_proxmox_recon(ip, port=8006, fixture=cfg.fixture)
+        desc = f"proxmox_recon on {ip}:8006: is_proxmox={result.get('is_proxmox')}"
+        _append_event(
+            runtime,
+            task_id=f"task-{uuid.uuid4().hex[:8]}",
+            parent_event_id=parent,
+            ip=ip,
+            type="proxmox_recon",
+            description=desc,
+            action="proxmox_recon",
+            result=result,
+        )
+        finding = _build_proxmox_finding(ip, 8006, result, runtime.board.open_ports)
+        runtime.board.findings.append(finding)
+        runtime.terminal_findings.append(finding)
+        return result
+
     if action == "asset_expectation_check":
         result = run_asset_expectation_check(
             ip, runtime.board.open_ports, fixture=cfg.fixture
@@ -624,6 +683,11 @@ def _fixture_next_action(runtime: PivotRuntime, turn: int) -> dict[str, Any]:
         and any(int(p.get("port", 0)) in RPC_PORTS for p in runtime.board.open_ports)
     ):
         return {"action": "rpc_audit", "ip": ip}
+    if (
+        "proxmox_recon" not in types
+        and any(int(p.get("port", 0)) in PROXMOX_PORTS for p in runtime.board.open_ports)
+    ):
+        return {"action": "proxmox_recon", "ip": ip}
     return {"action": "complete", "summary": f"Fixture pivot chain complete for {ip}"}
 
 
@@ -862,7 +926,10 @@ def run_pivot_mission(config: PivotMissionConfig) -> dict[str, Any]:
             # complementary passive surface (e.g. tls_recon on a 443 host that
             # http_recon already touched) is still unexamined.
             if (
-                action in ("smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit")
+                action in (
+                    "smb_enum", "http_recon", "tls_recon", "ssh_audit", "rpc_audit",
+                    "proxmox_recon",
+                )
                 and runtime.terminal_findings
                 and not _has_pending_passive_service(runtime)
             ):
