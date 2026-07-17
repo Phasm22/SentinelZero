@@ -6,20 +6,15 @@ This guide describes how SentinelZero is deployed on a single homelab host today
 
 ```
 ┌──────────────────────┐     ┌─────────────────────────────┐
-│  Traefik + Authentik │────▶│  Vite dev server (3173)     │
-│  (optional, remote)  │     │  proxies /api → backend     │
-└──────────────────────┘     └─────────────────────────────┘
-                                          │
-                               ┌──────────▼──────────┐
-                               │  sentinelzero.service│
-                               │  Flask + Socket.IO   │
-                               │  port 5000           │
-                               └─────────────────────┘
+│  Traefik + Authentik │────▶│  sentinelzero.service :5000 │
+│  (optional, remote)  │     │  Flask + Socket.IO          │
+└──────────────────────┘     │  serves React dist/         │
+                             └─────────────────────────────┘
 ```
 
-Production on this machine uses **one systemd unit** (`sentinelzero.service`) for the backend. The React UI runs as a Vite dev server on port **3173** during development (or can be built and served statically for a single-port setup).
+Production on this machine uses **one systemd unit** (`sentinelzero.service`). The React UI is built to `frontend/react-sentinelzero/dist` and served by Flask on port **5000**. Do **not** run the Vite unit (`sentinelzero-frontend`) in production.
 
-Authentication, when enabled, is handled by remote **Traefik + Authentik** forward auth — see [AUTHENTIK_SETUP.md](AUTHENTIK_SETUP.md).
+Authentication, when enabled, is handled by remote **Traefik + Authentik** forward auth — see [AUTHENTIK_SETUP.md](AUTHENTIK_SETUP.md). Traefik must point at `http://172.16.0.198:5000` (see `traefik/dynamic/sentinelzero.yml`).
 
 ## Prerequisites
 
@@ -65,7 +60,7 @@ sudo journalctl -u sentinelzero -f
 ```bash
 curl http://localhost:5000/api/ping
 curl http://localhost:5000/api/health
-curl http://localhost:3173          # frontend (dev)
+curl -s http://localhost:5000/ | head   # static UI (production)
 ```
 
 ## Environment variables
@@ -78,7 +73,7 @@ Set in `sentinelzero.service` or override with a drop-in:
 | `SENTINEL_ALLOWED_ORIGINS` | see service file | CORS / Socket.IO origins |
 | `SCAN_TIMEOUT_SECONDS` | `1800` | Lab scan watchdog |
 | `SCAN_TIMEOUT_VULN_SECONDS` | `10800` | Vuln-script scan watchdog |
-| `SENTINEL_TELEMETRY_RETENTION_DAYS` | `7` | Sensor telemetry prune age |
+| `SENTINEL_TELEMETRY_RETENTION_DAYS` | `3` | Sensor telemetry prune age |
 | `SENTINEL_VACUUM_AFTER_PRUNE` | `1` | Run SQLite VACUUM after telemetry delete |
 
 ## Database maintenance

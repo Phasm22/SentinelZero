@@ -75,10 +75,9 @@ def _resolve_allowed_origins(app):
         'http://127.0.0.1:3173',
         'http://localhost:5000',
         'http://127.0.0.1:5000',
-        'http://sentinelzero.prox:3173',
-        'http://sentinelzero.prox:5000',
-        'http://sentinelzero.prox',
-        'https://sentinelzero.prox',
+        'http://sentinelzero.ops.prox',
+        'http://sentinelzero.ops.prox:5000',
+        'https://sentinelzero.ops.prox',
     ]
 
 def _ensure_database_schema(app, db):
@@ -459,7 +458,7 @@ def main():
         print('🛡️  SentinelZero Network Security Scanner')
         print('='*60)
         print(f'📡 Backend Server: http://{bind_host}:{bind_port} (configured bind)')
-        print('🌐 Frontend (dev): http://localhost:3173 or http://sentinelzero.prox:3173') 
+        print('🌐 Frontend (dev): http://localhost:3173') 
         print('📊 Dashboard: http://localhost:3173/dashboard')
         print('⚙️  Settings: http://localhost:3173/settings')
         print('='*60)

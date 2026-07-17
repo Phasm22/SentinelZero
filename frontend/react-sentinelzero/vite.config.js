@@ -16,7 +16,7 @@ export default defineConfig({
     port: 3173,
     strictPort: true,
     host: '0.0.0.0',
-    allowedHosts: ['sentinelzero.prox', 'localhost', '127.0.0.1'],
+    allowedHosts: ['sentinelzero.ops.prox', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: backendTarget,
