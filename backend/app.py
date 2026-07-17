@@ -32,6 +32,7 @@ from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
 from src.routes.upload_routes import create_upload_blueprint
 from src.routes.whatsup_routes import bp as whatsup_bp
+from src.routes.lab_status_routes import bp as lab_status_bp
 from src.routes.insights_routes import insights_bp
 from src.routes.diff_routes import diff_bp
 from src.routes.sensor_routes import create_sensor_blueprint
@@ -48,6 +49,7 @@ from src.services.observability import configure_logging, ensure_request_id, log
 from src.models import Scan, Alert, SensorAgent, SensorTelemetry, IncidentEmbedding
 from src.services import sensor_service
 from src.services import db_maintenance
+from src.services import hunter_reports
 
 # Global instances
 db = None
@@ -338,6 +340,7 @@ def create_app(test_config=None):
     app.register_blueprint(create_api_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
     app.register_blueprint(whatsup_bp)
+    app.register_blueprint(lab_status_bp)
     app.register_blueprint(insights_bp, url_prefix='/')  # insights_bp already has /api in routes
     app.register_blueprint(diff_bp, url_prefix='/')      # /api/scan-diff/<id>
     app.register_blueprint(create_sensor_blueprint(db), url_prefix='/api')

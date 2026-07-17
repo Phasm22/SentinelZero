@@ -12,6 +12,7 @@ def init_routes(app, db, socketio, scheduler):
     from .schedule_routes import create_schedule_blueprint
     from .api_routes import create_api_blueprint
     from .whatsup_routes import bp as whatsup_bp
+    from .lab_status_routes import bp as lab_status_bp
     
     # Register blueprints
     app.register_blueprint(create_scan_blueprint(db, socketio))
@@ -19,5 +20,6 @@ def init_routes(app, db, socketio, scheduler):
     app.register_blueprint(create_schedule_blueprint(db, socketio, scheduler))
     app.register_blueprint(create_api_blueprint(db))
     app.register_blueprint(whatsup_bp)
+    app.register_blueprint(lab_status_bp)
     
     return app

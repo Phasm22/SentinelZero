@@ -147,6 +147,11 @@ export const apiService = {
     return response.data
   },
 
+  getLabStatusOverview: async (windowMinutes = 120) => {
+    const response = await axios.get(`${API_BASE_URL}/lab-status/overview?window_minutes=${encodeURIComponent(windowMinutes)}`)
+    return response.data
+  },
+
   // Insights operations
   getInsights: async (params = {}) => {
     const queryParams = new URLSearchParams()
