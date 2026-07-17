@@ -57,6 +57,8 @@ describe('Settings', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/User Preferences|Scheduled Scans|Network Settings/i).length).toBeGreaterThan(0)
     })
+    expect(screen.getByText(/Open Schedules/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Enable Scheduled Scans/i)).not.toBeInTheDocument()
   })
 
   it('shows error when settings load fails', async () => {

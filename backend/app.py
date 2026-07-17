@@ -50,6 +50,7 @@ from src.models import Scan, Alert, SensorAgent, SensorTelemetry, IncidentEmbedd
 from src.services import sensor_service
 from src.services import db_maintenance
 from src.services import hunter_reports
+from src.services import schedule_service
 
 # Global instances
 db = None
@@ -310,6 +311,13 @@ def create_app(test_config=None):
             )
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
+
+    try:
+        if scheduler:
+            hydrated = schedule_service.hydrate_scheduled_scans(scheduler, app, socketio)
+            print(f'[INFO] Hydrated {hydrated} scheduled nmap scan job(s)')
+    except Exception as e:
+        print(f'[WARN] Failed to hydrate scheduled scan jobs: {e}')
 
     # Handle OPTIONS requests for CORS preflight
     @app.route('/socket.io/', methods=['OPTIONS'])
