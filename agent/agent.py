@@ -1298,7 +1298,7 @@ def _fetch_scan_analysis_context(scan_id: int) -> dict:
     }
 
 
-def _get_latest_scan_id() -> int:
+def _get_latest_scan_id() -> int | None:
     r = _http.get(f"{BASE_URL}/api/scans", timeout=10)
     r.raise_for_status()
     data  = r.json()
@@ -1306,7 +1306,7 @@ def _get_latest_scan_id() -> int:
     for s in scans:
         if s.get("status") == "complete":
             return s["id"]
-    raise SystemExit("No completed scans found.")
+    return None
 
 
 def main() -> None:
@@ -1325,6 +1325,13 @@ def main() -> None:
         help="Do not POST scan analyst result to backend (stdout only)",
     )
     args = p.parse_args()
+
+    latest_scan_id = None
+    if args.latest:
+        latest_scan_id = _get_latest_scan_id()
+        if latest_scan_id is None:
+            print("[agent] No completed scans found; nothing to analyze.")
+            return
 
     if not _local_mode() and not os.environ.get("OPENAI_API_KEY"):
         print("error: OPENAI_API_KEY is not set (check /etc/sentinel-agent/agent.env)", file=sys.stderr)
@@ -1354,7 +1361,7 @@ def main() -> None:
         return
 
     if args.latest:
-        scan_id = _get_latest_scan_id()
+        scan_id = latest_scan_id
         source = "timer"
     else:
         scan_id = args.scan_id
