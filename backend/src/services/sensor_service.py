@@ -354,9 +354,13 @@ def get_network_sensor_context(db, host_ip: str) -> dict:
         if isinstance(alerts, dict):
             alerts = alerts.get("engaged", alerts.get("items", []))
         ctx["alerted_flows"] = alerts[:5]
+        active_hosts = ntop.get("active_hosts") or []
+        if isinstance(active_hosts, dict):
+            active_hosts = active_hosts.get("flagged") or active_hosts.get("hosts") or []
         flagged = [
-            h for h in (ntop.get("active_hosts") or [])
-            if h.get("ip") == host_ip or str(h.get("ip", "")).startswith(host_ip)
+            h for h in active_hosts
+            if isinstance(h, dict)
+            and (h.get("ip") == host_ip or str(h.get("ip", "")).startswith(host_ip))
         ]
         if flagged:
             ctx["host_flow_score"] = flagged[:3]

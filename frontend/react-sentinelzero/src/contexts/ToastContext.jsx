@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 const ToastContext = createContext()
 
@@ -12,6 +12,14 @@ export const useToast = () => {
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([])
+  const timeoutRefs = useRef(new Map())
+
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach((timeoutId) => clearTimeout(timeoutId))
+      timeoutRefs.current.clear()
+    }
+  }, [])
 
   const showToast = (message, type = 'info', duration = 5000) => {
     const id = Date.now()
@@ -19,12 +27,19 @@ export const ToastProvider = ({ children }) => {
     
     setToasts(prev => [...prev, toast])
     
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
+      timeoutRefs.current.delete(id)
     }, duration)
+    timeoutRefs.current.set(id, timeoutId)
   }
 
   const removeToast = (id) => {
+    const timeoutId = timeoutRefs.current.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      timeoutRefs.current.delete(id)
+    }
     setToasts(prev => prev.filter(t => t.id !== id))
   }
 
@@ -68,4 +83,4 @@ const ToastContainer = ({ toasts, onRemove }) => {
       ))}
     </div>
   )
-} 
+}

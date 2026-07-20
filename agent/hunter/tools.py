@@ -122,7 +122,12 @@ class HunterRuntime:
             return {"status": "skipped", "reason": "no-trigger-scan set"}
         r = _http.post(
             f"{BASE_URL}/api/scan",
-            data={"scan_type": scan_type, "target_network": cidr},
+            data={
+                "scan_type": scan_type,
+                "target_network": cidr,
+                "source": "hunter",
+                "initiated_by": self.mission.mission_id or "hunter",
+            },
             timeout=20,
         )
         if r.status_code >= 400:
@@ -361,4 +366,3 @@ def dispatch_tool(runtime: HunterRuntime, name: str, inputs: dict[str, Any]) -> 
         return fn(inputs or {})
     except Exception as exc:
         return {"error": str(exc)}
-

@@ -32,6 +32,7 @@ from src.routes.schedule_routes import create_schedule_blueprint
 from src.routes.api_routes import create_api_blueprint
 from src.routes.upload_routes import create_upload_blueprint
 from src.routes.whatsup_routes import bp as whatsup_bp
+from src.routes.lab_status_routes import bp as lab_status_bp
 from src.routes.insights_routes import insights_bp
 from src.routes.diff_routes import diff_bp
 from src.routes.sensor_routes import create_sensor_blueprint
@@ -48,6 +49,8 @@ from src.services.observability import configure_logging, ensure_request_id, log
 from src.models import Scan, Alert, SensorAgent, SensorTelemetry, IncidentEmbedding
 from src.services import sensor_service
 from src.services import db_maintenance
+from src.services import hunter_reports
+from src.services import schedule_service
 
 # Global instances
 db = None
@@ -75,10 +78,9 @@ def _resolve_allowed_origins(app):
         'http://127.0.0.1:3173',
         'http://localhost:5000',
         'http://127.0.0.1:5000',
-        'http://sentinelzero.prox:3173',
-        'http://sentinelzero.prox:5000',
-        'http://sentinelzero.prox',
-        'https://sentinelzero.prox',
+        'http://sentinelzero.ops.prox',
+        'http://sentinelzero.ops.prox:5000',
+        'https://sentinelzero.ops.prox',
     ]
 
 def _ensure_database_schema(app, db):
@@ -310,6 +312,13 @@ def create_app(test_config=None):
     except Exception as e:
         print(f'[WARN] Failed to schedule cleanup job: {e}')
 
+    try:
+        if scheduler:
+            hydrated = schedule_service.hydrate_scheduled_scans(scheduler, app, socketio)
+            print(f'[INFO] Hydrated {hydrated} scheduled nmap scan job(s)')
+    except Exception as e:
+        print(f'[WARN] Failed to hydrate scheduled scan jobs: {e}')
+
     # Handle OPTIONS requests for CORS preflight
     @app.route('/socket.io/', methods=['OPTIONS'])
     @app.route('/socket.io/<path:path>', methods=['OPTIONS'])
@@ -339,6 +348,7 @@ def create_app(test_config=None):
     app.register_blueprint(create_api_blueprint(db), url_prefix='/api')
     app.register_blueprint(create_upload_blueprint(db, socketio), url_prefix='/api')
     app.register_blueprint(whatsup_bp)
+    app.register_blueprint(lab_status_bp)
     app.register_blueprint(insights_bp, url_prefix='/')  # insights_bp already has /api in routes
     app.register_blueprint(diff_bp, url_prefix='/')      # /api/scan-diff/<id>
     app.register_blueprint(create_sensor_blueprint(db), url_prefix='/api')
@@ -459,7 +469,7 @@ def main():
         print('🛡️  SentinelZero Network Security Scanner')
         print('='*60)
         print(f'📡 Backend Server: http://{bind_host}:{bind_port} (configured bind)')
-        print('🌐 Frontend (dev): http://localhost:3173 or http://sentinelzero.prox:3173') 
+        print('🌐 Frontend (dev): http://localhost:3173') 
         print('📊 Dashboard: http://localhost:3173/dashboard')
         print('⚙️  Settings: http://localhost:3173/settings')
         print('='*60)

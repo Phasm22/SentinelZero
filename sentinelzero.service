@@ -14,7 +14,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=FLASK_ENV=production
 Environment=SENTINEL_BIND_HOST=0.0.0.0
 Environment=SENTINEL_BIND_PORT=5000
-Environment=SENTINEL_ALLOWED_ORIGINS=http://localhost:3173,http://127.0.0.1:3173,http://localhost:5000,http://127.0.0.1:5000,http://sentinelzero.prox:3173,http://sentinelzero.prox:5000,http://sentinelzero.prox,https://sentinelzero.prox
+Environment=SENTINEL_ALLOWED_ORIGINS=http://localhost:5000,http://127.0.0.1:5000,http://sentinelzero.ops.prox,http://sentinelzero.ops.prox:5000,https://sentinelzero.ops.prox,http://172.16.0.198:5000
 Environment=SCAN_TIMEOUT_SECONDS=1800
 Environment=SCAN_TIMEOUT_HOME_SECONDS=5400
 Environment=SCAN_TIMEOUT_IOT_HOME_SECONDS=7200

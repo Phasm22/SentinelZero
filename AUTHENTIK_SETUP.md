@@ -2,10 +2,9 @@
 
 ## Architecture Overview
 
-**This machine (sentinelzero.prox):**
+**This machine (sentinelzero.ops.prox):**
 - Runs SentinelZero via **systemd services**
-  - Backend: `http://172.16.0.198:5000`
-  - Frontend: `http://172.16.0.198:3173`
+  - App/API/static UI: `http://172.16.0.198:5000`
 - No authentication code needed (forward auth handles it)
 - No local Traefik or Authentik installation
 
@@ -17,15 +16,15 @@
 ## How It Works
 
 ```
-User → https://sentinelzero.prox
+User → https://sentinelzero.ops.prox
   ↓
 Traefik (remote box)
   ↓
 Authentik forward auth check (remote box)
   ↓ (if authenticated)
-Routes to → http://172.16.0.198:3173 (this machine)
+Routes to → http://172.16.0.198:5000 (this machine)
   ↓
-Frontend proxies /api & /socket.io → Backend (port 5000)
+SentinelZero Flask app serves React dist, /api, and /socket.io
 ```
 
 ## Configuration Files
@@ -38,18 +37,17 @@ The `traefik/dynamic/` folder contains configs for the **remote Traefik server**
 - Defines redirect and WebSocket headers
 
 **`traefik/dynamic/sentinelzero.yml`**
-- Routes `sentinelzero.prox` → `http://172.16.0.198:3173` (frontend)
+- Routes `sentinelzero.ops.prox` → `http://172.16.0.198:5000`
 - Applies `auth@file` middleware (Authentik)
-- Frontend proxies `/api` and `/socket.io` to backend (port 5000)
+- Backend serves React static assets, `/api`, and `/socket.io`
 
 ## Setup Instructions
 
-### On This Machine (sentinelzero.prox)
+### On This Machine (sentinelzero.ops.prox)
 
 1. **Ensure services are running:**
    ```bash
-   sudo systemctl status sentinelzero-backend  # Port 5000
-   sudo systemctl status sentinelzero-frontend # Port 3173
+   sudo systemctl status sentinelzero.service  # Port 5000
    ```
 
 2. **Disable nginx** (if using Traefik):
@@ -60,7 +58,7 @@ The `traefik/dynamic/` folder contains configs for the **remote Traefik server**
 3. **Verify services are accessible:**
    ```bash
    curl http://172.16.0.198:5000/api/dashboard-stats
-   curl http://172.16.0.198:3173
+   curl http://172.16.0.198:5000/
    ```
 
 ### On Remote Traefik Server (auth.ops.prox)
@@ -72,19 +70,19 @@ The `traefik/dynamic/` folder contains configs for the **remote Traefik server**
 
 2. **Ensure DNS points to Traefik server:**
    ```
-   sentinelzero.prox → [Traefik server IP]
+   sentinelzero.ops.prox → [Traefik server IP]
    ```
 
 3. **Verify Traefik picks up configs:**
    - Check Traefik dashboard for new routes
-   - Test: `https://sentinelzero.prox`
+   - Test: `https://sentinelzero.ops.prox`
 
 ### On Authentik Server (auth.ops.prox)
 
 1. **Create application in Authentik:**
    - Use the Authentik web UI or import a blueprint
    - Configure proxy provider with `forward_single` mode
-   - Set external host: `https://sentinelzero.prox`
+   - Set external host: `https://sentinelzero.ops.prox`
 
 2. **Verify outpost is running:**
    ```bash
@@ -96,21 +94,20 @@ The `traefik/dynamic/` folder contains configs for the **remote Traefik server**
 ### Services not accessible
 ```bash
 # Check if services are running
-sudo systemctl status sentinelzero-backend
-sudo systemctl status sentinelzero-frontend
+sudo systemctl status sentinelzero.service
 
 # Check if ports are listening
-sudo netstat -tlnp | grep -E '5000|3173'
+sudo netstat -tlnp | grep 5000
 ```
 
 ### Authentication not working
 - Verify Authentik outpost is running on remote server
 - Check Traefik logs on remote server
 - Ensure `traefik/dynamic/authentik.yml` has correct Authentik URL
+- Ensure the proxy provider redirect URIs use `sentinelzero.ops.prox`
 
 ### Frontend can't reach backend
-- Frontend Vite config should proxy `/api` and `/socket.io` to `http://localhost:5000`
-- Verify backend is accessible: `curl http://172.16.0.198:5000/api/dashboard-stats`
+- Verify the single-port app is accessible: `curl http://172.16.0.198:5000/api/dashboard-stats`
 
 ## Alternative: Nginx Setup
 

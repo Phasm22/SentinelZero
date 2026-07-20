@@ -4,9 +4,9 @@
 
 These configuration files are for the **remote Traefik server** (auth.ops.prox), NOT for this machine.
 
-This machine (sentinelzero.prox) runs SentinelZero services via systemd:
-- Backend: port 5000
-- Frontend: port 3173
+This machine (sentinelzero.ops.prox) runs SentinelZero via systemd:
+- App (API + static UI + Socket.IO): port **5000** (`sentinelzero.service`)
+- Vite on 3173 is **dev-only** and should be disabled in production
 
 The remote Traefik server handles:
 - Reverse proxy routing
@@ -25,7 +25,7 @@ Defines Traefik middlewares:
 Defines Traefik routing:
 - **sentinelzero-http** - HTTP router (redirects to HTTPS)
 - **sentinelzero** - HTTPS router with Authentik auth
-- **sentinelzero-frontend** - Service pointing to `http://172.16.0.198:3173`
+- **sentinelzero-app** - Service pointing to `http://172.16.0.198:5000`
 
 ## Setup on Remote Traefik Server
 
@@ -70,7 +70,7 @@ certificatesResolvers:
 Point the domain to your Traefik server:
 
 ```
-sentinelzero.prox → [Traefik server IP]
+sentinelzero.ops.prox → [Traefik server IP]
 ```
 
 ### 4. Verify Configuration
@@ -80,14 +80,14 @@ sentinelzero.prox → [Traefik server IP]
 docker logs traefik  # or check logs
 
 # Test routing
-curl -I https://sentinelzero.prox
+curl -I https://sentinelzero.ops.prox
 ```
 
 ### 5. Authentik Setup
 
 Ensure Authentik is configured with:
 - Proxy provider in `forward_single` mode
-- External host: `https://sentinelzero.prox`
+- External host: `https://sentinelzero.ops.prox`
 - Outpost running and accessible at: `https://auth.ops.prox/outpost.goauthentik.io/auth/traefik`
 
 ## How It Works
@@ -95,20 +95,21 @@ Ensure Authentik is configured with:
 ```
 User Request
   ↓
-https://sentinelzero.prox
+https://sentinelzero.ops.prox
   ↓
 Traefik (remote server)
-  ├─ Matches Host(`sentinelzero.prox`)
+  ├─ Matches Host(`sentinelzero.ops.prox`)
   ├─ Applies auth@file middleware
   │   └─ Forward auth to Authentik
   │       └─ If authenticated: continue
   │       └─ If not: redirect to login
   ├─ Applies websocket-headers@file
-  └─ Proxies to http://172.16.0.198:3173
+  └─ Proxies to http://172.16.0.198:5000
       ↓
-SentinelZero Frontend (this machine)
-  ├─ Serves React app
-  └─ Proxies /api & /socket.io → Backend (port 5000)
+SentinelZero Flask app (this machine)
+  ├─ Serves React dist
+  ├─ Handles /api
+  └─ Handles /socket.io
 ```
 
 ## Updating Configuration
@@ -138,23 +139,23 @@ curl -v https://auth.ops.prox/outpost.goauthentik.io/auth/traefik
 ### Verify routing
 ```bash
 # Should redirect to HTTPS
-curl -I http://sentinelzero.prox
+curl -I http://sentinelzero.ops.prox
 
 # Should require auth or redirect to login
-curl -I https://sentinelzero.prox
+curl -I https://sentinelzero.ops.prox
 ```
 
 ### Check backend accessibility from Traefik server
 ```bash
 # From the Traefik server
-curl http://172.16.0.198:3173
 curl http://172.16.0.198:5000/api/dashboard-stats
 ```
 
 ## Notes
 
 - These configs use file provider, not Docker labels
-- SSL certificates are handled by Let's Encrypt via Traefik
+- TLS is terminated by Traefik. In the homelab deployment, `*.ops.prox`
+  is covered by the internal self-signed certificate.
 - WebSocket support is included for Socket.IO
 - No changes needed to SentinelZero backend code
 - All authentication is handled at the Traefik layer

@@ -66,10 +66,27 @@ def create_scan_blueprint(db, socketio):
         except Exception as e:
             print(f'[DEBUG] Could not load network settings: {e}, using default: {target_network}')
 
+        payload = request.get_json(silent=True) if request.is_json else {}
+        payload = payload if isinstance(payload, dict) else {}
+
         # Optional request override for automation-driven scans (e.g. hunter handoff).
         requested_target_network = (request.form.get('target_network') or '').strip()
+        if not requested_target_network:
+            requested_target_network = str(payload.get('target_network') or '').strip()
         if requested_target_network:
             target_network = requested_target_network
+
+        allowed_sources = {'manual', 'scheduled', 'hunter', 'upload', 'sync'}
+        requested_source = (request.form.get('source') or payload.get('source') or 'manual').strip().lower()
+        if requested_source not in allowed_sources:
+            return jsonify({'status': 'error', 'message': f'Invalid scan source: {requested_source}'}), 400
+
+        initiated_by = (
+            request.form.get('initiated_by')
+            or payload.get('initiated_by')
+            or ('api' if requested_source == 'manual' else requested_source)
+        )
+        initiated_by = str(initiated_by).strip()[:64] or 'api'
         
         # Enforce concurrency limit (skip for lightweight Discovery Scan)
         scan_type_lower = (scan_type or '').strip().lower()
@@ -102,8 +119,8 @@ def create_scan_blueprint(db, socketio):
         scan = runtime.create_scan(
             scan_type=scan_type,
             target_network=target_network,
-            source='manual',
-            initiated_by='api',
+            source=requested_source,
+            initiated_by=initiated_by,
             correlation_id=get_request_id(),
             state='queued',
             message=f'Queued {scan_type} on {target_network}',

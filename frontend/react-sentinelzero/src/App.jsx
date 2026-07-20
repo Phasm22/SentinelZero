@@ -7,6 +7,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ScanHistory = lazy(() => import('./pages/ScanHistory'))
 const HunterRuns = lazy(() => import('./pages/HunterRuns'))
 const LabStatus = lazy(() => import('./pages/LabStatus'))
+const Schedules = lazy(() => import('./pages/Schedules'))
 const Settings = lazy(() => import('./pages/Settings'))
 const ThemeTest = lazy(() => import('./pages/ThemeTest'))
 import Layout from './components/Layout'
@@ -27,6 +28,7 @@ function App() {
                 <Route path="/scan-history" element={<ScanHistory />} />
                 <Route path="/hunter-runs" element={<HunterRuns />} />
                 <Route path="/lab-status" element={<LabStatus />} />
+                <Route path="/schedules" element={<Schedules />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/theme-test" element={<ThemeTest />} />
                 <Route path="*" element={<div className="p-8 text-center text-red-600">404: Page Not Found</div>} />
@@ -39,4 +41,4 @@ function App() {
   )
 }
 
-export default App 
+export default App
