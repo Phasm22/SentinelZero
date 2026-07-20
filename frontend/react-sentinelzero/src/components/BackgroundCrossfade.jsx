@@ -59,8 +59,8 @@ const BackgroundCrossfade = () => {
     }
 
     // Initial checks (RAF + slight delay for Firefox)
-  requestAnimationFrame(() => reconcile('initial-rAF'))
-  setTimeout(() => reconcile('initial-timeout'), 120)
+    const animationFrameId = window.requestAnimationFrame(() => reconcile('initial-rAF'))
+    const initialTimeoutId = window.setTimeout(() => reconcile('initial-timeout'), 120)
 
     const resizeHandler = () => reconcile('resize')
     window.addEventListener('resize', resizeHandler)
@@ -77,6 +77,8 @@ const BackgroundCrossfade = () => {
     observer.observe(document.documentElement, { attributes: true })
 
     return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      clearTimeout(initialTimeoutId)
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current)
       window.removeEventListener('resize', resizeHandler)
       if (mq.removeEventListener) mq.removeEventListener('change', mqHandler)
@@ -152,4 +154,4 @@ const BackgroundCrossfade = () => {
   )
 }
 
-export default BackgroundCrossfade 
+export default BackgroundCrossfade

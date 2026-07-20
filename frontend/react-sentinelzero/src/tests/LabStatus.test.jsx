@@ -1,6 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LabStatus from '../pages/LabStatus'
 import { SocketProvider } from '../contexts/SocketContext'
@@ -174,7 +173,6 @@ describe('LabStatus', () => {
   })
 
   it('shows an error state and retries when the aggregate endpoint fails', async () => {
-    const user = userEvent.setup()
     apiService.getLabStatusOverview
       .mockRejectedValueOnce(new Error('route unavailable'))
       .mockResolvedValueOnce(sampleOverview)
@@ -184,7 +182,7 @@ describe('LabStatus', () => {
     expect(await screen.findByText('Lab status unavailable')).toBeInTheDocument()
     expect(screen.getByText('route unavailable')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /retry/i }))
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }))
 
     expect(await screen.findByText('Network Core')).toBeInTheDocument()
     expect(apiService.getLabStatusOverview).toHaveBeenCalledTimes(2)
