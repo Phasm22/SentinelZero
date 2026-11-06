@@ -1,0 +1,28 @@
+# SentinelZero passive Wi-Fi / RF summary sensor
+# Copy to config-wifi.yaml (or /etc/sentinel-wifi/config.yaml).
+#
+# Live monitor-mode capture and t470s-rf-mcp are DEFERRED (hardware PoC).
+# This sensor only posts summaries via /api/sensor/ingest — never pcaps,
+# never wifi-mon, never configures radios. Uplink wlp58s0 is never touched.
+# Expected future sniff iface (not operated here): wlx54c9ff02d309
+
+agent_id: "t470s-rf"
+hostname: "phasm-T470s"
+host_ip: "192.168.68.111"
+role: "wireless"
+tags:
+  - "rf"
+  - "passive"
+
+# SentinelZero backend
+api_url: "http://172.16.0.254:5000"
+# Prefer env SENSOR_API_KEY; leave empty here. Auth header name: X-Sensor-Key
+api_key: ""
+
+interval: 60
+
+# Optional path to a local summary JSON written by a future capture daemon.
+# If missing, the sensor posts an empty heartbeat-shaped wifi block.
+# summary_path: "/var/lib/sentinel-wifi/summary.json"
+
+log_level: "INFO"
