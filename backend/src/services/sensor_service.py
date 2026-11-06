@@ -231,6 +231,102 @@ def get_proxmox_context(db, agent_id, anchor_ts=None, minutes=120) -> dict:
     return _loads(row.collectors_json).get('proxmox') or {}
 
 
+# Wi-Fi / RF summary collector (passive T470s sensor). Keep summaries small; never
+# store secrets, PSKs, or raw capture payloads. wifi_mac is an alias facet only.
+_WIFI_MAX_BYTES = 5 * 1024
+_WIFI_SECRET_KEYS = frozenset({
+    'psk', 'password', 'passphrase', 'api_key', 'sensor_api_key',
+    'token', 'secret', 'wpa_psk', 'pmkid', 'handshake',
+})
+
+
+def _strip_wifi_secrets(obj):
+    """Recursively drop secret-looking keys from wifi collector payloads."""
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if str(k).lower() in _WIFI_SECRET_KEYS:
+                continue
+            out[k] = _strip_wifi_secrets(v)
+        return out
+    if isinstance(obj, list):
+        return [_strip_wifi_secrets(x) for x in obj]
+    return obj
+
+
+def normalize_wifi_collector(wifi) -> dict:
+    """Validate and shrink a collectors.wifi block for storage.
+
+    Returns a dict with keys aps, clients_summary, channels, events (plus any
+    additional non-secret summary fields). Enforces the ≤5 KB summary budget by
+    trimming list fields if needed. Returns {} for empty/invalid input.
+    """
+    if not isinstance(wifi, dict) or not wifi:
+        return {}
+
+    cleaned = _strip_wifi_secrets(wifi)
+    # Canonical summary shape; preserve extras that survived secret scrubbing.
+    normalized = {
+        'aps': cleaned.get('aps') if isinstance(cleaned.get('aps'), list) else [],
+        'clients_summary': (
+            cleaned.get('clients_summary')
+            if isinstance(cleaned.get('clients_summary'), dict)
+            else {}
+        ),
+        'channels': (
+            cleaned.get('channels') if isinstance(cleaned.get('channels'), list) else []
+        ),
+        'events': cleaned.get('events') if isinstance(cleaned.get('events'), list) else [],
+    }
+    for key, value in cleaned.items():
+        if key in normalized:
+            continue
+        normalized[key] = value
+
+    encoded = json.dumps(normalized, separators=(',', ':'), default=str)
+    if len(encoded.encode('utf-8')) <= _WIFI_MAX_BYTES:
+        return normalized
+
+    # Trim list fields until under budget (events first, then aps/channels).
+    for field in ('events', 'aps', 'channels'):
+        items = list(normalized.get(field) or [])
+        while items and len(json.dumps(normalized, separators=(',', ':'), default=str).encode('utf-8')) > _WIFI_MAX_BYTES:
+            items = items[:-1]
+            normalized[field] = items
+        if len(json.dumps(normalized, separators=(',', ':'), default=str).encode('utf-8')) <= _WIFI_MAX_BYTES:
+            break
+
+    encoded = json.dumps(normalized, separators=(',', ':'), default=str)
+    if len(encoded.encode('utf-8')) > _WIFI_MAX_BYTES:
+        # Last resort: keep counts only.
+        cs = normalized.get('clients_summary') or {}
+        return {
+            'aps': [],
+            'clients_summary': {
+                k: cs.get(k) for k in ('associated', 'probe_noise_count', 'unresolved')
+                if k in cs
+            },
+            'channels': [],
+            'events': [],
+            'truncated': True,
+        }
+    return normalized
+
+
+def get_wifi_context(db, agent_id, anchor_ts=None, minutes=120) -> dict:
+    """Passive Wi-Fi / RF summary from the telemetry row closest to the anchor."""
+    row = _closest_row(_rows_for(db, agent_id, anchor_ts, minutes), anchor_ts)
+    if not row:
+        return {}
+    wifi = _loads(row.collectors_json).get('wifi')
+    if not isinstance(wifi, dict) or not wifi:
+        return {}
+    return {
+        'collected_at': row.collected_at.isoformat() if row.collected_at else None,
+        'wifi': wifi,
+    }
+
+
 def get_endpoint_security_context(db, agent_id, anchor_ts=None, minutes=120) -> dict:
     """Compact security signals (auth failures, failed services, proxmox) for
     pre-enrichment — attached to insights so the LLM sees them without a tool call."""

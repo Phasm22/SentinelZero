@@ -125,7 +125,21 @@ def create_sensor_blueprint(db):
                 collected_at = datetime.utcnow()
 
             collectors = payload.get('collectors', {})
-            system = collectors.get('system', {})
+            if not isinstance(collectors, dict):
+                collectors = {}
+            else:
+                collectors = dict(collectors)
+
+            # collectors.wifi was previously stored only as opaque JSON and never
+            # validated. Normalize so RF summaries are scrubbed, sized, and queryable.
+            if 'wifi' in collectors:
+                wifi = sensor_service.normalize_wifi_collector(collectors.get('wifi'))
+                if wifi:
+                    collectors['wifi'] = wifi
+                else:
+                    collectors.pop('wifi', None)
+
+            system = collectors.get('system', {}) or {}
 
             row = SensorTelemetry(
                 agent_id=agent_id,
@@ -333,6 +347,39 @@ def create_sensor_blueprint(db):
         if not ctx:
             return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'error': 'no proxmox telemetry'}), 404
         return jsonify({'agent_id': agent.agent_id, 'ip': ip, 'minutes': minutes, 'proxmox': ctx})
+
+    # ------------------------------------------------------------------
+    # GET /api/sensor/wifi?ip=&minutes=  (or agent_id=)
+    # Passive RF summaries from t470s-rf / wireless-role agents.
+    # ------------------------------------------------------------------
+    @bp.route('/sensor/wifi', methods=['GET'])
+    def get_wifi():
+        agent_id = request.args.get('agent_id', '').strip()
+        ip = request.args.get('ip', '').strip()
+        minutes = min(int(request.args.get('minutes', 120)), 1440)
+
+        if agent_id:
+            agent = SensorAgent.query.filter_by(agent_id=agent_id).first()
+            if not agent:
+                return jsonify({'error': 'not found'}), 404
+        else:
+            agent, ip, err = _agent_for_ip()
+            if err:
+                return err
+
+        ctx = sensor_service.get_wifi_context(db, agent.agent_id, minutes=minutes)
+        if not ctx:
+            return jsonify({
+                'agent_id': agent.agent_id,
+                'ip': agent.host_ip or ip,
+                'error': 'no wifi telemetry',
+            }), 404
+        return jsonify({
+            'agent_id': agent.agent_id,
+            'ip': agent.host_ip or ip,
+            'minutes': minutes,
+            **ctx,
+        })
 
     # ------------------------------------------------------------------
     # DELETE /api/sensor/agents/<agent_id>

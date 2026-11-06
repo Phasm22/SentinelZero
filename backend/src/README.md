@@ -59,7 +59,7 @@ backend/
 | Scans | `POST /api/scan`, `GET /api/scan-history`, `GET /api/active-scans` |
 | Insights | `GET /api/insights`, `GET /api/scans/<id>/host-context` |
 | Hunter | `GET /api/hunter/runs`, `POST /api/hunter/missions` |
-| Sensors | `POST /api/sensor/ingest`, `GET /api/sensor/agents` |
+| Sensors | `POST /api/sensor/ingest`, `GET /api/sensor/agents`, `GET /api/sensor/wifi` |
 | Health | `GET /api/ping`, `GET /api/health`, `GET /api/whatsup/summary` |
 
 Host-context GET returns cached data only (`status: pending` if not yet enriched). Enrichment runs during scan postprocessing and via a startup backfill timer.
