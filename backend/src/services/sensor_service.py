@@ -277,6 +277,35 @@ def _vacuum_enabled() -> bool:
     )
 
 
+# APScheduler runs jobs on bare worker threads with no Flask app context, and the
+# persistent SQLAlchemy job store saves jobs by import path, so closures cannot be
+# registered. These module-level entry points push the bound app's context.
+_BOUND_APP = None
+
+
+def bind_app(app) -> None:
+    """Record the Flask app that scheduled jobs should run under (called by create_app)."""
+    global _BOUND_APP
+    _BOUND_APP = app
+
+
+def _run_in_app_context(fn, *args, **kwargs):
+    if _BOUND_APP is None:
+        raise RuntimeError("sensor_service.bind_app() was not called before scheduling")
+    with _BOUND_APP.app_context():
+        return fn(*args, **kwargs)
+
+
+def scheduled_prune_old_telemetry() -> int:
+    """APScheduler entry point for prune_old_telemetry."""
+    return _run_in_app_context(prune_old_telemetry)
+
+
+def scheduled_vacuum_database() -> None:
+    """APScheduler entry point for vacuum_database."""
+    return _run_in_app_context(vacuum_database)
+
+
 def vacuum_database() -> None:
     """Reclaim SQLite file space after telemetry pruning."""
     from sqlalchemy import text

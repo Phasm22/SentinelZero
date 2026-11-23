@@ -242,6 +242,7 @@ def create_app(test_config=None):
     register_socket_handlers(socketio, runtime)
     app.extensions['whats_up_monitor'] = get_whats_up_monitor()
 
+    sensor_service.bind_app(app)
     scheduler = init_scheduler() if not app.config.get('TESTING') else None
     try:
         if scheduler:
@@ -254,7 +255,7 @@ def create_app(test_config=None):
                 replace_existing=True,
             )
             scheduler.add_job(
-                sensor_service.prune_old_telemetry,
+                sensor_service.scheduled_prune_old_telemetry,
                 'cron',
                 hour=3,
                 minute=30,
@@ -262,7 +263,7 @@ def create_app(test_config=None):
                 replace_existing=True,
             )
             scheduler.add_job(
-                sensor_service.vacuum_database,
+                sensor_service.scheduled_vacuum_database,
                 'cron',
                 day_of_week='sun',
                 hour=3,
