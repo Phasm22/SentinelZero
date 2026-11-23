@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useToast } from '../contexts/ToastContext'
 import { apiService } from '../utils/api'
 import { 
@@ -9,7 +10,6 @@ import {
   Shield,
   Network,
   Clock,
-  Calendar,
   AlertTriangle,
   CheckCircle,
   AlertCircle,
@@ -274,7 +274,6 @@ const Settings = () => {
     try {
       // Convert frontend format back to backend format
       const backendSettings = {
-        scheduledScansSettings: settings.scheduledScans || {},
         notificationSettings: settings.notifications || {},
         networkSettings: settings.network || {},
         securitySettings: settings.security || {}
@@ -405,78 +404,23 @@ const Settings = () => {
       {/* Scheduled Scans */}
       <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-lg shadow-xl">
         <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700">
-          <div className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-green-500" />
-            <h2 className="text-xl font-title font-bold text-gray-100">Scheduled Scans</h2>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-green-500" />
+              <h2 className="text-xl font-title font-bold text-gray-100">Scheduled Scans</h2>
+            </div>
+            <Link
+              to="/schedules"
+              className="inline-flex items-center px-3 py-1.5 rounded-sm border border-green-600/50 text-green-300 hover:text-green-200 hover:bg-green-900/20 text-sm"
+            >
+              Open Schedules
+            </Link>
           </div>
         </div>
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex flex-col items-start text-left w-full">
-              <label className="text-sm font-medium text-gray-300 text-left">Enable Scheduled Scans</label>
-              <p className="text-sm text-gray-400 text-left">Automatically run scans at specified intervals</p>
-            </div>
-            <Toggle
-              checked={settings.scheduledScans?.enabled || false}
-              onChange={(checked) => handleSettingChange('scheduledScans', 'enabled', checked)}
-            />
-          </div>
-
-          {settings.scheduledScans?.enabled && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Frequency</label>
-                  <select
-                    value={settings.scheduledScans?.frequency || 'daily'}
-                    onChange={(e) => handleSettingChange('scheduledScans', 'frequency', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
-                  >
-                    <option value="hourly">Hourly</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Time</label>
-                  <input
-                    type="time"
-                    value={settings.scheduledScans?.time || '02:00'}
-                    onChange={(e) => handleSettingChange('scheduledScans', 'time', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Scan Type</label>
-                  <select
-                    value={settings.scheduledScans?.scanType || 'Full TCP'}
-                    onChange={(e) => handleSettingChange('scheduledScans', 'scanType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
-                  >
-                    <option value="Full TCP">Full TCP</option>
-                    <option value="IoT Scan">IoT Scan</option>
-                    <option value="Vuln Scripts">Vuln Scripts</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Target Network</label>
-                  <input
-                    type="text"
-                    value={settings.scheduledScans?.targetNetwork || '172.16.0.0/22'}
-                    onChange={(e) => handleSettingChange('scheduledScans', 'targetNetwork', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-600 rounded-sm bg-gray-700 text-gray-100"
-                    placeholder="172.16.0.0/22"
-                  />
-                </div>
-              </div>
-            </>
-          )}
+        <div className="p-6">
+          <p className="text-sm text-gray-400">
+            Nmap schedules, hunter timers, pivot/on-demand notes, and maintenance jobs now live on the dedicated Schedules page.
+          </p>
         </div>
       </div>
 
@@ -812,4 +756,4 @@ const Settings = () => {
   )
 }
 
-export default Settings 
+export default Settings

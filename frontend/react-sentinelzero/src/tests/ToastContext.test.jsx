@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import userEvent from '@testing-library/user-event'
 import { ToastProvider, useToast } from '../contexts/ToastContext'
 
@@ -30,6 +31,7 @@ describe('ToastContext', () => {
       useToast()
       return null
     }
-    expect(() => render(<Broken />)).toThrow(/ToastProvider/)
+
+    expect(() => renderToString(<Broken />)).toThrow(/ToastProvider/)
   })
 })

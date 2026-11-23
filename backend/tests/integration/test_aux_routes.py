@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 
 import pytest
 from flask import Flask
@@ -13,6 +13,7 @@ from src.config.database import init_db
 from src.routes.schedule_routes import create_schedule_blueprint
 from src.models import Scan
 from src.services.scan_runtime import ScanRuntime
+from src.services import schedule_service
 
 
 @pytest.fixture
@@ -138,8 +139,14 @@ class FakeScheduler:
         self.removed.append(job_id)
         self.jobs = [job for job in self.jobs if job.id != job_id]
 
-    def add_job(self, func, trigger, id, name):
-        job = type('Job', (), {'id': id, 'name': name, 'func': func, 'trigger': trigger})
+    def add_job(self, func, trigger, id, name, **kwargs):
+        job = type('Job', (), {
+            'id': id,
+            'name': name,
+            'func': func,
+            'trigger': trigger,
+            'next_run_time': None,
+        })
         self.jobs.append(job)
         return job
 
@@ -179,8 +186,7 @@ def test_scheduled_scan_route_registers_job_and_executes_wrapper(tmp_path):
         'targetNetwork': '192.168.1.0/24',
     }]
 
-    mocked_open = mock_open()
-    with patch('src.routes.schedule_routes.open', mocked_open), \
+    with patch.object(schedule_service, 'SCHEDULE_SETTINGS_FILE', str(tmp_path / 'scheduled_scans_settings.json')), \
          patch('src.services.scanner.run_nmap_scan') as mock_run:
         response = client.post('/api/scheduled-scans', json=payload)
         assert response.status_code == 200
@@ -193,6 +199,39 @@ def test_scheduled_scan_route_registers_job_and_executes_wrapper(tmp_path):
             mock_run.assert_called_once()
             assert mock_run.call_args.args[0] == created.id
             assert mock_run.call_args.args[1] == 'Discovery Scan'
+
+
+def test_scan_route_accepts_allowlisted_source_and_history_returns_it(client, app):
+    class NoopThread:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            return None
+
+    with patch('src.routes.scan_routes.threading.Thread', NoopThread):
+        response = client.post('/api/scan', data={
+            'scan_type': 'Discovery Scan',
+            'target_network': '172.16.0.0/22',
+            'source': 'hunter',
+            'initiated_by': 'hunt-test',
+        })
+
+    assert response.status_code == 200
+    with app.app_context():
+        scan = Scan.query.one()
+        assert scan.source == 'hunter'
+        assert scan.initiated_by == 'hunt-test'
+
+    bad = client.post('/api/scan', data={'scan_type': 'Discovery Scan', 'source': 'bad-source'})
+    assert bad.status_code == 400
+
+    history = client.get('/api/scan-history')
+    assert history.status_code == 200
+    row = history.get_json()['scans'][0]
+    assert row['source'] == 'hunter'
+    assert row['initiated_by'] == 'hunt-test'
+    assert 'T' in row['timestamp']
 
 
 def test_hunter_overview_route_returns_normalized_payload(client, tmp_path, monkeypatch):

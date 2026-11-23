@@ -16,8 +16,12 @@ export const apiService = {
     return response.data
   },
 
-  getScanHistory: async () => {
-    const response = await axios.get(`${API_BASE_URL}/scan-history`)
+  getScanHistory: async (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.limit) query.append('limit', params.limit)
+    if (params.offset) query.append('offset', params.offset)
+    const qs = query.toString()
+    const response = await axios.get(`${API_BASE_URL}/scan-history${qs ? `?${qs}` : ''}`)
     return response.data
   },
 
@@ -92,23 +96,28 @@ export const apiService = {
   },
 
   // Schedule operations
-  getSchedule: async () => {
-    const response = await axios.get(`${API_BASE_URL}/schedule`)
+  getScheduledScans: async () => {
+    const response = await axios.get(`${API_BASE_URL}/scheduled-scans`)
     return response.data
   },
 
-  updateSchedule: async (schedule) => {
-    const response = await axios.post(`${API_BASE_URL}/schedule`, schedule)
+  saveScheduledScans: async (jobs) => {
+    const response = await axios.post(`${API_BASE_URL}/scheduled-scans`, { jobs })
     return response.data
   },
 
-  getSchedules: async () => {
-    const response = await axios.get(`${API_BASE_URL}/schedules`)
+  getMaintenanceJobs: async () => {
+    const response = await axios.get(`${API_BASE_URL}/scheduled-scans/maintenance`)
     return response.data
   },
 
-  deleteSchedule: async (jobId) => {
-    const response = await axios.delete(`${API_BASE_URL}/schedules/${jobId}`)
+  getHunterTimers: async () => {
+    const response = await axios.get(`${API_BASE_URL}/hunter/timers`)
+    return response.data
+  },
+
+  patchHunterTimer: async (name, payload) => {
+    const response = await axios.patch(`${API_BASE_URL}/hunter/timers/${encodeURIComponent(name)}`, payload)
     return response.data
   },
 
@@ -144,6 +153,11 @@ export const apiService = {
 
   ping: async () => {
     const response = await axios.get(`${API_BASE_URL}/ping`)
+    return response.data
+  },
+
+  getLabStatusOverview: async (windowMinutes = 120) => {
+    const response = await axios.get(`${API_BASE_URL}/lab-status/overview?window_minutes=${encodeURIComponent(windowMinutes)}`)
     return response.data
   },
 

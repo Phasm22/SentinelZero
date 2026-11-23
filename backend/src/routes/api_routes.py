@@ -191,6 +191,7 @@ def create_api_blueprint(db):
                     'error_code': scan.error_code,
                     'error_detail': scan.error_detail,
                     'source': scan.source,
+                    'initiated_by': scan.initiated_by,
                     'execution_mode': scan.execution_mode,
                     'created_at': scan.created_at.isoformat() if scan.created_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
@@ -203,16 +204,16 @@ def create_api_blueprint(db):
                 scan_dict.update(scan_analysis.public_summary(scan))
                 scan_dict.update(scan_scope_dict(scan))
 
-                # Convert timestamp to Denver timezone
+                # Convert timestamp to ISO string in Denver timezone.
                 if scan_dict['timestamp']:
-                    scan_dict['timestamp'] = scan_dict['timestamp'].astimezone(denver)
+                    scan_dict['timestamp'] = scan_dict['timestamp'].astimezone(denver).isoformat()
                 
                 # Parse hosts and vulns for count
                 try:
                     hosts = json.loads(scan.hosts_json) if scan.hosts_json else []
-                    scan_dict['hosts_count'] = len(hosts)
+                    scan_dict['hosts_count'] = len(hosts) or scan.hosts_up or scan.total_hosts or 0
                 except Exception:
-                    scan_dict['hosts_count'] = 0
+                    scan_dict['hosts_count'] = scan.hosts_up or scan.total_hosts or 0
                 
                 try:
                     vulns = json.loads(scan.vulns_json) if scan.vulns_json else []

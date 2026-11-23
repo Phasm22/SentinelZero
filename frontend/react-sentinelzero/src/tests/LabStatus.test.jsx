@@ -1,8 +1,9 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LabStatus from '../pages/LabStatus'
 import { SocketProvider } from '../contexts/SocketContext'
+import { apiService } from '../utils/api'
 
 const socketHandlers = {}
 const socketMock = {
@@ -20,29 +21,106 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => socketMock),
 }))
 
+vi.mock('../utils/api', () => ({
+  apiService: {
+    getLabStatusOverview: vi.fn(),
+  },
+}))
+
 vi.mock('../components/AnimatedValue', () => ({
   default: ({ value, suffix = '' }) => <span>{value}{suffix}</span>,
 }))
 
-const sampleSnapshot = {
-  overall_status: 'degraded',
-  health_percentage: 66.7,
-  total_items: 3,
-  up_items: 2,
-  down_items: 1,
-  total_up: 2,
-  total_checks: 3,
-  timestamp: '2026-03-08T00:00:00Z',
-  last_update: '2026-03-08T00:00:00Z',
-  layers: {
-    loopbacks: { total: 1, up: 1 },
-    services: { total: 1, up: 0 },
-    infrastructure: { total: 1, up: 1 },
+const sampleOverview = {
+  summary: {
+    overall_status: 'degraded',
+    health_score: 73,
+    generated_at: '2026-03-08T00:00:00Z',
+    window_minutes: 120,
+    source_freshness: {
+      opnsense: { status: 'available', age_seconds: 30 },
+      whatsup: { status: 'available', age_seconds: null },
+    },
   },
-  categories: {
-    loopbacks: { items: [{ name: 'Localhost', ip: '127.0.0.1', status: 'up' }] },
-    services: { items: [{ name: 'DNS', ip: '1.1.1.1', overall_status: 'down', status: 'down' }] },
-    infrastructure: { items: [{ name: 'Gateway', ip: '172.16.0.1', status: 'up' }] },
+  attention: [
+    {
+      source: 'sensor',
+      severity: 'high',
+      title: 'yang sensor is stale',
+      message: 'Last telemetry is outside the active window',
+    },
+  ],
+  reachability: {
+    overall_status: 'degraded',
+    health_percentage: 66.7,
+    categories: {
+      loopbacks: { items: [{ name: 'Localhost', ip: '127.0.0.1', status: 'up' }] },
+      services: { items: [{ name: 'DNS', ip: '1.1.1.1', overall_status: 'down', status: 'down' }] },
+      infrastructure: { items: [{ name: 'Gateway', ip: '172.16.0.1', status: 'up' }] },
+    },
+  },
+  sensor_fleet: {
+    count: 2,
+    active: 1,
+    stale: 1,
+    offline: 0,
+    collector_coverage: { system: 2, proxmox: 1 },
+    agents: [
+      {
+        agent_id: 'yang',
+        hostname: 'yang.prox',
+        host_ip: '172.16.0.12',
+        role: 'proxmox-node',
+        status: 'stale',
+        latest_collectors: { system: true, proxmox: true },
+      },
+      {
+        agent_id: 'opnsense',
+        hostname: 'opnsense',
+        host_ip: '172.16.0.1',
+        role: 'network-sensor',
+        status: 'active',
+        latest_collectors: { system: true },
+      },
+    ],
+  },
+  network: {
+    inventory: {
+      dhcp_lease_count: 12,
+      arp_entry_count: 18,
+      active_arp_count: 14,
+    },
+    opnsense: {
+      status: 'available',
+      gateway_down_count: 0,
+      ids: { alert_count: 1 },
+    },
+  },
+  dns: {
+    lab: {
+      summary: { total_queries: 100, blocked_queries: 20, percent_blocked: 20 },
+      top_blocked: [{ name: 'ads.test', count: 5 }],
+    },
+    home: {
+      summary: { total_queries: 80, blocked_queries: 8, percent_blocked: 10 },
+      top_blocked: [],
+    },
+  },
+  flows: {
+    active_host_count: 6,
+    flagged_hosts: [{ ip: '172.16.0.50', score: 88 }],
+  },
+  infrastructure: {
+    proxmox: {
+      node_count: 2,
+      guest_count: 8,
+      running_guests: 6,
+      nodes: [{ node: 'YANG', status: 'online', guest_count: 5, running_guests: 4 }],
+    },
+  },
+  metadata: {
+    missing_sources: [],
+    parser_warnings: [],
   },
 }
 
@@ -52,38 +130,30 @@ const renderLabStatus = () => render(
   </SocketProvider>
 )
 
-const hasOperationalCount = (expected) => (_, node) => {
-  const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-  return text.includes(`${expected}`) && text.includes('operational')
-}
-
 describe('LabStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     for (const key of Object.keys(socketHandlers)) delete socketHandlers[key]
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => sampleSnapshot,
-    })
+    apiService.getLabStatusOverview.mockResolvedValue(sampleOverview)
   })
 
-  it('renders the summary snapshot from the API', async () => {
+  it('renders the aggregate lab status overview from the API', async () => {
     renderLabStatus()
 
     await waitFor(() => {
-      expect(screen.getAllByText((_, node) => {
-        const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-        return text.includes('2/3') && text.includes('operational')
-      }).length).toBeGreaterThan(0)
+      expect(apiService.getLabStatusOverview).toHaveBeenCalledWith(120)
     })
 
-    expect(global.fetch).toHaveBeenCalledWith(`${window.location.origin}/api/whatsup/summary`, expect.any(Object))
-    expect(screen.getAllByText(hasOperationalCount('2/3')).length).toBeGreaterThan(0)
-    expect(screen.getByText(/^Lab$/)).toBeInTheDocument()
-    expect(screen.getByText(/Host Details/i)).toBeInTheDocument()
+    expect(await screen.findByText('Network Core')).toBeInTheDocument()
+    expect(screen.getByText('Sensor Fleet')).toBeInTheDocument()
+    expect(screen.getByText('DNS Protection')).toBeInTheDocument()
+    expect(screen.getAllByText('Infrastructure').length).toBeGreaterThan(0)
+    expect(screen.getByText('yang sensor is stale')).toBeInTheDocument()
+    expect(screen.getByText('12')).toBeInTheDocument()
+    expect(screen.getAllByText(/operational/i).length).toBeGreaterThan(0)
   })
 
-  it('applies realtime snapshot updates from the socket', async () => {
+  it('refetches the aggregate overview when a whatsup socket update arrives', async () => {
     renderLabStatus()
 
     await waitFor(() => {
@@ -95,27 +165,26 @@ describe('LabStatus', () => {
       expect(socketHandlers['whats_up.snapshot']).toBeTypeOf('function')
     })
 
-    socketHandlers['whats_up.snapshot']({
-      ...sampleSnapshot,
-      total_up: 3,
-      total_checks: 3,
-      health_percentage: 100,
-      layers: {
-        loopbacks: { total: 1, up: 1 },
-        services: { total: 1, up: 1 },
-        infrastructure: { total: 1, up: 1 },
-      },
-      categories: {
-        ...sampleSnapshot.categories,
-        services: { items: [{ name: 'DNS', ip: '1.1.1.1', overall_status: 'up', status: 'up' }] },
-      },
-    })
+    socketHandlers['whats_up.snapshot']({})
 
     await waitFor(() => {
-      expect(screen.getAllByText((_, node) => {
-        const text = node?.textContent?.replace(/\s+/g, ' ').trim() || ''
-        return text.includes('3/3') && text.includes('operational')
-      }).length).toBeGreaterThan(0)
+      expect(apiService.getLabStatusOverview).toHaveBeenCalledTimes(2)
     })
+  })
+
+  it('shows an error state and retries when the aggregate endpoint fails', async () => {
+    apiService.getLabStatusOverview
+      .mockRejectedValueOnce(new Error('route unavailable'))
+      .mockResolvedValueOnce(sampleOverview)
+
+    renderLabStatus()
+
+    expect(await screen.findByText('Lab status unavailable')).toBeInTheDocument()
+    expect(screen.getByText('route unavailable')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+
+    expect(await screen.findByText('Network Core')).toBeInTheDocument()
+    expect(apiService.getLabStatusOverview).toHaveBeenCalledTimes(2)
   })
 })

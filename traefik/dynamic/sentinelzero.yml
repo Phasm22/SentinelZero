@@ -1,37 +1,34 @@
 # Traefik File Provider Configuration for SentinelZero
-# Routes sentinelzero.prox to host services (ports 5000 and 3173)
-# This file should be placed in Traefik's dynamic config directory
+# Routes sentinelzero.ops.prox to the Flask production app on port 5000
+# (serves built React dist + /api + /socket.io). Copy to Traefik's dynamic dir.
 
 http:
   routers:
     # HTTP router - redirect to HTTPS
     sentinelzero-http:
-      rule: "Host(`sentinelzero.prox`)"
+      rule: "Host(`sentinelzero.ops.prox`)"
       entryPoints:
         - web
       middlewares:
         - redirect-to-https
-      service: sentinelzero-frontend
-    
+      service: sentinelzero-app
+
     # HTTPS router with Authentik middleware
-    # Routes to frontend (port 3173) which proxies /api and /socket.io to backend (port 5000)
     sentinelzero:
-      rule: "Host(`sentinelzero.prox`)"
+      rule: "Host(`sentinelzero.ops.prox`)"
       entryPoints:
         - websecure
       middlewares:
         - auth@file  # Authentik forward auth
         - websocket-headers@file
-      service: sentinelzero-frontend
+      service: sentinelzero-app
       tls:
         certResolver: letsencrypt
 
   services:
-    # Frontend service (port 3173)
-    # Vite dev server proxies /api and /socket.io to backend on port 5000
-    sentinelzero-frontend:
+    # Production app: Flask serves frontend/react-sentinelzero/dist statically
+    sentinelzero-app:
       loadBalancer:
         servers:
-          - url: "http://172.16.0.198:3173"  # SentinelZero frontend (Vite dev server)
+          - url: "http://172.16.0.198:5000"
         passHostHeader: true
-

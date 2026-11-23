@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { render } from '@testing-library/react'
 import App from './App'
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext'
-import { ToastProvider } from './contexts/ToastContext'
-import { SocketProvider } from './contexts/SocketContext'
 import axios from 'axios'
 
 vi.mock('axios', () => ({
@@ -41,11 +38,7 @@ vi.mock('socket.io-client', () => ({
 // Test wrapper component
 const TestWrapper = ({ children }) => (
   <UserPreferencesProvider>
-    <ToastProvider>
-      <SocketProvider>
-        {children}
-      </SocketProvider>
-    </ToastProvider>
+    {children}
   </UserPreferencesProvider>
 )
 

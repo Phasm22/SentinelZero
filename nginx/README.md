@@ -24,7 +24,7 @@ This directory contains nginx configuration for adding Authentik authentication 
    ```
    
    Update:
-   - `server_name` with your domain (e.g., `sentinelzero.prox`)
+   - `server_name` with your domain (e.g., `sentinelzero.ops.prox`)
    - `upstream authentik` with your Authentik server address
    - SSL certificate paths (if using Let's Encrypt, paths are usually correct)
 
@@ -41,7 +41,7 @@ This directory contains nginx configuration for adding Authentik authentication 
 6. **Get SSL certificate** (if needed):
    ```bash
    sudo apt install certbot python3-certbot-nginx
-   sudo certbot --nginx -d sentinelzero.prox
+   sudo certbot --nginx -d sentinelzero.ops.prox
    ```
 
 7. **Reload nginx**:
@@ -51,7 +51,7 @@ This directory contains nginx configuration for adding Authentik authentication 
 
 ## How It Works
 
-1. User accesses `https://sentinelzero.prox`
+1. User accesses `https://sentinelzero.ops.prox`
 2. Nginx checks authentication via Authentik forward auth (`/auth` location)
 3. If authenticated, request is proxied to backend on port 5000
 4. Backend (systemd service) handles the request normally

@@ -47,6 +47,7 @@ def _scan_type_from_filename(filename: str) -> str:
 
 
 _FILENAME_TS_RE = re.compile(r'(\d{4}-\d{2}-\d{2}_\d{4})')
+_CIDR_RE = re.compile(r'(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3}/\d{1,2})(?![\d.])')
 
 
 def _timestamp_from_filename(filename: str):
@@ -73,6 +74,25 @@ def _resolve_scan_timestamps(xml_path: str, scan_info: Dict[str, Any]):
     start = scan_info.get('start_time') or fallback
     end = scan_info.get('end_time') or start or fallback
     return start, end
+
+
+def _target_network_from_hosts(hosts):
+    ips = [str(host.get('ip') or '') for host in hosts or []]
+    if any(ip.startswith('172.16.') for ip in ips):
+        return '172.16.0.0/22'
+    if any(ip.startswith('192.168.68.') for ip in ips):
+        return '192.168.68.0/22'
+    return None
+
+
+def _target_network_from_filename(filename: str):
+    lower = filename.lower()
+    if 'lab' in lower or '172_16' in lower or '172.16' in lower:
+        return '172.16.0.0/22'
+    if 'home' in lower or '192_168_68' in lower or '192.168.68' in lower:
+        return '192.168.68.0/22'
+    match = _CIDR_RE.search(filename)
+    return match.group(1) if match else None
 
 
 def _to_relative_path(path: str, base_dir: str) -> str:
@@ -107,6 +127,7 @@ def parse_xml_file(xml_path: str) -> Dict[str, Any]:
             'hosts_up': 0,
             'total_ports': 0,
             'open_ports': 0,
+            'target_network': None,
             'start_time': None,
             'end_time': None
         }
@@ -127,6 +148,11 @@ def parse_xml_file(xml_path: str) -> Dict[str, Any]:
         # Determine scan type from filename
         filename = os.path.basename(xml_path)
         scan_info['scan_type'] = _scan_type_from_filename(filename)
+        args = root.attrib.get('args') or ''
+        cidr_match = _CIDR_RE.search(args)
+        scan_info['target_network'] = (
+            cidr_match.group(1) if cidr_match else _target_network_from_filename(filename)
+        )
         
         # Parse hosts
         hosts = []
@@ -247,6 +273,8 @@ def parse_xml_file(xml_path: str) -> Dict[str, Any]:
         scan_info['hosts_up'] = len([h for h in hosts if h['state'] == 'up'])
         scan_info['total_ports'] = total_ports
         scan_info['open_ports'] = open_ports
+        if not scan_info['target_network']:
+            scan_info['target_network'] = _target_network_from_hosts(hosts)
         
         return scan_info
         
@@ -318,6 +346,9 @@ def sync_scans_from_filesystem(scans_dir: str = 'scans', prune_missing_in_filesy
                 hosts_json=json.dumps(scan_data['hosts']),
                 vulns_json=json.dumps(scan_data['vulns']),
                 raw_xml_path=_to_relative_path(xml_path, base_dir),
+                target_network=scan_data.get('target_network'),
+                source='sync',
+                initiated_by='filesystem_sync',
                 created_at=created_at or datetime.utcnow(),
                 completed_at=completed_at or datetime.utcnow()
             )

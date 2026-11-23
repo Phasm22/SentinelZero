@@ -16,6 +16,8 @@ const LabHealthBar = ({ healthData, filter, setFilter }) => {
     total_up: 0,
     total_checks: 1,
     timestamp: null,
+    health_score: null,
+    overall_status: null,
     layers: {
       loopbacks: { up: 0, total: 0 },
       services: { up: 0, total: 0 },
@@ -26,12 +28,21 @@ const LabHealthBar = ({ healthData, filter, setFilter }) => {
 
   const totalUp = Number.isFinite(safe.total_up) ? safe.total_up : 0
   const totalChecks = safe.total_checks > 0 ? safe.total_checks : 1
+  const score = Number.isFinite(safe.health_score)
+    ? safe.health_score
+    : Math.round((totalUp / totalChecks) * 100)
 
-  const overallStatus = totalUp === totalChecks
+  const overallStatus = safe.overall_status === 'healthy'
     ? 'healthy'
-    : totalUp > totalChecks * 0.8
+    : safe.overall_status === 'degraded'
       ? 'warning'
-      : 'critical'
+      : safe.overall_status === 'critical'
+        ? 'critical'
+        : totalUp === totalChecks
+          ? 'healthy'
+          : totalUp > totalChecks * 0.8
+            ? 'warning'
+            : 'critical'
 
   const getTimeAgo = (timestamp) => {
     if (!timestamp) return 'updating...'
@@ -58,8 +69,12 @@ const LabHealthBar = ({ healthData, filter, setFilter }) => {
             <span className="text-gray-300">/{totalChecks}</span>
             <span className="ml-2 text-sm font-normal text-gray-300">operational</span>
           </span>
-          <span className="text-sm font-bold text-green-400">
-            <AnimatedValue value={Math.round((totalUp / totalChecks) * 100)} suffix="%" />
+          <span className={`text-sm font-bold ${
+            overallStatus === 'healthy' ? 'text-green-400' :
+            overallStatus === 'warning' ? 'text-yellow-400' :
+            'text-red-400'
+          }`}>
+            <AnimatedValue value={score} suffix="%" />
           </span>
         </div>
         <div className="flex items-center gap-2 card-body">

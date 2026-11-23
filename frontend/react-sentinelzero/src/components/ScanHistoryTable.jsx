@@ -9,10 +9,12 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
   const [sortDirection, setSortDirection] = useState('desc')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
 
   const sortableFields = {
     timestamp: { label: 'TIMESTAMP', type: 'date' },
     scan_type: { label: 'TYPE', type: 'string' },
+    source: { label: 'SOURCE', type: 'string' },
     network_label: { label: 'NETWORK', type: 'string' },
     hosts_count: { label: 'HOSTS', type: 'number' },
     vulns_count: { label: 'VULNS', type: 'number' },
@@ -34,6 +36,8 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
       // Search filter
       const matchesSearch = searchTerm === '' || 
         scan.scan_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (scan.source || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (scan.initiated_by || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (scan.network_label || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (scan.target_network || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         scan.id.toString().includes(searchTerm) ||
@@ -41,8 +45,9 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
       
       // Status filter
       const matchesStatus = statusFilter === 'all' || scan.status === statusFilter
+      const matchesSource = sourceFilter === 'all' || (scan.source || 'manual') === sourceFilter
       
-      return matchesSearch && matchesStatus
+      return matchesSearch && matchesStatus && matchesSource
     })
 
     // Sort the filtered results
@@ -66,7 +71,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
       return 0
     })
-  }, [scans, sortField, sortDirection, searchTerm, statusFilter])
+  }, [scans, sortField, sortDirection, searchTerm, statusFilter, sourceFilter])
 
   const getSortIcon = (field) => {
     if (sortField !== field) {
@@ -82,6 +87,43 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
     const statuses = [...new Set(scans.map(scan => scan.status).filter(Boolean))]
     return statuses.sort()
   }, [scans])
+
+  const uniqueSources = useMemo(() => {
+    const sources = [...new Set(scans.map(scan => scan.source || 'manual').filter(Boolean))]
+    return sources.sort()
+  }, [scans])
+
+  const sourceLabel = (source) => {
+    const labels = {
+      manual: 'Manual',
+      scheduled: 'Scheduled',
+      hunter: 'Hunter',
+      upload: 'Upload',
+      sync: 'Sync',
+    }
+    return labels[source || 'manual'] || source || 'Manual'
+  }
+
+  const sourceBadgeClass = (source) => {
+    const classes = {
+      scheduled: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/50',
+      hunter: 'bg-violet-900/40 text-violet-300 border-violet-700/50',
+      upload: 'bg-sky-900/40 text-sky-300 border-sky-700/50',
+      sync: 'bg-sky-900/40 text-sky-300 border-sky-700/50',
+      manual: 'bg-gray-800/70 text-gray-300 border-gray-600/50',
+    }
+    return classes[source || 'manual'] || classes.manual
+  }
+
+  const hostsDisplay = (scan) => {
+    return scan.hosts_count ?? scan.hosts_up ?? scan.total_hosts ?? 0
+  }
+
+  const vulnsDisplay = (scan) => {
+    if (scan.vulns_count != null) return scan.vulns_count
+    if ((scan.scan_type || '').toLowerCase().includes('discovery')) return '—'
+    return 0
+  }
 
   return (
     <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/60 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-2xl p-8 flex flex-col gap-4">
@@ -145,6 +187,21 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
             ))}
           </select>
         </div>
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="pl-10 pr-8 py-2 bg-gray-900/50 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+          >
+            <option value="all">All Sources</option>
+            {uniqueSources.map(source => (
+              <option key={source} value={source}>
+                {sourceLabel(source)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
@@ -153,7 +210,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
             <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-200 mb-2">No scans found</h3>
             <p className="text-gray-300">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all' || sourceFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria'
                 : 'No scans available'
               }
@@ -189,20 +246,25 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
                     </span>
                   </td>
                   <td>
+                    <span className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-md border ${sourceBadgeClass(scan.source)}`}>
+                      {sourceLabel(scan.source)}
+                    </span>
+                  </td>
+                  <td>
                     <span
                       className="text-xs font-mono text-gray-300"
                       title={scan.target_network || ''}
                     >
-                      {scan.network_label || '—'}
-                      {scan.target_network && (
+                      {scan.network_label || scan.target_network || '—'}
+                      {scan.target_network && scan.network_label && (
                         <span className="block text-[10px] text-gray-500 truncate max-w-[120px]">
                           {scan.target_network}
                         </span>
                       )}
                     </span>
                   </td>
-                  <td>{scan.hosts_count || 0}</td>
-                  <td>{scan.vulns_count || 0}</td>
+                  <td>{hostsDisplay(scan)}</td>
+                  <td>{vulnsDisplay(scan)}</td>
                   <td><ScanInsightBadge scan={scan} /></td>
                   <td>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -241,7 +303,7 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
             <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-200 mb-2">No scans found</h3>
             <p className="text-gray-300">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all' || sourceFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria'
                 : 'No scans available'
               }
@@ -250,18 +312,16 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
         ) : (
           filteredAndSortedScans.map((scan) => (
           <div key={scan.id} className="bg-white/10 dark:bg-gray-900/30 backdrop-blur-lg border border-white/10 dark:border-gray-700 rounded-md shadow-xl p-4 space-y-3" data-testid={`history-scan-card-${scan.id}`}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-blue-900/50 text-blue-300 border border-blue-600/50">
                   <Info className="w-3 h-3" />
                   {scan.scan_type}
                 </span>
-              </div>
-              {scan.target_network && (
-                <span className="text-xs font-mono text-gray-400" title={scan.target_network}>
-                  {scan.network_label} · {scan.target_network}
+                <span className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-md border ${sourceBadgeClass(scan.source)}`}>
+                  {sourceLabel(scan.source)}
                 </span>
-              )}
+              </div>
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                 scan.status === 'complete' 
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -274,6 +334,12 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
                 {scan.status || 'unknown'}
               </span>
             </div>
+            {(scan.network_label || scan.target_network) && (
+              <div className="text-xs font-mono text-gray-400" title={scan.target_network}>
+                {scan.network_label || '—'}
+                {scan.target_network ? ` · ${scan.target_network}` : ''}
+              </div>
+            )}
             <div className="text-sm text-gray-400 mb-1">
               {formatTimestamp(scan.timestamp, preferences.use24Hour)}
             </div>
@@ -281,13 +347,13 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
               <div>
                 <div className="text-gray-400 font-medium">Hosts</div>
                 <div className="text-gray-100 font-semibold">
-                  {scan.hosts_count || 0}
+                  {hostsDisplay(scan)}
                 </div>
               </div>
               <div>
                 <div className="text-gray-400 font-medium">Vulnerabilities</div>
                 <div className="text-gray-100 font-semibold">
-                  {scan.vulns_count || 0}
+                  {vulnsDisplay(scan)}
                 </div>
               </div>
             </div>
@@ -320,4 +386,4 @@ const ScanHistoryTable = ({ scans, preferences, handleViewDetails, onSync, isSyn
   )
 }
 
-export default ScanHistoryTable 
+export default ScanHistoryTable

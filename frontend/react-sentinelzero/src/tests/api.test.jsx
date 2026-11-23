@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Dashboard from '../pages/Dashboard'
 import Settings from '../pages/Settings'
 import ScanHistory from '../pages/ScanHistory'
@@ -69,13 +69,15 @@ vi.mock('socket.io-client', () => ({
 
 // Test wrapper component
 const TestWrapper = ({ children }) => (
-  <UserPreferencesProvider>
-    <ToastProvider>
-      <SocketProvider>
-        {children}
-      </SocketProvider>
-    </ToastProvider>
-  </UserPreferencesProvider>
+  <MemoryRouter>
+    <UserPreferencesProvider>
+      <ToastProvider>
+        <SocketProvider>
+          {children}
+        </SocketProvider>
+      </ToastProvider>
+    </UserPreferencesProvider>
+  </MemoryRouter>
 )
 
 describe('API Endpoints', () => {

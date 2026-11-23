@@ -1,11 +1,7 @@
-"""
-Scheduler-related API routes
-"""
-import json
-import os
-import uuid
+"""Scheduler-related API routes."""
 from flask import Blueprint, request, jsonify, current_app
-from apscheduler.triggers.cron import CronTrigger
+
+from ..services import hunter_timers, schedule_service
 
 def create_schedule_blueprint(db, socketio, scheduler):
     """Create and configure schedule routes blueprint"""
@@ -13,103 +9,70 @@ def create_schedule_blueprint(db, socketio, scheduler):
     
     @bp.route('/scheduled-scans', methods=['GET'])
     def get_scheduled_scans():
-        """Get all scheduled scans"""
+        """Get all scheduled nmap scans."""
         try:
-            if os.path.exists('scheduled_scans_settings.json'):
-                with open('scheduled_scans_settings.json', 'r') as f:
-                    scheduled_scans = json.load(f)
-                    return jsonify(scheduled_scans)
-            return jsonify([])
+            jobs = schedule_service.load_scheduled_jobs()
+            enriched = schedule_service.enrich_jobs_with_next_run(scheduler, jobs)
+            return jsonify({'jobs': enriched, 'count': len(enriched)})
         except Exception as e:
             print(f'[DEBUG] Error loading scheduled scans: {e}')
             return jsonify({'status': 'error', 'message': f'Error loading scheduled scans: {str(e)}'}), 500
     
     @bp.route('/scheduled-scans', methods=['POST'])
     def save_scheduled_scans():
-        """Save scheduled scans configuration"""
+        """Save scheduled scans configuration and register APScheduler jobs."""
         try:
             data = request.get_json()
-            if not data:
+            if data is None:
                 return jsonify({'status': 'error', 'message': 'No data provided'}), 400
-            
-            # Save to file
-            with open('scheduled_scans_settings.json', 'w') as f:
-                json.dump(data, f, indent=4)
-            
-            # Clear existing scheduled jobs
-            if scheduler:
-                for job in scheduler.get_jobs():
-                    if job.id.startswith('scheduled_scan_'):
-                        scheduler.remove_job(job.id)
-            
-            # Add new scheduled jobs
-            from ..services.scanner import run_nmap_scan
+
+            raw_jobs = data.get('jobs') if isinstance(data, dict) and 'jobs' in data else data
+            if isinstance(raw_jobs, dict):
+                raw_jobs = schedule_service.migrate_legacy_settings(raw_jobs)
+            if not isinstance(raw_jobs, list):
+                return jsonify({'status': 'error', 'message': 'Expected a list of job configs'}), 400
+
+            jobs = schedule_service.save_scheduled_jobs(raw_jobs)
             app = current_app._get_current_object()
-            runtime = current_app.extensions['scan_runtime']
-            
-            for i, scan_config in enumerate(data):
-                if scan_config.get('enabled', False):
-                    if scheduler is None:
-                        continue
-                    job_id = f'scheduled_scan_{i}'
-                    
-                    # Create cron trigger from configuration
-                    trigger = CronTrigger(
-                        minute=scan_config.get('minute', '0'),
-                        hour=scan_config.get('hour', '0'),
-                        day=scan_config.get('day', '*'),
-                        month=scan_config.get('month', '*'),
-                        day_of_week=scan_config.get('dayOfWeek', '*')
-                    )
-                    
-                    def scheduled_scan_wrapper(
-                        scan_type=scan_config['scanType'],
-                        scheduled_network=scan_config.get('targetNetwork')
-                        or scan_config.get('target_network')
-                        or '172.16.0.0/22',
-                    ):
-                        """Wrapper function for scheduled scans"""
-                        with app.app_context():
-                            security_settings = {
-                                'vuln_scanning_enabled': True,
-                                'os_detection_enabled': True,
-                                'service_detection_enabled': True,
-                                'aggressive_scanning': False
-                            }
-                            
-                            try:
-                                if os.path.exists('security_settings.json'):
-                                    with open('security_settings.json', 'r') as f:
-                                        security_settings.update(json.load(f))
-                            except Exception as e:
-                                print(f'[DEBUG] Could not load security settings for scheduled scan: {e}')
-                            
-                            scan = runtime.create_scan(
-                                scan_type=scan_type,
-                                target_network=scheduled_network,
-                                source='scheduled',
-                                initiated_by='scheduler',
-                                correlation_id=str(uuid.uuid4()),
-                                state='queued',
-                                message=f'Queued scheduled {scan_type} on {scheduled_network}',
-                            )
-                            runtime.emit_scan_event('scan.started', scan)
-                            runtime.emit_snapshot(scan)
-                            run_nmap_scan(scan.id, scan_type, security_settings, socketio, app, scheduled_network)
-                    
-                    scheduler.add_job(
-                        func=scheduled_scan_wrapper,
-                        trigger=trigger,
-                        id=job_id,
-                        name=f'Scheduled {scan_config["scanType"]} Scan'
-                    )
-                    
-                    print(f'[DEBUG] Scheduled scan job created: {job_id}')
-            
-            return jsonify({'status': 'success', 'message': 'Scheduled scans updated successfully'})
-            
+            registered = schedule_service.register_nmap_jobs(scheduler, app, socketio, jobs)
+            enriched = schedule_service.enrich_jobs_with_next_run(scheduler, jobs)
+
+            return jsonify({
+                'status': 'success',
+                'message': 'Scheduled scans updated successfully',
+                'jobs': enriched,
+                'registered': registered,
+            })
         except Exception as e:
             print(f'[DEBUG] Error saving scheduled scans: {e}')
             return jsonify({'status': 'error', 'message': f'Error saving scheduled scans: {str(e)}'}), 500
+
+    @bp.route('/scheduled-scans/maintenance', methods=['GET'])
+    def get_maintenance_jobs():
+        """List read-only background maintenance jobs."""
+        try:
+            return jsonify({'jobs': schedule_service.list_maintenance_jobs(scheduler)})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @bp.route('/hunter/timers', methods=['GET'])
+    def get_hunter_timers():
+        try:
+            timers = hunter_timers.list_timers()
+            return jsonify({'timers': timers, 'count': len(timers)})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    @bp.route('/hunter/timers/<name>', methods=['PATCH'])
+    def patch_hunter_timer(name):
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return jsonify({'status': 'error', 'message': 'JSON body required'}), 400
+
+        result = hunter_timers.patch_timer(name, payload)
+        status = 200 if result.get('status') == 'success' else 400
+        if result.get('status') == 'error' and 'Unknown timer' in (result.get('message') or ''):
+            status = 404
+        return jsonify(result), status
     
     return bp

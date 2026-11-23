@@ -277,6 +277,35 @@ def _vacuum_enabled() -> bool:
     )
 
 
+# APScheduler runs jobs on bare worker threads with no Flask app context, and the
+# persistent SQLAlchemy job store saves jobs by import path, so closures cannot be
+# registered. These module-level entry points push the bound app's context.
+_BOUND_APP = None
+
+
+def bind_app(app) -> None:
+    """Record the Flask app that scheduled jobs should run under (called by create_app)."""
+    global _BOUND_APP
+    _BOUND_APP = app
+
+
+def _run_in_app_context(fn, *args, **kwargs):
+    if _BOUND_APP is None:
+        raise RuntimeError("sensor_service.bind_app() was not called before scheduling")
+    with _BOUND_APP.app_context():
+        return fn(*args, **kwargs)
+
+
+def scheduled_prune_old_telemetry() -> int:
+    """APScheduler entry point for prune_old_telemetry."""
+    return _run_in_app_context(prune_old_telemetry)
+
+
+def scheduled_vacuum_database() -> None:
+    """APScheduler entry point for vacuum_database."""
+    return _run_in_app_context(vacuum_database)
+
+
 def vacuum_database() -> None:
     """Reclaim SQLite file space after telemetry pruning."""
     from sqlalchemy import text
@@ -354,9 +383,13 @@ def get_network_sensor_context(db, host_ip: str) -> dict:
         if isinstance(alerts, dict):
             alerts = alerts.get("engaged", alerts.get("items", []))
         ctx["alerted_flows"] = alerts[:5]
+        active_hosts = ntop.get("active_hosts") or []
+        if isinstance(active_hosts, dict):
+            active_hosts = active_hosts.get("flagged") or active_hosts.get("hosts") or []
         flagged = [
-            h for h in (ntop.get("active_hosts") or [])
-            if h.get("ip") == host_ip or str(h.get("ip", "")).startswith(host_ip)
+            h for h in active_hosts
+            if isinstance(h, dict)
+            and (h.get("ip") == host_ip or str(h.get("ip", "")).startswith(host_ip))
         ]
         if flagged:
             ctx["host_flow_score"] = flagged[:3]

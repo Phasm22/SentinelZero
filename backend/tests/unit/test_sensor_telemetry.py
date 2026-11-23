@@ -108,3 +108,45 @@ def test_prune_old_telemetry_vacuums_when_rows_deleted(app, monkeypatch):
         deleted = sensor_service.prune_old_telemetry(days=7)
         assert deleted == 1
         assert vacuum_calls['count'] == 1
+
+
+
+def test_scheduled_prune_runs_in_app_context_and_is_serializable(app):
+    """APScheduler runs jobs on bare worker threads and persists them by import path:
+    the raw job must fail there, the scheduled entry point must work and serialize."""
+    import threading
+    from apscheduler.util import obj_to_ref, ref_to_obj
+
+    def run_in_thread(fn, **kwargs):
+        out = {}
+
+        def target():
+            try:
+                out['value'] = fn(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - recorded for the assertion
+                out['error'] = exc
+        t = threading.Thread(target=target)
+        t.start()
+        t.join(timeout=30)
+        return out
+
+    with app.app_context():
+        db.session.add(SensorAgent(agent_id='ctx-agent', hostname='ctx', host_ip='10.9.9.9'))
+        db.session.add(SensorTelemetry(
+            agent_id='ctx-agent',
+            collected_at=datetime.utcnow() - timedelta(days=30),
+            received_at=datetime.utcnow() - timedelta(days=30),
+            collectors_json='{}',
+        ))
+        db.session.commit()
+
+    raw = run_in_thread(sensor_service.prune_old_telemetry, days=7)
+    assert isinstance(raw.get('error'), RuntimeError)
+
+    for job in (sensor_service.scheduled_prune_old_telemetry, sensor_service.scheduled_vacuum_database):
+        assert ref_to_obj(obj_to_ref(job)) is job
+
+    sensor_service.bind_app(app)
+    scheduled = run_in_thread(sensor_service.scheduled_prune_old_telemetry)
+    assert 'error' not in scheduled, scheduled.get('error')
+    assert scheduled['value'] == 1
